@@ -1,3 +1,4 @@
+import Toybox.Application;
 import Toybox.Attention;
 import Toybox.Lang;
 import Toybox.System;
@@ -23,6 +24,27 @@ class Metronome {
     function initialize() {
         _timer = new Timer.Timer();
         setBpm(DEFAULT_BPM);
+        loadSettings();
+    }
+
+    // Reads app settings (configurable from Garmin Connect on the phone).
+    // Keeps defaults if a key is missing, e.g. right after an app update.
+    function loadSettings() as Void {
+        try {
+            var bpm = Application.Properties.getValue("defaultBpm");
+            if (bpm instanceof Number) {
+                setBpm(bpm);
+            }
+            var tone = Application.Properties.getValue("toneEnabled");
+            if (tone instanceof Boolean) {
+                _toneEnabled = tone;
+            }
+            var vibe = Application.Properties.getValue("vibeEnabled");
+            if (vibe instanceof Boolean) {
+                _vibeEnabled = vibe;
+            }
+        } catch (e) {
+        }
     }
 
     function getBpm() as Number {

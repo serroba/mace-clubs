@@ -1,4 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <strings>
     <string id="AppName">Mace and Clubs</string>
+    <string id="SettingDefaultBpm">Default tempo (bpm)</string>
+    <string id="SettingToneEnabled">Beep on beat</string>
+    <string id="SettingVibeEnabled">Vibrate on beat</string>
 </strings>
