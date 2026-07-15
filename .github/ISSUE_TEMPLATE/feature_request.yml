@@ -1,0 +1,27 @@
+name: Feature idea
+description: Suggest a workout mode, metric, or improvement
+labels: [enhancement]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Ideas are very welcome! If your idea involves the screen or a flow, a
+        picture says more than a paragraph — **a photo of a hand-drawn sketch is
+        perfectly valid** (and honestly encouraged).
+  - type: textarea
+    id: idea
+    attributes:
+      label: The idea
+      description: What should the app do?
+    validations:
+      required: true
+  - type: textarea
+    id: training-context
+    attributes:
+      label: How would you use it in training?
+      description: The training situation where this would help (e.g. "during heavy 2-hand 360 sets I want...").
+  - type: textarea
+    id: sketches
+    attributes:
+      label: Sketches or mockups
+      description: Optional but encouraged — drag and drop an image here. Hand-drawn on paper and photographed is great.
