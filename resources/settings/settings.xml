@@ -9,4 +9,10 @@
     <setting propertyKey="@Properties.vibeEnabled" title="@Strings.SettingVibeEnabled">
         <settingConfig type="boolean"/>
     </setting>
+    <setting propertyKey="@Properties.beatVibeStrength" title="@Strings.SettingBeatVibeStrength">
+        <settingConfig type="numeric" min="10" max="100"/>
+    </setting>
+    <setting propertyKey="@Properties.softBeep" title="@Strings.SettingSoftBeep">
+        <settingConfig type="boolean"/>
+    </setting>
 </settings>

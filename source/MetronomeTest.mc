@@ -52,6 +52,23 @@ function testAdjustBpmDoesNotCrossLimits(logger as Test.Logger) as Boolean {
 }
 
 (:test)
+function testVibeStrengthDefaultsTo50(logger as Test.Logger) as Boolean {
+    var m = new Metronome();
+    Test.assertEqualMessage(m.getVibeStrength(), 50, "default vibe strength should be 50");
+    return true;
+}
+
+(:test)
+function testVibeStrengthClampsToPerceptibleFloor(logger as Test.Logger) as Boolean {
+    var m = new Metronome();
+    m.setVibeStrength(0);
+    Test.assertEqualMessage(m.getVibeStrength(), 10, "strength should clamp to 10");
+    m.setVibeStrength(999);
+    Test.assertEqualMessage(m.getVibeStrength(), 100, "strength should clamp to 100");
+    return true;
+}
+
+(:test)
 function testMetronomeStartsAndStops(logger as Test.Logger) as Boolean {
     var m = new Metronome();
     Test.assertMessage(!m.isRunning(), "should not run before start");
