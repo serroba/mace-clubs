@@ -53,6 +53,16 @@ monkey-c-formatter source        # format in place
 monkey-c-linter --fix source     # lint with auto-fixes
 ```
 
+### Releases
+
+Pushing a `v*` tag builds the store-ready `.iq` (signed with the developer key from
+the `CIQ_DEVELOPER_KEY` repo secret) plus an Instinct 3 sideload `.prg`, and attaches
+both to a GitHub Release:
+
+```sh
+git tag v0.1.0 && git push origin v0.1.0
+```
+
 ## Workflow
 
 - Small, focused PRs — one feature or concern per PR, stacked when they depend on each other.

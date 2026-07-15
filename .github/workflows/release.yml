@@ -1,0 +1,46 @@
+name: Release
+
+permissions:
+  contents: write
+
+on:
+  push:
+    tags: ['v*']
+
+jobs:
+  release:
+    name: Build and publish .iq package
+    runs-on: ubuntu-latest
+    container:
+      image: ghcr.io/matco/connectiq-tester:latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Restore signing key
+        env:
+          CIQ_DEVELOPER_KEY: ${{ secrets.CIQ_DEVELOPER_KEY }}
+        run: |
+          test -n "$CIQ_DEVELOPER_KEY" || { echo "::error::CIQ_DEVELOPER_KEY secret is not set"; exit 1; }
+          echo "$CIQ_DEVELOPER_KEY" | base64 -d > /tmp/developer_key.der
+
+      - name: Build store package (.iq, all manifest devices)
+        run: |
+          mkdir -p dist
+          monkeyc -f monkey.jungle -e -r -o dist/mace-clubs.iq -y /tmp/developer_key.der
+
+      - name: Build Instinct 3 Solar sideload binary
+        run: |
+          monkeyc -f monkey.jungle -d instinct3solar45mm -r \
+            -o dist/mace-clubs-instinct3solar.prg -y /tmp/developer_key.der
+
+      - name: Shred signing key
+        if: always()
+        run: rm -f /tmp/developer_key.der
+
+      - name: Publish GitHub release
+        uses: softprops/action-gh-release@v2
+        with:
+          generate_release_notes: true
+          files: |
+            dist/mace-clubs.iq
+            dist/mace-clubs-instinct3solar.prg
