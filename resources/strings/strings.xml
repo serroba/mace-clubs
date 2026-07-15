@@ -9,4 +9,8 @@
     <string id="SettingCustomSets">Custom workout: sets</string>
     <string id="SettingCustomWork">Custom workout: work (seconds)</string>
     <string id="SettingCustomRest">Custom workout: rest (seconds)</string>
+    <string id="SettingBeatsPerRound">Beats per round (movement loop)</string>
+    <string id="SettingCircleShows">Instinct circle shows</string>
+    <string id="CircleRounds">Rounds</string>
+    <string id="CircleHeartRate">Heart rate</string>
 </strings>

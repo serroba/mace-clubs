@@ -18,7 +18,7 @@ class MaceClubsApp extends Application.AppBase {
     function onSettingsChanged() as Void {
         var view = _view;
         if (view != null) {
-            view.metronome.loadSettings();
+            view.loadSettings();
         }
         WatchUi.requestUpdate();
     }

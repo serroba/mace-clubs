@@ -24,4 +24,13 @@
     <setting propertyKey="@Properties.customRestSecs" title="@Strings.SettingCustomRest">
         <settingConfig type="numeric" min="0" max="3600"/>
     </setting>
+    <setting propertyKey="@Properties.beatsPerRound" title="@Strings.SettingBeatsPerRound">
+        <settingConfig type="numeric" min="1" max="16"/>
+    </setting>
+    <setting propertyKey="@Properties.circleShows" title="@Strings.SettingCircleShows">
+        <settingConfig type="list">
+            <listEntry value="0">@Strings.CircleRounds</listEntry>
+            <listEntry value="1">@Strings.CircleHeartRate</listEntry>
+        </settingConfig>
+    </setting>
 </settings>
