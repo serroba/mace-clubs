@@ -96,6 +96,17 @@ function testResetBeatCountClearsRounds(logger as Test.Logger) as Boolean {
 }
 
 (:test)
+function testRoundStartMarksDownbeats(logger as Test.Logger) as Boolean {
+    var m = new Metronome(); // default 4 beats per round
+    Test.assertMessage(m.isRoundStart(1), "beat 1 starts round 1");
+    Test.assertMessage(!m.isRoundStart(2), "beat 2 is not a downbeat");
+    Test.assertMessage(!m.isRoundStart(4), "beat 4 is not a downbeat");
+    Test.assertMessage(m.isRoundStart(5), "beat 5 starts round 2");
+    Test.assertMessage(m.isRoundStart(9), "beat 9 starts round 3");
+    return true;
+}
+
+(:test)
 function testMetronomeStartsAndStops(logger as Test.Logger) as Boolean {
     var m = new Metronome();
     Test.assertMessage(!m.isRunning(), "should not run before start");

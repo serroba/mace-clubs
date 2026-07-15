@@ -10,4 +10,5 @@
     <property id="customRestSecs" type="number">60</property>
     <property id="beatsPerRound" type="number">4</property>
     <property id="circleShows" type="number">0</property>
+    <property id="accentEnabled" type="boolean">true</property>
 </properties>
