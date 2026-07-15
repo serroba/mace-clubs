@@ -2,8 +2,9 @@
 
 [![CI](https://github.com/serroba/mace-clubs/actions/workflows/ci.yml/badge.svg)](https://github.com/serroba/mace-clubs/actions/workflows/ci.yml)
 
-A Garmin Connect IQ workout app for steel mace and Indian club training, targeting the
-**Instinct 3 Solar** (45mm / 50mm).
+A Garmin Connect IQ workout app for steel mace and Indian club training. Primary
+target is the **Instinct 3 Solar**; the manifest supports 120 Garmin wearables
+(Connect IQ API 3.1+), and CI compiles every one of them.
 
 ## Features
 
