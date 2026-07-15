@@ -3,11 +3,15 @@ import Toybox.Test;
 
 // Run with: monkeydo bin/mace-clubs.prg instinct3solar45mm -t
 // (build with `monkeyc ... --unit-test` first)
+//
+// Limits are asserted as literals (20/240/50) rather than through the
+// class constants: Monkey C does not expose class consts as static
+// symbols, and the literals pin the documented contract anyway.
 
 (:test)
 function testDefaultBpmIs50(logger as Test.Logger) as Boolean {
     var m = new Metronome();
-    Test.assertEqualMessage(m.getBpm(), Metronome.DEFAULT_BPM, "default bpm should be 50");
+    Test.assertEqualMessage(m.getBpm(), 50, "default bpm should be 50");
     return true;
 }
 
@@ -15,7 +19,7 @@ function testDefaultBpmIs50(logger as Test.Logger) as Boolean {
 function testBpmClampsToMinimum(logger as Test.Logger) as Boolean {
     var m = new Metronome();
     m.setBpm(5);
-    Test.assertEqualMessage(m.getBpm(), Metronome.MIN_BPM, "bpm should clamp to minimum");
+    Test.assertEqualMessage(m.getBpm(), 20, "bpm should clamp to minimum");
     return true;
 }
 
@@ -23,7 +27,7 @@ function testBpmClampsToMinimum(logger as Test.Logger) as Boolean {
 function testBpmClampsToMaximum(logger as Test.Logger) as Boolean {
     var m = new Metronome();
     m.setBpm(999);
-    Test.assertEqualMessage(m.getBpm(), Metronome.MAX_BPM, "bpm should clamp to maximum");
+    Test.assertEqualMessage(m.getBpm(), 240, "bpm should clamp to maximum");
     return true;
 }
 
@@ -41,9 +45,9 @@ function testAdjustBpmMovesInSteps(logger as Test.Logger) as Boolean {
 (:test)
 function testAdjustBpmDoesNotCrossLimits(logger as Test.Logger) as Boolean {
     var m = new Metronome();
-    m.setBpm(Metronome.MIN_BPM);
+    m.setBpm(20);
     m.adjustBpm(-1);
-    Test.assertEqualMessage(m.getBpm(), Metronome.MIN_BPM, "adjust below min should stay at min");
+    Test.assertEqualMessage(m.getBpm(), 20, "adjust below min should stay at min");
     return true;
 }
 
