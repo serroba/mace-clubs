@@ -4,4 +4,6 @@
     <string id="SettingDefaultBpm">Default tempo (bpm)</string>
     <string id="SettingToneEnabled">Beep on beat</string>
     <string id="SettingVibeEnabled">Vibrate on beat</string>
+    <string id="SettingBeatVibeStrength">Beat vibration strength (10-100)</string>
+    <string id="SettingSoftBeep">Soft beep (quieter tone)</string>
 </strings>

@@ -3,4 +3,6 @@
     <property id="defaultBpm" type="number">50</property>
     <property id="toneEnabled" type="boolean">true</property>
     <property id="vibeEnabled" type="boolean">true</property>
+    <property id="beatVibeStrength" type="number">50</property>
+    <property id="softBeep" type="boolean">true</property>
 </properties>

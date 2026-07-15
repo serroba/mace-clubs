@@ -12,6 +12,8 @@ class Metronome {
     const MAX_BPM = 240;
     const BPM_STEP = 5;
     const DEFAULT_BPM = 50;
+    const MIN_VIBE = 10;
+    const MAX_VIBE = 100;
 
     private var _timer as Timer.Timer;
     private var _bpm as Number = DEFAULT_BPM;
@@ -20,6 +22,8 @@ class Metronome {
     private var _running as Boolean = false;
     private var _toneEnabled as Boolean = true;
     private var _vibeEnabled as Boolean = true;
+    private var _vibeStrength as Number = 50;
+    private var _softTone as Boolean = true;
 
     function initialize() {
         _timer = new Timer.Timer();
@@ -43,8 +47,32 @@ class Metronome {
             if (vibe instanceof Boolean) {
                 _vibeEnabled = vibe;
             }
+            var strength = Application.Properties.getValue("beatVibeStrength");
+            if (strength instanceof Number) {
+                setVibeStrength(strength);
+            }
+            var soft = Application.Properties.getValue("softBeep");
+            if (soft instanceof Boolean) {
+                _softTone = soft;
+            }
         } catch (e) {
         }
+    }
+
+    function getVibeStrength() as Number {
+        return _vibeStrength;
+    }
+
+    // Vibration duty cycle for the beat pulse. Floor of MIN_VIBE keeps a
+    // configured beat from becoming imperceptible; use the vibration
+    // toggle to silence it entirely.
+    function setVibeStrength(strength as Number) as Void {
+        if (strength < MIN_VIBE) {
+            strength = MIN_VIBE;
+        } else if (strength > MAX_VIBE) {
+            strength = MAX_VIBE;
+        }
+        _vibeStrength = strength;
     }
 
     function getBpm() as Number {
@@ -98,10 +126,12 @@ class Metronome {
 
     private function playCue() as Void {
         if (_toneEnabled && (Attention has :playTone)) {
-            Attention.playTone(Attention.TONE_LOUD_BEEP);
+            // tone volume is not controllable from CIQ (it follows the
+            // system sound setting); TONE_KEY is the softest cue available
+            Attention.playTone(_softTone ? Attention.TONE_KEY : Attention.TONE_LOUD_BEEP);
         }
         if (_vibeEnabled && (Attention has :vibrate)) {
-            Attention.vibrate([new Attention.VibeProfile(80, 100)]);
+            Attention.vibrate([new Attention.VibeProfile(_vibeStrength, 100)]);
         }
     }
 }
