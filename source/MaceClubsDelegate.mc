@@ -4,7 +4,7 @@ import Toybox.WatchUi;
 // Instinct 3 controls:
 //   SELECT (top right)  - start workout / mark a set / (paused) save & exit
 //   BACK (bottom right) - pause / (paused) resume / (idle) quit
-//   UP / DOWN (left)    - adjust tempo in 5 bpm steps
+//   UP / DOWN (left)    - idle: choose workout preset; in workout: tempo +-5 bpm
 class MaceClubsDelegate extends WatchUi.BehaviorDelegate {
 
     private var _view as MaceClubsView;
@@ -47,13 +47,21 @@ class MaceClubsDelegate extends WatchUi.BehaviorDelegate {
     }
 
     function onPreviousPage() as Boolean {
-        _view.metronome.adjustBpm(1);
+        if (_view.workout.isStarted()) {
+            _view.metronome.adjustBpm(1);
+        } else {
+            _view.cyclePreset(-1);
+        }
         WatchUi.requestUpdate();
         return true;
     }
 
     function onNextPage() as Boolean {
-        _view.metronome.adjustBpm(-1);
+        if (_view.workout.isStarted()) {
+            _view.metronome.adjustBpm(-1);
+        } else {
+            _view.cyclePreset(1);
+        }
         WatchUi.requestUpdate();
         return true;
     }
