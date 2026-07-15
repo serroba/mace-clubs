@@ -42,6 +42,17 @@ monkeyc -f monkey.jungle -d instinct3solar45mm -o bin/mace-clubs-test.prg -y /pa
 monkeydo bin/mace-clubs-test.prg instinct3solar45mm -t
 ```
 
+### Formatting and linting
+
+Source is formatted with [monkey-c-formatter and linted with monkey-c-linter](https://github.com/bombsimon/monkey-c-rs)
+(install with `cargo install --git https://github.com/bombsimon/monkey-c-rs monkey-c-formatter monkey-c-linter`).
+CI enforces both:
+
+```sh
+monkey-c-formatter source        # format in place
+monkey-c-linter --fix source     # lint with auto-fixes
+```
+
 ## Workflow
 
 - Small, focused PRs — one feature or concern per PR, stacked when they depend on each other.

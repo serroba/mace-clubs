@@ -12,7 +12,6 @@ import Toybox.WatchUi;
 // shapes (round, rectangle) get centered top anchors, which stay inside a
 // round screen's visible chord.
 class MaceClubsView extends WatchUi.View {
-
     var metronome as Metronome;
     var workout as WorkoutSession;
     var paused as Boolean = false;
@@ -33,8 +32,7 @@ class MaceClubsView extends WatchUi.View {
         _refreshTimer = new Timer.Timer();
         _icon = WatchUi.loadResource(Rez.Drawables.LauncherIcon) as WatchUi.BitmapResource;
         if (System has :SCREEN_SHAPE_SEMI_OCTAGON) {
-            _subwindow =
-                System.getDeviceSettings().screenShape == System.SCREEN_SHAPE_SEMI_OCTAGON;
+            _subwindow = System.getDeviceSettings().screenShape == System.SCREEN_SHAPE_SEMI_OCTAGON;
         }
     }
 
@@ -66,8 +64,7 @@ class MaceClubsView extends WatchUi.View {
         var preset = selectedPreset();
         var sets = preset[:sets] as Number;
         if (sets > 0) {
-            plan = new Intervals.Plan(sets, preset[:work] as Number,
-                preset[:rest] as Number);
+            plan = new Intervals.Plan(sets, preset[:work] as Number, preset[:rest] as Number);
         } else {
             plan = null;
         }
@@ -96,7 +93,7 @@ class MaceClubsView extends WatchUi.View {
         var oldSet = _lastSet;
         _lastPhase = phase;
         _lastSet = set;
-        if (oldPhase == null || (phase == oldPhase && set == oldSet)) {
+        if (oldPhase == null || phase == oldPhase && set == oldSet) {
             return;
         }
         onPlanTransition(oldPhase as Number, phase);
@@ -126,8 +123,7 @@ class MaceClubsView extends WatchUi.View {
 
     private function playTransitionCue(finished as Boolean) as Void {
         if (Attention has :playTone) {
-            Attention.playTone(finished
-                ? Attention.TONE_SUCCESS : Attention.TONE_INTERVAL_ALERT);
+            Attention.playTone(finished ? Attention.TONE_SUCCESS : Attention.TONE_INTERVAL_ALERT);
         }
         if (Attention has :vibrate) {
             Attention.vibrate([new Attention.VibeProfile(100, 400)]);
@@ -147,13 +143,22 @@ class MaceClubsView extends WatchUi.View {
         var h = dc.getHeight();
 
         if (paused) {
-            dc.drawText(cx, h * 38 / 100, Graphics.FONT_MEDIUM,
-                done ? "DONE!" : "PAUSED", Graphics.TEXT_JUSTIFY_CENTER);
-            dc.drawText(cx, h * 56 / 100, Graphics.FONT_SMALL, "SELECT: save",
-                Graphics.TEXT_JUSTIFY_CENTER);
+            dc.drawText(
+                cx,
+                h * 38 / 100,
+                Graphics.FONT_MEDIUM,
+                done ? "DONE!" : "PAUSED",
+                Graphics.TEXT_JUSTIFY_CENTER
+            );
+            dc.drawText(cx, h * 56 / 100, Graphics.FONT_SMALL, "SELECT: save", Graphics.TEXT_JUSTIFY_CENTER);
             if (!done) {
-                dc.drawText(cx, h * 71 / 100, Graphics.FONT_SMALL, "BACK: resume",
-                    Graphics.TEXT_JUSTIFY_CENTER);
+                dc.drawText(
+                    cx,
+                    h * 71 / 100,
+                    Graphics.FONT_SMALL,
+                    "BACK: resume",
+                    Graphics.TEXT_JUSTIFY_CENTER
+                );
             }
             return;
         }
@@ -166,15 +171,22 @@ class MaceClubsView extends WatchUi.View {
                 iconY = 2;
             }
             dc.drawBitmap(_subwindow ? cx - 45 : cx - 31, iconY, _icon);
-            dc.drawText(cx, h * 38 / 100, Graphics.FONT_MEDIUM,
-                selectedPreset()[:label] as String, Graphics.TEXT_JUSTIFY_CENTER);
-            dc.drawText(cx, h * 54 / 100, Graphics.FONT_TINY, "UP/DOWN: workout",
-                Graphics.TEXT_JUSTIFY_CENTER);
-            dc.drawText(cx, h * 66 / 100, Graphics.FONT_TINY,
+            dc.drawText(
+                cx,
+                h * 38 / 100,
+                Graphics.FONT_MEDIUM,
+                selectedPreset()[:label] as String,
+                Graphics.TEXT_JUSTIFY_CENTER
+            );
+            dc.drawText(cx, h * 54 / 100, Graphics.FONT_TINY, "UP/DOWN: workout", Graphics.TEXT_JUSTIFY_CENTER);
+            dc.drawText(
+                cx,
+                h * 66 / 100,
+                Graphics.FONT_TINY,
                 Lang.format("$1$ bpm", [metronome.getBpm()]),
-                Graphics.TEXT_JUSTIFY_CENTER);
-            dc.drawText(cx, h * 78 / 100, Graphics.FONT_SMALL, "SELECT to start",
-                Graphics.TEXT_JUSTIFY_CENTER);
+                Graphics.TEXT_JUSTIFY_CENTER
+            );
+            dc.drawText(cx, h * 78 / 100, Graphics.FONT_SMALL, "SELECT to start", Graphics.TEXT_JUSTIFY_CENTER);
             return;
         }
 
@@ -194,41 +206,68 @@ class MaceClubsView extends WatchUi.View {
             // Interval workout: phase + countdown drive the screen
             var s = p.stateAt(timerMs);
             var phase = s[:phase] as Number;
-            dc.drawText(_subwindow ? w * 5 / 100 : cx, h * 6 / 100, Graphics.FONT_TINY,
+            dc.drawText(
+                _subwindow ? w * 5 / 100 : cx,
+                h * 6 / 100,
+                Graphics.FONT_TINY,
                 formatSecs(timerMs / 1000),
-                _subwindow ? Graphics.TEXT_JUSTIFY_LEFT : Graphics.TEXT_JUSTIFY_CENTER);
-            dc.drawText(cx, h * 30 / 100, Graphics.FONT_SMALL,
-                Lang.format("SET $1$/$2$  $3$", [s[:set], p.getSets(),
-                    phase == Intervals.PHASE_REST ? "REST" : "WORK"]),
-                Graphics.TEXT_JUSTIFY_CENTER);
-            dc.drawText(cx, h * 40 / 100, Graphics.FONT_NUMBER_HOT,
-                formatSecs(s[:remaining] as Number), Graphics.TEXT_JUSTIFY_CENTER);
-            dc.drawText(cx - 35, h * 72 / 100, Graphics.FONT_MEDIUM,
-                metronome.getBpm().toString(), Graphics.TEXT_JUSTIFY_CENTER);
-            dc.drawText(cx - 35, h * 87 / 100, Graphics.FONT_TINY, "bpm",
-                Graphics.TEXT_JUSTIFY_CENTER);
-            dc.drawText(cx + 35, h * 72 / 100, Graphics.FONT_MEDIUM, hr,
-                Graphics.TEXT_JUSTIFY_CENTER);
-            dc.drawText(cx + 35, h * 87 / 100, Graphics.FONT_TINY, "hr",
-                Graphics.TEXT_JUSTIFY_CENTER);
+                _subwindow ? Graphics.TEXT_JUSTIFY_LEFT : Graphics.TEXT_JUSTIFY_CENTER
+            );
+            dc.drawText(
+                cx,
+                h * 30 / 100,
+                Graphics.FONT_SMALL,
+                Lang.format(
+                    "SET $1$/$2$  $3$",
+                    [s[:set], p.getSets(), phase == Intervals.PHASE_REST ? "REST" : "WORK"]
+                ),
+                Graphics.TEXT_JUSTIFY_CENTER
+            );
+            dc.drawText(
+                cx,
+                h * 40 / 100,
+                Graphics.FONT_NUMBER_HOT,
+                formatSecs(s[:remaining] as Number),
+                Graphics.TEXT_JUSTIFY_CENTER
+            );
+            dc.drawText(
+                cx - 35,
+                h * 72 / 100,
+                Graphics.FONT_MEDIUM,
+                metronome.getBpm().toString(),
+                Graphics.TEXT_JUSTIFY_CENTER
+            );
+            dc.drawText(cx - 35, h * 87 / 100, Graphics.FONT_TINY, "bpm", Graphics.TEXT_JUSTIFY_CENTER);
+            dc.drawText(cx + 35, h * 72 / 100, Graphics.FONT_MEDIUM, hr, Graphics.TEXT_JUSTIFY_CENTER);
+            dc.drawText(cx + 35, h * 87 / 100, Graphics.FONT_TINY, "hr", Graphics.TEXT_JUSTIFY_CENTER);
             return;
         }
 
         // Free training: big tempo, manual set counter
-        dc.drawText(_subwindow ? w * 5 / 100 : cx, h * 6 / 100, Graphics.FONT_MEDIUM,
+        dc.drawText(
+            _subwindow ? w * 5 / 100 : cx,
+            h * 6 / 100,
+            Graphics.FONT_MEDIUM,
             formatSecs(timerMs / 1000),
-            _subwindow ? Graphics.TEXT_JUSTIFY_LEFT : Graphics.TEXT_JUSTIFY_CENTER);
-        dc.drawText(cx, h * 32 / 100, Graphics.FONT_NUMBER_HOT,
-            metronome.getBpm().toString(), Graphics.TEXT_JUSTIFY_CENTER);
-        dc.drawText(cx, h * 56 / 100, Graphics.FONT_TINY, "bpm",
-            Graphics.TEXT_JUSTIFY_CENTER);
-        dc.drawText(cx - 30, h * 68 / 100, Graphics.FONT_MEDIUM,
-            workout.getSets().toString(), Graphics.TEXT_JUSTIFY_CENTER);
-        dc.drawText(cx - 30, h * 84 / 100, Graphics.FONT_TINY, "sets",
-            Graphics.TEXT_JUSTIFY_CENTER);
-        dc.drawText(cx + 30, h * 68 / 100, Graphics.FONT_MEDIUM, hr,
-            Graphics.TEXT_JUSTIFY_CENTER);
-        dc.drawText(cx + 30, h * 84 / 100, Graphics.FONT_TINY, "hr",
-            Graphics.TEXT_JUSTIFY_CENTER);
+            _subwindow ? Graphics.TEXT_JUSTIFY_LEFT : Graphics.TEXT_JUSTIFY_CENTER
+        );
+        dc.drawText(
+            cx,
+            h * 32 / 100,
+            Graphics.FONT_NUMBER_HOT,
+            metronome.getBpm().toString(),
+            Graphics.TEXT_JUSTIFY_CENTER
+        );
+        dc.drawText(cx, h * 56 / 100, Graphics.FONT_TINY, "bpm", Graphics.TEXT_JUSTIFY_CENTER);
+        dc.drawText(
+            cx - 30,
+            h * 68 / 100,
+            Graphics.FONT_MEDIUM,
+            workout.getSets().toString(),
+            Graphics.TEXT_JUSTIFY_CENTER
+        );
+        dc.drawText(cx - 30, h * 84 / 100, Graphics.FONT_TINY, "sets", Graphics.TEXT_JUSTIFY_CENTER);
+        dc.drawText(cx + 30, h * 68 / 100, Graphics.FONT_MEDIUM, hr, Graphics.TEXT_JUSTIFY_CENTER);
+        dc.drawText(cx + 30, h * 84 / 100, Graphics.FONT_TINY, "hr", Graphics.TEXT_JUSTIFY_CENTER);
     }
 }

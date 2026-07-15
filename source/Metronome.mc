@@ -7,7 +7,6 @@ import Toybox.Timer;
 // Beat timer that re-anchors against System.getTimer() every beat,
 // so the tempo does not drift over a long session.
 class Metronome {
-
     const MIN_BPM = 20;
     const MAX_BPM = 240;
     const BPM_STEP = 5;
@@ -55,8 +54,7 @@ class Metronome {
             if (soft instanceof Boolean) {
                 _softTone = soft;
             }
-        } catch (e) {
-        }
+        } catch (e) {}
     }
 
     function getVibeStrength() as Number {
@@ -125,12 +123,12 @@ class Metronome {
     }
 
     private function playCue() as Void {
-        if (_toneEnabled && (Attention has :playTone)) {
+        if (_toneEnabled && Attention has :playTone) {
             // tone volume is not controllable from CIQ (it follows the
             // system sound setting); TONE_KEY is the softest cue available
             Attention.playTone(_softTone ? Attention.TONE_KEY : Attention.TONE_LOUD_BEEP);
         }
-        if (_vibeEnabled && (Attention has :vibrate)) {
+        if (_vibeEnabled && Attention has :vibrate) {
             Attention.vibrate([new Attention.VibeProfile(_vibeStrength, 100)]);
         }
     }

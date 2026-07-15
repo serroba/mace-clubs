@@ -7,7 +7,6 @@ import Toybox.System;
 
 // Wraps the FIT recording session and custom developer fields.
 class WorkoutSession {
-
     const FIELD_ID_SETS = 0;
 
     private var _session as ActivityRecording.Session?;
@@ -30,14 +29,19 @@ class WorkoutSession {
 
     function start() as Void {
         if (_session == null) {
-            var session = ActivityRecording.createSession({
-                :name => "Mace & Clubs",
-                :sport => Activity.SPORT_TRAINING,
-                :subSport => Activity.SUB_SPORT_STRENGTH_TRAINING
-            });
-            _setsField = session.createField("total_sets", FIELD_ID_SETS,
+            var session = ActivityRecording.createSession(
+                {
+                    :name     => "Mace & Clubs",
+                    :sport    => Activity.SPORT_TRAINING,
+                    :subSport => Activity.SUB_SPORT_STRENGTH_TRAINING
+                }
+            );
+            _setsField = session.createField(
+                "total_sets",
+                FIELD_ID_SETS,
                 FitContributor.DATA_TYPE_UINT16,
-                { :mesgType => FitContributor.MESG_TYPE_SESSION, :units => "sets" });
+                {:mesgType => FitContributor.MESG_TYPE_SESSION, :units => "sets"}
+            );
             _session = session;
         }
         (_session as ActivityRecording.Session).start();
@@ -66,11 +70,13 @@ class WorkoutSession {
             field.setData(_sets);
         }
         if (Attention has :vibrate) {
-            Attention.vibrate([
-                new Attention.VibeProfile(100, 80),
-                new Attention.VibeProfile(0, 80),
-                new Attention.VibeProfile(100, 80)
-            ]);
+            Attention.vibrate(
+                [
+                    new Attention.VibeProfile(100, 80),
+                    new Attention.VibeProfile(0, 80),
+                    new Attention.VibeProfile(100, 80)
+                ]
+            );
         }
     }
 

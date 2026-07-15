@@ -4,13 +4,11 @@ import Toybox.Lang;
 // State is derived purely from the FIT timer time, so pausing the
 // session (which freezes the timer) freezes the plan for free.
 module Intervals {
-
     const PHASE_WORK = 0;
     const PHASE_REST = 1;
     const PHASE_DONE = 2;
 
     class Plan {
-
         private var _sets as Number;
         private var _workSecs as Number;
         private var _restSecs as Number;
@@ -33,7 +31,7 @@ module Intervals {
             var set = t / cycle;
             var within = t - set * cycle;
 
-            if (set >= _sets || (set == _sets - 1 && within >= _workSecs)) {
+            if (set >= _sets || set == _sets - 1 && within >= _workSecs) {
                 return {:phase => PHASE_DONE, :set => _sets, :remaining => 0};
             }
             if (within < _workSecs) {
