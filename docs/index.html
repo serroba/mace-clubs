@@ -1,0 +1,222 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Mace and Clubs — Garmin Connect IQ app</title>
+<meta name="description" content="A metronome-driven workout app for steel mace and Indian club training on the Garmin Instinct 3.">
+<style>
+  :root {
+    --bg: #0e0f11;
+    --panel: #17191d;
+    --ink: #e8e6e1;
+    --muted: #9a978f;
+    --accent: #ff5a1f;
+    --line: #2a2d33;
+    --mono: "SF Mono", ui-monospace, Menlo, Consolas, monospace;
+  }
+  @media (prefers-color-scheme: light) {
+    :root {
+      --bg: #f6f5f2;
+      --panel: #ffffff;
+      --ink: #1c1c1a;
+      --muted: #6b6963;
+      --line: #e2e0da;
+    }
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    background: var(--bg); color: var(--ink);
+    font: 17px/1.65 -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  }
+  .wrap { max-width: 980px; margin: 0 auto; padding: 0 24px; }
+  header { padding: 72px 0 48px; }
+  .hero { display: flex; gap: 48px; align-items: center; flex-wrap: wrap; }
+  .hero-copy { flex: 1 1 340px; }
+  h1 { font-size: 2.6rem; line-height: 1.15; letter-spacing: -0.02em; }
+  h1 .amp { color: var(--accent); }
+  .tagline { margin-top: 14px; font-size: 1.15rem; color: var(--muted); max-width: 46ch; }
+  .badges { margin-top: 22px; display: flex; gap: 10px; flex-wrap: wrap; align-items: center; }
+  .btn {
+    display: inline-block; padding: 10px 18px; border-radius: 8px;
+    text-decoration: none; font-weight: 600; font-size: 0.95rem;
+  }
+  .btn-primary { background: var(--accent); color: #fff; }
+  .btn-ghost { border: 1px solid var(--line); color: var(--ink); }
+  .btn:hover { filter: brightness(1.1); }
+
+  /* Watch mockup */
+  .watch { flex: 0 0 auto; margin: 0 auto; }
+  .bezel {
+    width: 280px; height: 280px; border-radius: 50%;
+    background: #26282c;
+    border: 10px solid #3a3d42;
+    box-shadow: 0 20px 60px rgba(0,0,0,.45), inset 0 0 0 6px #1a1c1f;
+    display: flex; align-items: center; justify-content: center;
+    position: relative;
+  }
+  .bezel::before, .bezel::after {
+    content: ""; position: absolute; left: 50%; transform: translateX(-50%);
+    width: 74px; height: 12px; border-radius: 4px; background: var(--accent);
+  }
+  .bezel::before { top: -4px; }
+  .bezel::after { bottom: -4px; }
+  .face {
+    width: 210px; height: 210px; border-radius: 50%;
+    background: #101112; color: #f2f0ea;
+    position: relative; overflow: hidden;
+    font-family: var(--mono); text-align: center;
+    display: flex; flex-direction: column; justify-content: center;
+    text-transform: uppercase;
+  }
+  .subwindow {
+    position: absolute; top: 8px; right: 14px;
+    width: 64px; height: 64px; border-radius: 50%;
+    background: #060607;
+    border: 3px solid #2c2f34;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 20px; line-height: 1;
+  }
+  .face .app { font-size: 11px; letter-spacing: .14em; color: #b9b6ae; position: absolute; top: 18px; left: 20px; }
+  .face .preset { font-size: 15px; font-weight: 700; margin-top: 26px; }
+  .face .hint { font-size: 10px; color: #8f8c85; margin-top: 10px; letter-spacing: .1em; }
+  .face .bpm { font-size: 12px; margin-top: 8px; color: #b9b6ae; }
+  .face .go { font-size: 13px; margin-top: 12px; font-weight: 700; }
+
+  section { padding: 40px 0; border-top: 1px solid var(--line); }
+  h2 { font-size: 1.5rem; margin-bottom: 20px; letter-spacing: -0.01em; }
+  .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); gap: 16px; }
+  .card {
+    background: var(--panel); border: 1px solid var(--line); border-radius: 12px;
+    padding: 20px;
+  }
+  .card h3 { font-size: 1.02rem; margin-bottom: 8px; }
+  .card h3 .dot { color: var(--accent); }
+  .card p { font-size: 0.93rem; color: var(--muted); }
+
+  .table-scroll { overflow-x: auto; }
+  table { border-collapse: collapse; width: 100%; font-size: 0.93rem; min-width: 520px; }
+  th, td { text-align: left; padding: 10px 14px; border-bottom: 1px solid var(--line); }
+  th { color: var(--muted); font-weight: 600; }
+  td:first-child { font-family: var(--mono); font-size: 0.85rem; white-space: nowrap; }
+
+  pre {
+    background: var(--panel); border: 1px solid var(--line); border-radius: 12px;
+    padding: 18px; overflow-x: auto; font-family: var(--mono); font-size: 0.82rem; line-height: 1.7;
+  }
+  code { font-family: var(--mono); font-size: 0.9em; }
+  p + p { margin-top: 10px; }
+  section p { color: var(--muted); max-width: 70ch; }
+  section p strong { color: var(--ink); }
+  a { color: var(--accent); }
+  footer { padding: 40px 0 64px; border-top: 1px solid var(--line); font-size: 0.85rem; color: var(--muted); }
+  footer p + p { margin-top: 8px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<header>
+  <div class="hero">
+    <div class="hero-copy">
+      <h1>Mace <span class="amp">&amp;</span> Clubs</h1>
+      <p class="tagline">A metronome-driven workout app for steel mace and Indian club
+        training. Swing on tempo, follow interval sets, and log it all to Garmin
+        Connect — built for the Garmin Instinct 3.</p>
+      <div class="badges">
+        <a class="btn btn-primary" href="https://github.com/serroba/mace-clubs">View on GitHub</a>
+        <a class="btn btn-ghost" href="#build">Build &amp; install</a>
+        <a href="https://github.com/serroba/mace-clubs/actions/workflows/ci.yml"><img
+          src="https://github.com/serroba/mace-clubs/actions/workflows/ci.yml/badge.svg" alt="CI status"></a>
+      </div>
+    </div>
+    <div class="watch" aria-hidden="true">
+      <div class="bezel">
+        <div class="face">
+          <div class="subwindow">🕐</div>
+          <div class="app">Mace &amp; Clubs</div>
+          <div class="preset">5 x 2:00 | 1:00</div>
+          <div class="hint">UP/DOWN: workout</div>
+          <div class="bpm">50 bpm</div>
+          <div class="go">Select to start</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</header>
+
+<section>
+  <h2>Features</h2>
+  <div class="grid">
+    <div class="card">
+      <h3><span class="dot">●</span> Tempo you can feel</h3>
+      <p>A drift-free metronome from 20 to 240 bpm with wrist vibration and tone on
+        every beat — you keep your 360s smooth without watching the screen.</p>
+    </div>
+    <div class="card">
+      <h3><span class="dot">●</span> Interval presets</h3>
+      <p>Pick a workout shape before you start: 5×2:00 with 1:00 or 2:00 rest,
+        3×2:00, EMOM-style 10×1:00, or free training. The watch calls work and
+        rest for you.</p>
+    </div>
+    <div class="card">
+      <h3><span class="dot">●</span> Real training data</h3>
+      <p>Sessions record as a named “Mace &amp; Clubs” strength activity in Garmin
+        Connect with heart rate, training load, and a per-session sets field in
+        the FIT file.</p>
+    </div>
+    <div class="card">
+      <h3><span class="dot">●</span> Set up from your phone</h3>
+      <p>Default tempo, beep, and vibration are app settings in Garmin Connect —
+        adjust them between sessions without touching watch menus.</p>
+    </div>
+  </div>
+</section>
+
+<section>
+  <h2>Controls</h2>
+  <div class="table-scroll">
+  <table>
+    <tr><th>Button</th><th>Idle</th><th>Recording</th><th>Paused</th></tr>
+    <tr><td>SELECT</td><td>Start workout</td><td>Mark a set</td><td>Save &amp; exit</td></tr>
+    <tr><td>BACK</td><td>Quit</td><td>Pause</td><td>Resume</td></tr>
+    <tr><td>UP / DOWN</td><td>Choose preset</td><td>Tempo ±5 bpm</td><td>—</td></tr>
+  </table>
+  </div>
+</section>
+
+<section id="build">
+  <h2>Build &amp; install</h2>
+  <p>The app targets the <strong>Instinct 3 Solar (45&nbsp;mm / 50&nbsp;mm)</strong> and isn’t
+    on the Connect IQ Store yet — for now you build from source with the
+    <a href="https://developer.garmin.com/connect-iq/sdk/">Connect IQ SDK</a>:</p>
+  <pre>git clone https://github.com/serroba/mace-clubs.git
+cd mace-clubs
+
+# build (developer key: see the README)
+monkeyc -f monkey.jungle -d instinct3solar45mm \
+        -o bin/mace-clubs.prg -y /path/to/developer_key
+
+# run in the simulator ...
+connectiq &amp;&amp; monkeydo bin/mace-clubs.prg instinct3solar45mm
+
+# ... or sideload: copy bin/mace-clubs.prg to GARMIN/APPS over USB</pre>
+</section>
+
+<section>
+  <h2>Open source</h2>
+  <p>MIT-licensed and developed in the open with small, test-first pull requests —
+    every change passes lint and simulator unit tests in CI before it merges.
+    Issues and ideas are welcome on
+    <a href="https://github.com/serroba/mace-clubs/issues">the tracker</a>.</p>
+</section>
+
+<footer>
+  <p>© 2026 Sebastian Machuca · MIT License</p>
+  <p>This is an independent project, not affiliated with or endorsed by Garmin Ltd.
+    Garmin, Instinct, and Connect IQ are trademarks of Garmin Ltd. or its subsidiaries.</p>
+</footer>
+
+</div>
+</body>
+</html>
