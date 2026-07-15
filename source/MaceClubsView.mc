@@ -2,13 +2,15 @@ import Toybox.Activity;
 import Toybox.Attention;
 import Toybox.Graphics;
 import Toybox.Lang;
+import Toybox.System;
 import Toybox.Timer;
 import Toybox.WatchUi;
 
-// Layout note: the Instinct 3 Solar has a physical subwindow cut-out in
-// the top-right corner (x >= 114, y <= 62 on the 45mm per personality.mss).
-// Pixels drawn there are not visible, so top-of-screen text is kept
-// left-aligned or pushed below it.
+// Layout notes: the Instinct family (semi-octagon screens) has a physical
+// subwindow cut-out in the top-right corner (x >= 114, y <= 62 on the 45mm
+// per personality.mss) - top text is left-aligned to avoid it. All other
+// shapes (round, rectangle) get centered top anchors, which stay inside a
+// round screen's visible chord.
 class MaceClubsView extends WatchUi.View {
 
     var metronome as Metronome;
@@ -22,6 +24,7 @@ class MaceClubsView extends WatchUi.View {
     private var _lastPhase as Number?;
     private var _lastSet as Number = 0;
     private var _icon as WatchUi.BitmapResource;
+    private var _subwindow as Boolean = false;
 
     function initialize() {
         View.initialize();
@@ -29,6 +32,10 @@ class MaceClubsView extends WatchUi.View {
         workout = new WorkoutSession();
         _refreshTimer = new Timer.Timer();
         _icon = WatchUi.loadResource(Rez.Drawables.LauncherIcon) as WatchUi.BitmapResource;
+        if (System has :SCREEN_SHAPE_SEMI_OCTAGON) {
+            _subwindow =
+                System.getDeviceSettings().screenShape == System.SCREEN_SHAPE_SEMI_OCTAGON;
+        }
     }
 
     function onShow() as Void {
@@ -152,8 +159,13 @@ class MaceClubsView extends WatchUi.View {
         }
 
         if (!workout.isStarted()) {
-            // crossed mace-and-club art, kept left of the subwindow cut-out
-            dc.drawBitmap(cx - 45, 2, _icon);
+            // crossed mace-and-club art above the preset label; on subwindow
+            // devices shifted left of the cut-out, elsewhere centered
+            var iconY = h * 38 / 100 - 70;
+            if (iconY < 2) {
+                iconY = 2;
+            }
+            dc.drawBitmap(_subwindow ? cx - 45 : cx - 31, iconY, _icon);
             dc.drawText(cx, h * 38 / 100, Graphics.FONT_MEDIUM,
                 selectedPreset()[:label] as String, Graphics.TEXT_JUSTIFY_CENTER);
             dc.drawText(cx, h * 54 / 100, Graphics.FONT_TINY, "UP/DOWN: workout",
@@ -182,8 +194,9 @@ class MaceClubsView extends WatchUi.View {
             // Interval workout: phase + countdown drive the screen
             var s = p.stateAt(timerMs);
             var phase = s[:phase] as Number;
-            dc.drawText(w * 5 / 100, h * 6 / 100, Graphics.FONT_TINY,
-                formatSecs(timerMs / 1000), Graphics.TEXT_JUSTIFY_LEFT);
+            dc.drawText(_subwindow ? w * 5 / 100 : cx, h * 6 / 100, Graphics.FONT_TINY,
+                formatSecs(timerMs / 1000),
+                _subwindow ? Graphics.TEXT_JUSTIFY_LEFT : Graphics.TEXT_JUSTIFY_CENTER);
             dc.drawText(cx, h * 30 / 100, Graphics.FONT_SMALL,
                 Lang.format("SET $1$/$2$  $3$", [s[:set], p.getSets(),
                     phase == Intervals.PHASE_REST ? "REST" : "WORK"]),
@@ -202,8 +215,9 @@ class MaceClubsView extends WatchUi.View {
         }
 
         // Free training: big tempo, manual set counter
-        dc.drawText(w * 5 / 100, h * 6 / 100, Graphics.FONT_MEDIUM,
-            formatSecs(timerMs / 1000), Graphics.TEXT_JUSTIFY_LEFT);
+        dc.drawText(_subwindow ? w * 5 / 100 : cx, h * 6 / 100, Graphics.FONT_MEDIUM,
+            formatSecs(timerMs / 1000),
+            _subwindow ? Graphics.TEXT_JUSTIFY_LEFT : Graphics.TEXT_JUSTIFY_CENTER);
         dc.drawText(cx, h * 32 / 100, Graphics.FONT_NUMBER_HOT,
             metronome.getBpm().toString(), Graphics.TEXT_JUSTIFY_CENTER);
         dc.drawText(cx, h * 56 / 100, Graphics.FONT_TINY, "bpm",

@@ -19,12 +19,51 @@ jobs:
           sudo apt-get update -q && sudo apt-get install -y -q libxml2-utils
           find . -name '*.xml' -not -path './.git/*' -print0 | xargs -0 -n1 xmllint --noout
 
-  test:
-    name: Build & unit tests (simulator)
+  build-all:
+    name: Build every manifest device
     runs-on: ubuntu-latest
+    container:
+      # same image the test job's action uses: monkeyc on PATH, device files preinstalled
+      image: ghcr.io/matco/connectiq-tester:latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Compile for each product in the manifest
+        shell: bash
+        run: |
+          openssl genrsa -out /tmp/key.pem 4096 2>/dev/null
+          openssl pkcs8 -topk8 -inform PEM -outform DER -in /tmp/key.pem -out /tmp/key.der -nocrypt
+          mkdir -p /tmp/sweep
+          fails=0; total=0
+          for d in $(grep -o 'product id="[^"]*"' manifest.xml | cut -d'"' -f2); do
+            total=$((total+1))
+            if ! monkeyc -f monkey.jungle -d "$d" -o "/tmp/sweep/$d.prg" -y /tmp/key.der -l 3 > "/tmp/sweep/$d.log" 2>&1; then
+              fails=$((fails+1))
+              echo "::error::build failed for $d"
+              cat "/tmp/sweep/$d.log"
+            fi
+          done
+          echo "$((total-fails))/$total devices build clean"
+          test "$fails" -eq 0
+
+  test:
+    name: Unit tests (${{ matrix.device }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        # one representative per screen shape / display tech / API generation
+        device:
+          - instinct3solar45mm   # semi-octagon MIP with subwindow (primary target)
+          - instinct2            # semi-octagon, CIQ 3.4, 96KB memory
+          - fenix5               # round MIP, CIQ 3.1 (oldest supported API)
+          - fenix7               # round MIP, CIQ 5.x
+          - fr965                # round AMOLED
+          - venu3                # round AMOLED, touch
+          - venusq               # rectangle
+          - vivoactive6          # newest API level 6
     steps:
       - uses: actions/checkout@v4
       - name: Compile and run unit tests
         uses: matco/action-connectiq-tester@v1
         with:
-          device: instinct3solar45mm
+          device: ${{ matrix.device }}
