@@ -13,6 +13,7 @@ class MaceClubsView extends WatchUi.View {
     var metronome as Metronome;
     var workout as WorkoutSession;
     var paused as Boolean = false;
+    var presetIndex as Number = 0;
 
     private var _refreshTimer as Timer.Timer;
 
@@ -33,6 +34,15 @@ class MaceClubsView extends WatchUi.View {
 
     function onRefresh() as Void {
         WatchUi.requestUpdate();
+    }
+
+    function selectedPreset() as Dictionary {
+        return Presets.LIST[presetIndex] as Dictionary;
+    }
+
+    function cyclePreset(dir as Number) as Void {
+        var n = Presets.LIST.size();
+        presetIndex = (presetIndex + dir + n) % n;
     }
 
     function onUpdate(dc as Dc) as Void {
@@ -56,11 +66,14 @@ class MaceClubsView extends WatchUi.View {
         if (!workout.isStarted()) {
             dc.drawText(w * 5 / 100, h * 6 / 100, Graphics.FONT_XTINY, "MACE & CLUBS",
                 Graphics.TEXT_JUSTIFY_LEFT);
-            dc.drawText(cx, h * 38 / 100, Graphics.FONT_NUMBER_HOT,
-                metronome.getBpm().toString(), Graphics.TEXT_JUSTIFY_CENTER);
-            dc.drawText(cx, h * 62 / 100, Graphics.FONT_TINY, "bpm  (UP/DOWN)",
+            dc.drawText(cx, h * 36 / 100, Graphics.FONT_MEDIUM,
+                selectedPreset()[:label] as String, Graphics.TEXT_JUSTIFY_CENTER);
+            dc.drawText(cx, h * 54 / 100, Graphics.FONT_TINY, "UP/DOWN: workout",
                 Graphics.TEXT_JUSTIFY_CENTER);
-            dc.drawText(cx, h * 76 / 100, Graphics.FONT_SMALL, "SELECT to start",
+            dc.drawText(cx, h * 66 / 100, Graphics.FONT_TINY,
+                Lang.format("$1$ bpm", [metronome.getBpm()]),
+                Graphics.TEXT_JUSTIFY_CENTER);
+            dc.drawText(cx, h * 78 / 100, Graphics.FONT_SMALL, "SELECT to start",
                 Graphics.TEXT_JUSTIFY_CENTER);
             return;
         }
