@@ -1,0 +1,41 @@
+name: Bug report
+description: Something isn't working right on the watch or in the simulator
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for taking the time to report this! **Please attach a screenshot** —
+        it's the fastest way to show what went wrong. A simulator screenshot or a
+        phone photo of the watch both work; drag and drop images into any text
+        field below.
+  - type: input
+    id: device
+    attributes:
+      label: Device
+      description: Which watch (or simulator device) did this happen on?
+      placeholder: e.g. Instinct 3 Solar 45mm, venu3 in the simulator
+    validations:
+      required: true
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: What happened?
+      description: What did you expect, and what happened instead?
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      placeholder: |
+        1. Select the 5 x 2:00 | 1:00 preset
+        2. Start the workout and pause during rest
+        3. ...
+    validations:
+      required: true
+  - type: textarea
+    id: screenshots
+    attributes:
+      label: Screenshots
+      description: Strongly recommended — drag and drop images here (simulator capture or a photo of the watch).
