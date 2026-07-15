@@ -127,6 +127,47 @@ function testEveryBeatCueModeCuesAll(logger as Test.Logger) as Boolean {
 }
 
 (:test)
+function testMixedPatternCountsRounds(logger as Test.Logger) as Boolean {
+    var m = new Metronome();
+    m.setPattern([4, 2] as Toybox.Lang.Array<Toybox.Lang.Number>);
+    m.start(); // beat 1
+    for (var i = 0; i < 5; i++) {
+        m.onBeat(); // beats 2..6: one full 4-2 cycle
+    }
+    Test.assertEqualMessage(m.getRounds(), 2, "4-2 cycle complete = 2 rounds");
+    for (var j = 0; j < 4; j++) {
+        m.onBeat(); // beats 7..10: loop A of cycle 2 done
+    }
+    m.stop();
+    Test.assertEqualMessage(m.getRounds(), 3, "next 4-beat loop = 3rd round");
+    return true;
+}
+
+(:test)
+function testMixedPatternRoundStarts(logger as Test.Logger) as Boolean {
+    var m = new Metronome();
+    m.setPattern([4, 2] as Toybox.Lang.Array<Toybox.Lang.Number>);
+    Test.assertMessage(m.isRoundStart(1), "beat 1 starts loop A");
+    Test.assertMessage(!m.isRoundStart(4), "beat 4 is inside loop A");
+    Test.assertMessage(m.isRoundStart(5), "beat 5 starts loop B");
+    Test.assertMessage(!m.isRoundStart(6), "beat 6 is inside loop B");
+    Test.assertMessage(m.isRoundStart(7), "beat 7 starts the next cycle");
+    Test.assertMessage(m.isRoundStart(11), "beat 11 starts loop B again");
+    return true;
+}
+
+(:test)
+function testMixedPatternRoundCues(logger as Test.Logger) as Boolean {
+    var m = new Metronome(); // default round-cue mode
+    m.setPattern([4, 2] as Toybox.Lang.Array<Toybox.Lang.Number>);
+    Test.assertMessage(m.shouldCue(1), "cue at loop A start");
+    Test.assertMessage(m.shouldCue(5), "cue at loop B start");
+    Test.assertMessage(!m.shouldCue(6), "silent inside loop B");
+    Test.assertMessage(m.shouldCue(7), "cue at next cycle start");
+    return true;
+}
+
+(:test)
 function testMetronomeStartsAndStops(logger as Test.Logger) as Boolean {
     var m = new Metronome();
     Test.assertMessage(!m.isRunning(), "should not run before start");

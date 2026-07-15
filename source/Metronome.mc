@@ -24,7 +24,11 @@ class Metronome {
     private var _vibeStrength as Number = 50;
     private var _softTone as Boolean = true;
     private var _beatCount as Number = 0;
-    private var _beatsPerRound as Number = 4;
+    // Round pattern: loop lengths in beats, cycled in order. [4] is a
+    // uniform 4-beat loop; [4, 2] alternates a 4-move loop with a 2-move
+    // loop (the classic club "4-2").
+    private var _pattern as Array<Number> = [4] as Array<Number>;
+    private var _cycleBeats as Number = 4;
     private var _accentEnabled as Boolean = true;
     private var _cueEveryBeat as Boolean = false;
 
@@ -58,10 +62,17 @@ class Metronome {
             if (soft instanceof Boolean) {
                 _softTone = soft;
             }
+            var a = 4;
+            var b = 0;
             var bpr = Application.Properties.getValue("beatsPerRound");
             if (bpr instanceof Number) {
-                _beatsPerRound = clampNum(bpr, 1, 16);
+                a = clampNum(bpr, 1, 16);
             }
+            var bpr2 = Application.Properties.getValue("beatsPerRound2");
+            if (bpr2 instanceof Number) {
+                b = clampNum(bpr2, 0, 16);
+            }
+            setPattern(b > 0 ? ([a, b] as Array<Number>) : ([a] as Array<Number>));
             var accent = Application.Properties.getValue("accentEnabled");
             if (accent instanceof Boolean) {
                 _accentEnabled = accent;
@@ -76,8 +87,32 @@ class Metronome {
     // Rounds derive exactly from the beat count: the metronome defines
     // the movement cadence, so beats / beatsPerRound is the number of
     // completed movement loops. Reset at each work interval / set mark.
+    function setPattern(pattern as Array<Number>) as Void {
+        if (pattern.size() == 0) {
+            pattern = [4] as Array<Number>;
+        }
+        var total = 0;
+        for (var i = 0; i < pattern.size(); i++) {
+            total += pattern[i];
+        }
+        _pattern = pattern;
+        _cycleBeats = total;
+    }
+
     function getRounds() as Number {
-        return _beatCount / _beatsPerRound;
+        var cycles = _beatCount / _cycleBeats;
+        var rem = _beatCount % _cycleBeats;
+        var rounds = cycles * _pattern.size();
+        var acc = 0;
+        for (var i = 0; i < _pattern.size(); i++) {
+            acc += _pattern[i];
+            if (rem >= acc) {
+                rounds++;
+            } else {
+                break;
+            }
+        }
+        return rounds;
     }
 
     function resetBeatCount() as Void {
@@ -87,7 +122,19 @@ class Metronome {
     // The downbeat: the first beat of each movement round. Meaningless
     // when every beat starts a round.
     function isRoundStart(beatNumber as Number) as Boolean {
-        return _beatsPerRound > 1 && (beatNumber - 1) % _beatsPerRound == 0;
+        if (_cycleBeats == _pattern.size()) {
+            // every beat is its own round; accenting all of them is noise
+            return false;
+        }
+        var rem = (beatNumber - 1) % _cycleBeats;
+        var acc = 0;
+        for (var i = 0; i < _pattern.size(); i++) {
+            if (rem == acc) {
+                return true;
+            }
+            acc += _pattern[i];
+        }
+        return false;
     }
 
     function setCueEveryBeat(everyBeat as Boolean) as Void {
@@ -99,7 +146,7 @@ class Metronome {
     // the classic full metronome. Degenerates to every beat when a
     // round is a single beat.
     function shouldCue(beatNumber as Number) as Boolean {
-        return _cueEveryBeat || _beatsPerRound == 1 || (beatNumber - 1) % _beatsPerRound == 0;
+        return _cueEveryBeat || _cycleBeats == _pattern.size() || isRoundStart(beatNumber);
     }
 
     private function clampNum(v as Number, lo as Number, hi as Number) as Number {

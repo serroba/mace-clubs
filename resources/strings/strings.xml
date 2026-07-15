@@ -9,7 +9,8 @@
     <string id="SettingCustomSets">Custom workout: sets</string>
     <string id="SettingCustomWork">Custom workout: work (seconds)</string>
     <string id="SettingCustomRest">Custom workout: rest (seconds)</string>
-    <string id="SettingBeatsPerRound">Beats per round (movement loop)</string>
+    <string id="SettingBeatsPerRound">Beats in loop A</string>
+    <string id="SettingBeatsPerRound2">Beats in loop B (0 = single loop)</string>
     <string id="SettingAccentEnabled">Accent first beat of each round</string>
     <string id="SettingCueMode">Metronome cues on</string>
     <string id="CueRoundStarts">Round starts (battery friendly)</string>
