@@ -16,9 +16,12 @@ A Garmin Connect IQ workout app for steel mace and Indian club training, targeti
 
 | Button | Idle | Recording | Paused |
 |---|---|---|---|
-| SELECT | Start workout | Mark a set | Save & exit |
-| BACK | Quit | Pause | Resume |
-| UP / DOWN | Tempo ±5 bpm | Tempo ±5 bpm | — |
+| SELECT | Start workout | Mark a set (free training) | Save & exit |
+| BACK | Quit | Pause | Resume (unless finished) |
+| UP / DOWN | Choose workout preset | Tempo ±5 bpm | — |
+
+Interval presets (e.g. 5 × 2:00 work / 1:00 rest) call work and rest with tone and
+vibration cues, run the metronome only during work, and count sets automatically.
 
 ## Development
 

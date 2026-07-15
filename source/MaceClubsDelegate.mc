@@ -19,9 +19,9 @@ class MaceClubsDelegate extends WatchUi.BehaviorDelegate {
             _view.metronome.stop();
             _view.workout.saveAndExit();
         } else if (!_view.workout.isStarted()) {
-            _view.workout.start();
-            _view.metronome.start();
-        } else {
+            _view.startWorkout();
+        } else if (_view.plan == null) {
+            // manual set marking is free-training only; presets count sets
             _view.workout.addSet();
         }
         WatchUi.requestUpdate();
@@ -29,6 +29,10 @@ class MaceClubsDelegate extends WatchUi.BehaviorDelegate {
     }
 
     function onBack() as Boolean {
+        if (_view.done) {
+            // a finished interval workout can only be saved
+            return true;
+        }
         if (_view.paused) {
             _view.paused = false;
             _view.workout.resume();
