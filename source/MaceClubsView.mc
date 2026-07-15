@@ -208,13 +208,26 @@ class MaceClubsView extends WatchUi.View {
             // Interval workout: phase + countdown drive the screen
             var s = p.stateAt(timerMs);
             var phase = s[:phase] as Number;
-            dc.drawText(
-                _subwindow ? w * 5 / 100 : cx,
-                h * 6 / 100,
-                Graphics.FONT_TINY,
-                formatSecs(timerMs / 1000),
-                _subwindow ? Graphics.TEXT_JUSTIFY_LEFT : Graphics.TEXT_JUSTIFY_CENTER
-            );
+            if (_subwindow) {
+                // elapsed sits inside the semi-octagon's diagonal corner cut,
+                // so it is nudged inward; live HR gets the subwindow itself
+                dc.drawText(
+                    w * 14 / 100,
+                    h * 8 / 100,
+                    Graphics.FONT_TINY,
+                    formatSecs(timerMs / 1000),
+                    Graphics.TEXT_JUSTIFY_LEFT
+                );
+                drawSubwindowHr(dc, hr);
+            } else {
+                dc.drawText(
+                    cx,
+                    h * 6 / 100,
+                    Graphics.FONT_TINY,
+                    formatSecs(timerMs / 1000),
+                    Graphics.TEXT_JUSTIFY_CENTER
+                );
+            }
             dc.drawText(
                 cx,
                 h * 30 / 100,
@@ -232,26 +245,64 @@ class MaceClubsView extends WatchUi.View {
                 formatSecs(s[:remaining] as Number),
                 Graphics.TEXT_JUSTIFY_CENTER
             );
-            dc.drawText(
-                cx - 35,
-                h * 72 / 100,
-                Graphics.FONT_MEDIUM,
-                metronome.getBpm().toString(),
-                Graphics.TEXT_JUSTIFY_CENTER
-            );
-            dc.drawText(cx - 35, h * 87 / 100, Graphics.FONT_TINY, "bpm", Graphics.TEXT_JUSTIFY_CENTER);
-            dc.drawText(cx + 35, h * 72 / 100, Graphics.FONT_MEDIUM, hr, Graphics.TEXT_JUSTIFY_CENTER);
-            dc.drawText(cx + 35, h * 87 / 100, Graphics.FONT_TINY, "hr", Graphics.TEXT_JUSTIFY_CENTER);
+            if (_subwindow) {
+                dc.drawText(
+                    cx,
+                    h * 72 / 100,
+                    Graphics.FONT_MEDIUM,
+                    metronome.getBpm().toString(),
+                    Graphics.TEXT_JUSTIFY_CENTER
+                );
+                dc.drawText(cx, h * 87 / 100, Graphics.FONT_TINY, "bpm", Graphics.TEXT_JUSTIFY_CENTER);
+            } else {
+                dc.drawText(
+                    cx - 35,
+                    h * 72 / 100,
+                    Graphics.FONT_MEDIUM,
+                    metronome.getBpm().toString(),
+                    Graphics.TEXT_JUSTIFY_CENTER
+                );
+                dc.drawText(cx - 35, h * 87 / 100, Graphics.FONT_TINY, "bpm", Graphics.TEXT_JUSTIFY_CENTER);
+                dc.drawText(cx + 35, h * 72 / 100, Graphics.FONT_MEDIUM, hr, Graphics.TEXT_JUSTIFY_CENTER);
+                dc.drawText(cx + 35, h * 87 / 100, Graphics.FONT_TINY, "hr", Graphics.TEXT_JUSTIFY_CENTER);
+            }
             return;
         }
 
-        // Free training: big tempo, manual set counter
+        // Free training: elapsed time front and center, tempo and manual
+        // set counter below; HR in the subwindow where the screen has one
+        if (_subwindow) {
+            drawSubwindowHr(dc, hr);
+            dc.drawText(
+                cx,
+                h * 22 / 100,
+                Graphics.FONT_NUMBER_MILD,
+                formatSecs(timerMs / 1000),
+                Graphics.TEXT_JUSTIFY_CENTER
+            );
+            dc.drawText(
+                cx,
+                h * 48 / 100,
+                Graphics.FONT_MEDIUM,
+                Lang.format("$1$ bpm", [metronome.getBpm()]),
+                Graphics.TEXT_JUSTIFY_CENTER
+            );
+            dc.drawText(
+                cx,
+                h * 64 / 100,
+                Graphics.FONT_MEDIUM,
+                workout.getSets().toString(),
+                Graphics.TEXT_JUSTIFY_CENTER
+            );
+            dc.drawText(cx, h * 80 / 100, Graphics.FONT_TINY, "sets", Graphics.TEXT_JUSTIFY_CENTER);
+            return;
+        }
         dc.drawText(
-            _subwindow ? w * 5 / 100 : cx,
+            cx,
             h * 6 / 100,
             Graphics.FONT_MEDIUM,
             formatSecs(timerMs / 1000),
-            _subwindow ? Graphics.TEXT_JUSTIFY_LEFT : Graphics.TEXT_JUSTIFY_CENTER
+            Graphics.TEXT_JUSTIFY_CENTER
         );
         dc.drawText(
             cx,
@@ -271,5 +322,27 @@ class MaceClubsView extends WatchUi.View {
         dc.drawText(cx - 30, h * 84 / 100, Graphics.FONT_TINY, "sets", Graphics.TEXT_JUSTIFY_CENTER);
         dc.drawText(cx + 30, h * 68 / 100, Graphics.FONT_MEDIUM, hr, Graphics.TEXT_JUSTIFY_CENTER);
         dc.drawText(cx + 30, h * 84 / 100, Graphics.FONT_TINY, "hr", Graphics.TEXT_JUSTIFY_CENTER);
+    }
+
+    // Draw the heart rate inside the Instinct's circular subwindow.
+    // getSubscreen gives exact bounds on CIQ 4.2+; older Instincts fall
+    // back to the family's typical top-right placement.
+    private function drawSubwindowHr(dc as Dc, hr as String) as Void {
+        var sx = dc.getWidth() * 82 / 100;
+        var sy = dc.getHeight() * 17 / 100;
+        if (WatchUi has :getSubscreen) {
+            var sub = WatchUi.getSubscreen();
+            if (sub != null) {
+                sx = (sub.x as Number) + (sub.width as Number) / 2;
+                sy = (sub.y as Number) + (sub.height as Number) / 2;
+            }
+        }
+        dc.drawText(
+            sx,
+            sy,
+            Graphics.FONT_SMALL,
+            hr,
+            Graphics.TEXT_JUSTIFY_CENTER | Graphics.TEXT_JUSTIFY_VCENTER
+        );
     }
 }
