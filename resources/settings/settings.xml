@@ -15,4 +15,13 @@
     <setting propertyKey="@Properties.softBeep" title="@Strings.SettingSoftBeep">
         <settingConfig type="boolean"/>
     </setting>
+    <setting propertyKey="@Properties.customSets" title="@Strings.SettingCustomSets">
+        <settingConfig type="numeric" min="1" max="50"/>
+    </setting>
+    <setting propertyKey="@Properties.customWorkSecs" title="@Strings.SettingCustomWork">
+        <settingConfig type="numeric" min="10" max="3600"/>
+    </setting>
+    <setting propertyKey="@Properties.customRestSecs" title="@Strings.SettingCustomRest">
+        <settingConfig type="numeric" min="0" max="3600"/>
+    </setting>
 </settings>

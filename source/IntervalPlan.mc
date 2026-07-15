@@ -1,3 +1,4 @@
+import Toybox.Application;
 import Toybox.Lang;
 
 // Interval training plans: N sets of work with rest in between.
@@ -56,8 +57,9 @@ module Intervals {
     }
 }
 
-// Built-in workout shapes shown on the idle screen. :sets == 0 is
-// free training (no interval plan, manual set marking).
+// Workout shapes shown on the idle screen. :sets == 0 is free training
+// (no interval plan, manual set marking). The last slot is the Custom
+// preset, built from phone-editable app settings on every read.
 module Presets {
     const LIST = [
         {:label => "Free training", :sets => 0, :work => 0, :rest => 0},
@@ -66,4 +68,59 @@ module Presets {
         {:label => "3 x 2:00 | 1:00", :sets => 3, :work => 120, :rest => 60},
         {:label => "10 x 1:00 | 0:30", :sets => 10, :work => 60, :rest => 30}
     ] as Array<Dictionary>;
+
+    function count() as Number {
+        return LIST.size() + 1;
+    }
+
+    function get(index as Number) as Dictionary {
+        if (index < LIST.size()) {
+            return LIST[index] as Dictionary;
+        }
+        return custom();
+    }
+
+    // The Custom preset reads customSets / customWorkSecs / customRestSecs
+    // from app settings (Garmin Connect on the phone), clamped to sane
+    // ranges; defaults apply when a key is missing.
+    function custom() as Dictionary {
+        var sets = 4;
+        var work = 90;
+        var rest = 60;
+        try {
+            var s = Application.Properties.getValue("customSets");
+            if (s instanceof Number) {
+                sets = clamp(s, 1, 50);
+            }
+            var wk = Application.Properties.getValue("customWorkSecs");
+            if (wk instanceof Number) {
+                work = clamp(wk, 10, 3600);
+            }
+            var r = Application.Properties.getValue("customRestSecs");
+            if (r instanceof Number) {
+                rest = clamp(r, 0, 3600);
+            }
+        } catch (e) {}
+        return {
+            :label  => Lang.format("$1$ x $2$ | $3$", [sets, mmss(work), mmss(rest)]),
+            :sets   => sets,
+            :work   => work,
+            :rest   => rest,
+            :custom => true
+        };
+    }
+
+    function clamp(v as Number, lo as Number, hi as Number) as Number {
+        if (v < lo) {
+            return lo;
+        }
+        if (v > hi) {
+            return hi;
+        }
+        return v;
+    }
+
+    function mmss(total as Number) as String {
+        return Lang.format("$1$:$2$", [total / 60, (total % 60).format("%02d")]);
+    }
 }
