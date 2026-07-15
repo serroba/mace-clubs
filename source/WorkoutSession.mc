@@ -111,11 +111,12 @@ class WorkoutSession {
         if (field == null || start == null) {
             return;
         }
-        var used = start - System.getSystemStats().battery;
-        if (used < 0.0) {
-            used = 0.0;
-        }
-        field.setData(used);
+        field.setData(batteryDelta(start, System.getSystemStats().battery));
+    }
+
+    function batteryDelta(startPct as Float, endPct as Float) as Float {
+        var used = startPct - endPct;
+        return used < 0.0 ? 0.0 : used;
     }
 
     function discardAndExit() as Void {
