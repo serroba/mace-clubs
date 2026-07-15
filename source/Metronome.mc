@@ -26,6 +26,7 @@ class Metronome {
     private var _beatCount as Number = 0;
     private var _beatsPerRound as Number = 4;
     private var _accentEnabled as Boolean = true;
+    private var _cueEveryBeat as Boolean = false;
 
     function initialize() {
         _timer = new Timer.Timer();
@@ -65,6 +66,10 @@ class Metronome {
             if (accent instanceof Boolean) {
                 _accentEnabled = accent;
             }
+            var cm = Application.Properties.getValue("cueMode");
+            if (cm instanceof Number) {
+                setCueEveryBeat(cm == 1);
+            }
         } catch (e) {}
     }
 
@@ -83,6 +88,18 @@ class Metronome {
     // when every beat starts a round.
     function isRoundStart(beatNumber as Number) as Boolean {
         return _beatsPerRound > 1 && (beatNumber - 1) % _beatsPerRound == 0;
+    }
+
+    function setCueEveryBeat(everyBeat as Boolean) as Void {
+        _cueEveryBeat = everyBeat;
+    }
+
+    // Round cues (the default) pulse only on loop boundaries, cutting
+    // vibration power by the beats-per-round factor; every-beat mode is
+    // the classic full metronome. Degenerates to every beat when a
+    // round is a single beat.
+    function shouldCue(beatNumber as Number) as Boolean {
+        return _cueEveryBeat || _beatsPerRound == 1 || (beatNumber - 1) % _beatsPerRound == 0;
     }
 
     private function clampNum(v as Number, lo as Number, hi as Number) as Number {
@@ -152,7 +169,9 @@ class Metronome {
             return;
         }
         _beatCount++;
-        playCue(_accentEnabled && isRoundStart(_beatCount));
+        if (shouldCue(_beatCount)) {
+            playCue(_accentEnabled && isRoundStart(_beatCount));
+        }
         _nextBeat += _intervalMs;
         var delay = (_nextBeat - System.getTimer()).toNumber();
         if (delay < 50) {

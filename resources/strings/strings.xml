@@ -11,6 +11,9 @@
     <string id="SettingCustomRest">Custom workout: rest (seconds)</string>
     <string id="SettingBeatsPerRound">Beats per round (movement loop)</string>
     <string id="SettingAccentEnabled">Accent first beat of each round</string>
+    <string id="SettingCueMode">Metronome cues on</string>
+    <string id="CueRoundStarts">Round starts (battery friendly)</string>
+    <string id="CueEveryBeat">Every beat</string>
     <string id="SettingCircleShows">Instinct circle shows</string>
     <string id="CircleRounds">Rounds</string>
     <string id="CircleHeartRate">Heart rate</string>

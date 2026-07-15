@@ -30,6 +30,12 @@
     <setting propertyKey="@Properties.accentEnabled" title="@Strings.SettingAccentEnabled">
         <settingConfig type="boolean"/>
     </setting>
+    <setting propertyKey="@Properties.cueMode" title="@Strings.SettingCueMode">
+        <settingConfig type="list">
+            <listEntry value="0">@Strings.CueRoundStarts</listEntry>
+            <listEntry value="1">@Strings.CueEveryBeat</listEntry>
+        </settingConfig>
+    </setting>
     <setting propertyKey="@Properties.circleShows" title="@Strings.SettingCircleShows">
         <settingConfig type="list">
             <listEntry value="0">@Strings.CircleRounds</listEntry>

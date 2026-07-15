@@ -107,6 +107,26 @@ function testRoundStartMarksDownbeats(logger as Test.Logger) as Boolean {
 }
 
 (:test)
+function testRoundCueModeIsDefaultAndPulsesOnLoops(logger as Test.Logger) as Boolean {
+    var m = new Metronome(); // default: round cues, 4 beats per round
+    Test.assertMessage(m.shouldCue(1), "cue on round 1 start");
+    Test.assertMessage(!m.shouldCue(2), "silent mid-round");
+    Test.assertMessage(!m.shouldCue(4), "silent on round-closing beat");
+    Test.assertMessage(m.shouldCue(5), "cue on round 2 start");
+    return true;
+}
+
+(:test)
+function testEveryBeatCueModeCuesAll(logger as Test.Logger) as Boolean {
+    var m = new Metronome();
+    m.setCueEveryBeat(true);
+    Test.assertMessage(m.shouldCue(1), "beat 1 cues");
+    Test.assertMessage(m.shouldCue(2), "beat 2 cues");
+    Test.assertMessage(m.shouldCue(3), "beat 3 cues");
+    return true;
+}
+
+(:test)
 function testMetronomeStartsAndStops(logger as Test.Logger) as Boolean {
     var m = new Metronome();
     Test.assertMessage(!m.isRunning(), "should not run before start");
