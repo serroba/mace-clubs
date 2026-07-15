@@ -4,14 +4,28 @@ import Toybox.WatchUi;
 
 class MaceClubsView extends WatchUi.View {
 
+    var metronome as Metronome;
+
     function initialize() {
         View.initialize();
+        metronome = new Metronome();
     }
 
     function onUpdate(dc as Dc) as Void {
         dc.setColor(Graphics.COLOR_WHITE, Graphics.COLOR_BLACK);
         dc.clear();
-        dc.drawText(dc.getWidth() / 2, dc.getHeight() / 2, Graphics.FONT_MEDIUM,
-            "MACE & CLUBS", Graphics.TEXT_JUSTIFY_CENTER | Graphics.TEXT_JUSTIFY_VCENTER);
+
+        var cx = dc.getWidth() / 2;
+        var h = dc.getHeight();
+
+        dc.drawText(cx, h * 20 / 100, Graphics.FONT_SMALL, "MACE & CLUBS",
+            Graphics.TEXT_JUSTIFY_CENTER);
+        dc.drawText(cx, h * 38 / 100, Graphics.FONT_NUMBER_HOT,
+            metronome.getBpm().toString(), Graphics.TEXT_JUSTIFY_CENTER);
+        dc.drawText(cx, h * 62 / 100, Graphics.FONT_TINY, "bpm  (UP/DOWN)",
+            Graphics.TEXT_JUSTIFY_CENTER);
+        dc.drawText(cx, h * 76 / 100, Graphics.FONT_SMALL,
+            metronome.isRunning() ? "SELECT to stop" : "SELECT to start",
+            Graphics.TEXT_JUSTIFY_CENTER);
     }
 }
