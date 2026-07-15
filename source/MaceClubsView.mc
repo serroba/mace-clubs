@@ -4,6 +4,10 @@ import Toybox.Lang;
 import Toybox.Timer;
 import Toybox.WatchUi;
 
+// Layout note: the Instinct 3 Solar has a physical subwindow cut-out in
+// the top-right corner (x >= 114, y <= 62 on the 45mm per personality.mss).
+// Pixels drawn there are not visible, so top-of-screen text is kept
+// left-aligned or pushed below it.
 class MaceClubsView extends WatchUi.View {
 
     var metronome as Metronome;
@@ -35,22 +39,23 @@ class MaceClubsView extends WatchUi.View {
         dc.setColor(Graphics.COLOR_WHITE, Graphics.COLOR_BLACK);
         dc.clear();
 
-        var cx = dc.getWidth() / 2;
+        var w = dc.getWidth();
+        var cx = w / 2;
         var h = dc.getHeight();
 
         if (paused) {
-            dc.drawText(cx, h * 25 / 100, Graphics.FONT_MEDIUM, "PAUSED",
+            dc.drawText(cx, h * 38 / 100, Graphics.FONT_MEDIUM, "PAUSED",
                 Graphics.TEXT_JUSTIFY_CENTER);
-            dc.drawText(cx, h * 45 / 100, Graphics.FONT_SMALL, "SELECT: save",
+            dc.drawText(cx, h * 56 / 100, Graphics.FONT_SMALL, "SELECT: save",
                 Graphics.TEXT_JUSTIFY_CENTER);
-            dc.drawText(cx, h * 60 / 100, Graphics.FONT_SMALL, "BACK: resume",
+            dc.drawText(cx, h * 71 / 100, Graphics.FONT_SMALL, "BACK: resume",
                 Graphics.TEXT_JUSTIFY_CENTER);
             return;
         }
 
         if (!workout.isStarted()) {
-            dc.drawText(cx, h * 20 / 100, Graphics.FONT_SMALL, "MACE & CLUBS",
-                Graphics.TEXT_JUSTIFY_CENTER);
+            dc.drawText(w * 5 / 100, h * 6 / 100, Graphics.FONT_XTINY, "MACE & CLUBS",
+                Graphics.TEXT_JUSTIFY_LEFT);
             dc.drawText(cx, h * 38 / 100, Graphics.FONT_NUMBER_HOT,
                 metronome.getBpm().toString(), Graphics.TEXT_JUSTIFY_CENTER);
             dc.drawText(cx, h * 62 / 100, Graphics.FONT_TINY, "bpm  (UP/DOWN)",
@@ -68,12 +73,12 @@ class MaceClubsView extends WatchUi.View {
             elapsed = Lang.format("$1$:$2$",
                 [totalSec / 60, (totalSec % 60).format("%02d")]);
         }
-        dc.drawText(cx, h * 8 / 100, Graphics.FONT_MEDIUM, elapsed,
-            Graphics.TEXT_JUSTIFY_CENTER);
+        dc.drawText(w * 5 / 100, h * 6 / 100, Graphics.FONT_MEDIUM, elapsed,
+            Graphics.TEXT_JUSTIFY_LEFT);
 
-        dc.drawText(cx, h * 28 / 100, Graphics.FONT_NUMBER_HOT,
+        dc.drawText(cx, h * 32 / 100, Graphics.FONT_NUMBER_HOT,
             metronome.getBpm().toString(), Graphics.TEXT_JUSTIFY_CENTER);
-        dc.drawText(cx, h * 52 / 100, Graphics.FONT_TINY, "bpm",
+        dc.drawText(cx, h * 56 / 100, Graphics.FONT_TINY, "bpm",
             Graphics.TEXT_JUSTIFY_CENTER);
 
         var hr = "--";
