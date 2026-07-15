@@ -23,6 +23,8 @@ class Metronome {
     private var _vibeEnabled as Boolean = true;
     private var _vibeStrength as Number = 50;
     private var _softTone as Boolean = true;
+    private var _beatCount as Number = 0;
+    private var _beatsPerRound as Number = 4;
 
     function initialize() {
         _timer = new Timer.Timer();
@@ -54,7 +56,32 @@ class Metronome {
             if (soft instanceof Boolean) {
                 _softTone = soft;
             }
+            var bpr = Application.Properties.getValue("beatsPerRound");
+            if (bpr instanceof Number) {
+                _beatsPerRound = clampNum(bpr, 1, 16);
+            }
         } catch (e) {}
+    }
+
+    // Rounds derive exactly from the beat count: the metronome defines
+    // the movement cadence, so beats / beatsPerRound is the number of
+    // completed movement loops. Reset at each work interval / set mark.
+    function getRounds() as Number {
+        return _beatCount / _beatsPerRound;
+    }
+
+    function resetBeatCount() as Void {
+        _beatCount = 0;
+    }
+
+    private function clampNum(v as Number, lo as Number, hi as Number) as Number {
+        if (v < lo) {
+            return lo;
+        }
+        if (v > hi) {
+            return hi;
+        }
+        return v;
     }
 
     function getVibeStrength() as Number {
@@ -113,6 +140,7 @@ class Metronome {
         if (!_running) {
             return;
         }
+        _beatCount++;
         playCue();
         _nextBeat += _intervalMs;
         var delay = (_nextBeat - System.getTimer()).toNumber();

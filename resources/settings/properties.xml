@@ -8,4 +8,6 @@
     <property id="customSets" type="number">4</property>
     <property id="customWorkSecs" type="number">90</property>
     <property id="customRestSecs" type="number">60</property>
+    <property id="beatsPerRound" type="number">4</property>
+    <property id="circleShows" type="number">0</property>
 </properties>

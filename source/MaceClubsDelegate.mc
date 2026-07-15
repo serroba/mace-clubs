@@ -21,7 +21,7 @@ class MaceClubsDelegate extends WatchUi.BehaviorDelegate {
             _view.startWorkout();
         } else if (_view.plan == null) {
             // manual set marking is free-training only; presets count sets
-            _view.workout.addSet();
+            _view.markSet();
         }
         WatchUi.requestUpdate();
         return true;

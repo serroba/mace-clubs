@@ -1,4 +1,5 @@
 import Toybox.Activity;
+import Toybox.Application;
 import Toybox.Attention;
 import Toybox.Graphics;
 import Toybox.Lang;
@@ -24,6 +25,7 @@ class MaceClubsView extends WatchUi.View {
     private var _lastSet as Number = 0;
     private var _icon as WatchUi.BitmapResource;
     private var _subwindow as Boolean = false;
+    private var _circleRounds as Boolean = true;
 
     function initialize() {
         View.initialize();
@@ -34,6 +36,19 @@ class MaceClubsView extends WatchUi.View {
         if (System has :SCREEN_SHAPE_SEMI_OCTAGON) {
             _subwindow = System.getDeviceSettings().screenShape == System.SCREEN_SHAPE_SEMI_OCTAGON;
         }
+        loadSettings();
+    }
+
+    // Applies phone-editable settings; called at startup and from
+    // AppBase.onSettingsChanged when edited mid-session.
+    function loadSettings() as Void {
+        metronome.loadSettings();
+        try {
+            var c = Application.Properties.getValue("circleShows");
+            if (c instanceof Number) {
+                _circleRounds = c == 0;
+            }
+        } catch (e) {}
     }
 
     function onShow() as Void {
@@ -70,8 +85,15 @@ class MaceClubsView extends WatchUi.View {
         }
         done = false;
         _lastPhase = null;
+        metronome.resetBeatCount();
         workout.start();
         metronome.start();
+    }
+
+    // Free-training set mark: log the set and start a fresh round count.
+    function markSet() as Void {
+        workout.addSet();
+        metronome.resetBeatCount();
     }
 
     // Detect work/rest/done transitions once per refresh tick and fire
@@ -116,6 +138,7 @@ class MaceClubsView extends WatchUi.View {
             if (oldPhase == Intervals.PHASE_WORK) {
                 workout.addSet();
             }
+            metronome.resetBeatCount();
             metronome.start();
             playTransitionCue(false);
         }
@@ -202,6 +225,10 @@ class MaceClubsView extends WatchUi.View {
         if (info != null && info.currentHeartRate != null) {
             hr = (info.currentHeartRate as Number).toString();
         }
+        var rounds = metronome.getRounds().toString();
+        var circleValue = _circleRounds ? rounds : hr;
+        var otherValue = _circleRounds ? hr : rounds;
+        var otherLabel = _circleRounds ? "hr" : "rnds";
 
         var p = plan;
         if (p != null) {
@@ -218,7 +245,7 @@ class MaceClubsView extends WatchUi.View {
                     formatSecs(timerMs / 1000),
                     Graphics.TEXT_JUSTIFY_LEFT
                 );
-                drawSubwindowHr(dc, hr);
+                drawSubwindowMetric(dc, circleValue);
             } else {
                 dc.drawText(
                     cx,
@@ -247,15 +274,6 @@ class MaceClubsView extends WatchUi.View {
             );
             if (_subwindow) {
                 dc.drawText(
-                    cx,
-                    h * 72 / 100,
-                    Graphics.FONT_MEDIUM,
-                    metronome.getBpm().toString(),
-                    Graphics.TEXT_JUSTIFY_CENTER
-                );
-                dc.drawText(cx, h * 87 / 100, Graphics.FONT_TINY, "bpm", Graphics.TEXT_JUSTIFY_CENTER);
-            } else {
-                dc.drawText(
                     cx - 35,
                     h * 72 / 100,
                     Graphics.FONT_MEDIUM,
@@ -263,8 +281,33 @@ class MaceClubsView extends WatchUi.View {
                     Graphics.TEXT_JUSTIFY_CENTER
                 );
                 dc.drawText(cx - 35, h * 87 / 100, Graphics.FONT_TINY, "bpm", Graphics.TEXT_JUSTIFY_CENTER);
-                dc.drawText(cx + 35, h * 72 / 100, Graphics.FONT_MEDIUM, hr, Graphics.TEXT_JUSTIFY_CENTER);
-                dc.drawText(cx + 35, h * 87 / 100, Graphics.FONT_TINY, "hr", Graphics.TEXT_JUSTIFY_CENTER);
+                dc.drawText(
+                    cx + 35,
+                    h * 72 / 100,
+                    Graphics.FONT_MEDIUM,
+                    otherValue,
+                    Graphics.TEXT_JUSTIFY_CENTER
+                );
+                dc.drawText(
+                    cx + 35,
+                    h * 87 / 100,
+                    Graphics.FONT_TINY,
+                    otherLabel,
+                    Graphics.TEXT_JUSTIFY_CENTER
+                );
+            } else {
+                dc.drawText(
+                    cx - 50,
+                    h * 72 / 100,
+                    Graphics.FONT_MEDIUM,
+                    metronome.getBpm().toString(),
+                    Graphics.TEXT_JUSTIFY_CENTER
+                );
+                dc.drawText(cx - 50, h * 87 / 100, Graphics.FONT_TINY, "bpm", Graphics.TEXT_JUSTIFY_CENTER);
+                dc.drawText(cx, h * 72 / 100, Graphics.FONT_MEDIUM, rounds, Graphics.TEXT_JUSTIFY_CENTER);
+                dc.drawText(cx, h * 87 / 100, Graphics.FONT_TINY, "rnds", Graphics.TEXT_JUSTIFY_CENTER);
+                dc.drawText(cx + 50, h * 72 / 100, Graphics.FONT_MEDIUM, hr, Graphics.TEXT_JUSTIFY_CENTER);
+                dc.drawText(cx + 50, h * 87 / 100, Graphics.FONT_TINY, "hr", Graphics.TEXT_JUSTIFY_CENTER);
             }
             return;
         }
@@ -272,7 +315,7 @@ class MaceClubsView extends WatchUi.View {
         // Free training: elapsed time front and center, tempo and manual
         // set counter below; HR in the subwindow where the screen has one
         if (_subwindow) {
-            drawSubwindowHr(dc, hr);
+            drawSubwindowMetric(dc, circleValue);
             dc.drawText(
                 cx,
                 h * 22 / 100,
@@ -288,13 +331,15 @@ class MaceClubsView extends WatchUi.View {
                 Graphics.TEXT_JUSTIFY_CENTER
             );
             dc.drawText(
-                cx,
+                cx - 30,
                 h * 64 / 100,
                 Graphics.FONT_MEDIUM,
                 workout.getSets().toString(),
                 Graphics.TEXT_JUSTIFY_CENTER
             );
-            dc.drawText(cx, h * 80 / 100, Graphics.FONT_TINY, "sets", Graphics.TEXT_JUSTIFY_CENTER);
+            dc.drawText(cx - 30, h * 80 / 100, Graphics.FONT_TINY, "sets", Graphics.TEXT_JUSTIFY_CENTER);
+            dc.drawText(cx + 30, h * 64 / 100, Graphics.FONT_MEDIUM, otherValue, Graphics.TEXT_JUSTIFY_CENTER);
+            dc.drawText(cx + 30, h * 80 / 100, Graphics.FONT_TINY, otherLabel, Graphics.TEXT_JUSTIFY_CENTER);
             return;
         }
         dc.drawText(
@@ -313,21 +358,24 @@ class MaceClubsView extends WatchUi.View {
         );
         dc.drawText(cx, h * 56 / 100, Graphics.FONT_TINY, "bpm", Graphics.TEXT_JUSTIFY_CENTER);
         dc.drawText(
-            cx - 30,
+            cx - 50,
             h * 68 / 100,
             Graphics.FONT_MEDIUM,
             workout.getSets().toString(),
             Graphics.TEXT_JUSTIFY_CENTER
         );
-        dc.drawText(cx - 30, h * 84 / 100, Graphics.FONT_TINY, "sets", Graphics.TEXT_JUSTIFY_CENTER);
-        dc.drawText(cx + 30, h * 68 / 100, Graphics.FONT_MEDIUM, hr, Graphics.TEXT_JUSTIFY_CENTER);
-        dc.drawText(cx + 30, h * 84 / 100, Graphics.FONT_TINY, "hr", Graphics.TEXT_JUSTIFY_CENTER);
+        dc.drawText(cx - 50, h * 84 / 100, Graphics.FONT_TINY, "sets", Graphics.TEXT_JUSTIFY_CENTER);
+        dc.drawText(cx, h * 68 / 100, Graphics.FONT_MEDIUM, rounds, Graphics.TEXT_JUSTIFY_CENTER);
+        dc.drawText(cx, h * 84 / 100, Graphics.FONT_TINY, "rnds", Graphics.TEXT_JUSTIFY_CENTER);
+        dc.drawText(cx + 50, h * 68 / 100, Graphics.FONT_MEDIUM, hr, Graphics.TEXT_JUSTIFY_CENTER);
+        dc.drawText(cx + 50, h * 84 / 100, Graphics.FONT_TINY, "hr", Graphics.TEXT_JUSTIFY_CENTER);
     }
 
-    // Draw the heart rate inside the Instinct's circular subwindow.
-    // getSubscreen gives exact bounds on CIQ 4.2+; older Instincts fall
-    // back to the family's typical top-right placement.
-    private function drawSubwindowHr(dc as Dc, hr as String) as Void {
+    // Draw a metric (rounds or heart rate, per the circleShows setting)
+    // inside the Instinct's circular subwindow. getSubscreen gives exact
+    // bounds on CIQ 4.2+; older Instincts fall back to the family's
+    // typical top-right placement.
+    private function drawSubwindowMetric(dc as Dc, value as String) as Void {
         var sx = dc.getWidth() * 82 / 100;
         var sy = dc.getHeight() * 17 / 100;
         if (WatchUi has :getSubscreen) {
@@ -341,7 +389,7 @@ class MaceClubsView extends WatchUi.View {
             sx,
             sy,
             Graphics.FONT_SMALL,
-            hr,
+            value,
             Graphics.TEXT_JUSTIFY_CENTER | Graphics.TEXT_JUSTIFY_VCENTER
         );
     }

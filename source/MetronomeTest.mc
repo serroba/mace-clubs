@@ -69,6 +69,33 @@ function testVibeStrengthClampsToPerceptibleFloor(logger as Test.Logger) as Bool
 }
 
 (:test)
+function testRoundsDeriveFromBeats(logger as Test.Logger) as Boolean {
+    var m = new Metronome();
+    Test.assertEqualMessage(m.getRounds(), 0, "no rounds before any beats");
+    m.start(); // fires beat 1 immediately
+    for (var i = 0; i < 7; i++) {
+        m.onBeat(); // beats 2..8
+    }
+    m.stop();
+    Test.assertEqualMessage(m.getRounds(), 2, "8 beats at 4 per round = 2 rounds");
+    return true;
+}
+
+(:test)
+function testResetBeatCountClearsRounds(logger as Test.Logger) as Boolean {
+    var m = new Metronome();
+    m.start();
+    m.onBeat();
+    m.onBeat();
+    m.onBeat(); // 4 beats = 1 round
+    m.stop();
+    Test.assertEqualMessage(m.getRounds(), 1, "one round after 4 beats");
+    m.resetBeatCount();
+    Test.assertEqualMessage(m.getRounds(), 0, "reset starts a fresh set");
+    return true;
+}
+
+(:test)
 function testMetronomeStartsAndStops(logger as Test.Logger) as Boolean {
     var m = new Metronome();
     Test.assertMessage(!m.isRunning(), "should not run before start");
