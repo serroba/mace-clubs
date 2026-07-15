@@ -85,6 +85,31 @@ function testCompletedSetsDuringPlan(logger as Test.Logger) as Boolean {
 }
 
 (:test)
+function testCustomPresetIsLastAndWellFormed(logger as Test.Logger) as Boolean {
+    Test.assertEqualMessage(
+        Presets.count(),
+        Presets.LIST.size() + 1,
+        "custom preset extends the built-in list by one"
+    );
+    var q = Presets.get(Presets.count() - 1);
+    var isCustom = q[:custom] as Boolean?;
+    Test.assertMessage(isCustom != null, "last preset is the custom one");
+    Test.assertEqualMessage(q[:sets] as Number, 4, "default custom sets");
+    Test.assertEqualMessage(q[:work] as Number, 90, "default custom work seconds");
+    Test.assertEqualMessage(q[:rest] as Number, 60, "default custom rest seconds");
+    Test.assertEqualMessage(q[:label] as String, "4 x 1:30 | 1:00", "label derives from the custom values");
+    return true;
+}
+
+(:test)
+function testCustomClampKeepsValuesSane(logger as Test.Logger) as Boolean {
+    Test.assertEqualMessage(Presets.clamp(0, 1, 50), 1, "clamps up to minimum");
+    Test.assertEqualMessage(Presets.clamp(999, 1, 50), 50, "clamps down to maximum");
+    Test.assertEqualMessage(Presets.clamp(7, 1, 50), 7, "in-range value unchanged");
+    return true;
+}
+
+(:test)
 function testPresetsAreWellFormed(logger as Test.Logger) as Boolean {
     Test.assertMessage(Presets.LIST.size() >= 2, "at least free + one preset");
     var free = Presets.LIST[0] as Dictionary;

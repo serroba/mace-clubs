@@ -6,4 +6,7 @@
     <string id="SettingVibeEnabled">Vibrate on beat</string>
     <string id="SettingBeatVibeStrength">Beat vibration strength (10-100)</string>
     <string id="SettingSoftBeep">Soft beep (quieter tone)</string>
+    <string id="SettingCustomSets">Custom workout: sets</string>
+    <string id="SettingCustomWork">Custom workout: work (seconds)</string>
+    <string id="SettingCustomRest">Custom workout: rest (seconds)</string>
 </strings>

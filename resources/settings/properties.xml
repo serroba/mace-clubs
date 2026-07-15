@@ -5,4 +5,7 @@
     <property id="vibeEnabled" type="boolean">true</property>
     <property id="beatVibeStrength" type="number">50</property>
     <property id="softBeep" type="boolean">true</property>
+    <property id="customSets" type="number">4</property>
+    <property id="customWorkSecs" type="number">90</property>
+    <property id="customRestSecs" type="number">60</property>
 </properties>

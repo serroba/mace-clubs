@@ -50,11 +50,11 @@ class MaceClubsView extends WatchUi.View {
     }
 
     function selectedPreset() as Dictionary {
-        return Presets.LIST[presetIndex] as Dictionary;
+        return Presets.get(presetIndex);
     }
 
     function cyclePreset(dir as Number) as Void {
-        var n = Presets.LIST.size();
+        var n = Presets.count();
         presetIndex = (presetIndex + dir + n) % n;
     }
 
@@ -178,7 +178,9 @@ class MaceClubsView extends WatchUi.View {
                 selectedPreset()[:label] as String,
                 Graphics.TEXT_JUSTIFY_CENTER
             );
-            dc.drawText(cx, h * 54 / 100, Graphics.FONT_TINY, "UP/DOWN: workout", Graphics.TEXT_JUSTIFY_CENTER);
+            var isCustom = selectedPreset()[:custom] as Boolean?;
+            var hint = isCustom != null ? "custom - edit on phone" : "UP/DOWN: workout";
+            dc.drawText(cx, h * 54 / 100, Graphics.FONT_TINY, hint, Graphics.TEXT_JUSTIFY_CENTER);
             dc.drawText(
                 cx,
                 h * 66 / 100,
