@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<properties>
+    <property id="defaultBpm" type="number">50</property>
+    <property id="toneEnabled" type="boolean">true</property>
+    <property id="vibeEnabled" type="boolean">true</property>
+</properties>

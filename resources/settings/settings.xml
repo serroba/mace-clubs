@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<settings>
+    <setting propertyKey="@Properties.defaultBpm" title="@Strings.SettingDefaultBpm">
+        <settingConfig type="numeric" min="20" max="240"/>
+    </setting>
+    <setting propertyKey="@Properties.toneEnabled" title="@Strings.SettingToneEnabled">
+        <settingConfig type="boolean"/>
+    </setting>
+    <setting propertyKey="@Properties.vibeEnabled" title="@Strings.SettingVibeEnabled">
+        <settingConfig type="boolean"/>
+    </setting>
+</settings>
