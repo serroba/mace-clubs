@@ -6,7 +6,6 @@ import Toybox.WatchUi;
 //   BACK (bottom right) - pause / (paused) resume / (idle) quit
 //   UP / DOWN (left)    - idle: choose workout preset; in workout: tempo +-5 bpm
 class MaceClubsDelegate extends WatchUi.BehaviorDelegate {
-
     private var _view as MaceClubsView;
 
     function initialize(view as MaceClubsView) {
