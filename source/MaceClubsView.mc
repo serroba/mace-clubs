@@ -21,12 +21,14 @@ class MaceClubsView extends WatchUi.View {
     private var _refreshTimer as Timer.Timer;
     private var _lastPhase as Number?;
     private var _lastSet as Number = 0;
+    private var _icon as WatchUi.BitmapResource;
 
     function initialize() {
         View.initialize();
         metronome = new Metronome();
         workout = new WorkoutSession();
         _refreshTimer = new Timer.Timer();
+        _icon = WatchUi.loadResource(Rez.Drawables.LauncherIcon) as WatchUi.BitmapResource;
     }
 
     function onShow() as Void {
@@ -150,9 +152,9 @@ class MaceClubsView extends WatchUi.View {
         }
 
         if (!workout.isStarted()) {
-            dc.drawText(w * 5 / 100, h * 6 / 100, Graphics.FONT_XTINY, "MACE & CLUBS",
-                Graphics.TEXT_JUSTIFY_LEFT);
-            dc.drawText(cx, h * 36 / 100, Graphics.FONT_MEDIUM,
+            // crossed mace-and-club art, kept left of the subwindow cut-out
+            dc.drawBitmap(cx - 45, 2, _icon);
+            dc.drawText(cx, h * 38 / 100, Graphics.FONT_MEDIUM,
                 selectedPreset()[:label] as String, Graphics.TEXT_JUSTIFY_CENTER);
             dc.drawText(cx, h * 54 / 100, Graphics.FONT_TINY, "UP/DOWN: workout",
                 Graphics.TEXT_JUSTIFY_CENTER);
