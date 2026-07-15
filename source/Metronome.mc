@@ -25,6 +25,7 @@ class Metronome {
     private var _softTone as Boolean = true;
     private var _beatCount as Number = 0;
     private var _beatsPerRound as Number = 4;
+    private var _accentEnabled as Boolean = true;
 
     function initialize() {
         _timer = new Timer.Timer();
@@ -60,6 +61,10 @@ class Metronome {
             if (bpr instanceof Number) {
                 _beatsPerRound = clampNum(bpr, 1, 16);
             }
+            var accent = Application.Properties.getValue("accentEnabled");
+            if (accent instanceof Boolean) {
+                _accentEnabled = accent;
+            }
         } catch (e) {}
     }
 
@@ -72,6 +77,12 @@ class Metronome {
 
     function resetBeatCount() as Void {
         _beatCount = 0;
+    }
+
+    // The downbeat: the first beat of each movement round. Meaningless
+    // when every beat starts a round.
+    function isRoundStart(beatNumber as Number) as Boolean {
+        return _beatsPerRound > 1 && (beatNumber - 1) % _beatsPerRound == 0;
     }
 
     private function clampNum(v as Number, lo as Number, hi as Number) as Number {
@@ -141,7 +152,7 @@ class Metronome {
             return;
         }
         _beatCount++;
-        playCue();
+        playCue(_accentEnabled && isRoundStart(_beatCount));
         _nextBeat += _intervalMs;
         var delay = (_nextBeat - System.getTimer()).toNumber();
         if (delay < 50) {
@@ -150,14 +161,22 @@ class Metronome {
         _timer.start(method(:onBeat), delay, false);
     }
 
-    private function playCue() as Void {
+    // The accent (downbeat) marks the first beat of each round with a
+    // stronger, longer pulse and a step up in tone, so a side switch is
+    // felt without reading the screen.
+    private function playCue(accent as Boolean) as Void {
         if (_toneEnabled && Attention has :playTone) {
             // tone volume is not controllable from CIQ (it follows the
             // system sound setting); TONE_KEY is the softest cue available
-            Attention.playTone(_softTone ? Attention.TONE_KEY : Attention.TONE_LOUD_BEEP);
+            if (accent) {
+                Attention.playTone(_softTone ? Attention.TONE_LOUD_BEEP : Attention.TONE_ALERT_HI);
+            } else {
+                Attention.playTone(_softTone ? Attention.TONE_KEY : Attention.TONE_LOUD_BEEP);
+            }
         }
         if (_vibeEnabled && Attention has :vibrate) {
-            Attention.vibrate([new Attention.VibeProfile(_vibeStrength, 100)]);
+            var strength = accent ? clampNum(_vibeStrength + 40, MIN_VIBE, MAX_VIBE) : _vibeStrength;
+            Attention.vibrate([new Attention.VibeProfile(strength, accent ? 250 : 100)]);
         }
     }
 }
