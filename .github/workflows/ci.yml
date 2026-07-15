@@ -1,0 +1,30 @@
+name: CI
+
+permissions:
+  contents: read
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+jobs:
+  lint:
+    name: Lint XML resources
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Validate XML files
+        run: |
+          sudo apt-get update -q && sudo apt-get install -y -q libxml2-utils
+          find . -name '*.xml' -not -path './.git/*' -print0 | xargs -0 -n1 xmllint --noout
+
+  test:
+    name: Build & unit tests (simulator)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Compile and run unit tests
+        uses: matco/action-connectiq-tester@v1
+        with:
+          device: instinct3solar45mm

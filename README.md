@@ -1,5 +1,7 @@
 # Mace & Clubs
 
+[![CI](https://github.com/serroba/mace-clubs/actions/workflows/ci.yml/badge.svg)](https://github.com/serroba/mace-clubs/actions/workflows/ci.yml)
+
 A Garmin Connect IQ workout app for steel mace and Indian club training, targeting the
 **Instinct 3 Solar** (45mm / 50mm).
 
