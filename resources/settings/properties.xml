@@ -13,4 +13,5 @@
     <property id="circleShows" type="number">0</property>
     <property id="accentEnabled" type="boolean">true</property>
     <property id="cueMode" type="number">0</property>
+    <property id="motionCapture" type="boolean">false</property>
 </properties>
