@@ -13,6 +13,10 @@ class Metronome {
     const DEFAULT_BPM = 50;
     const MIN_VIBE = 10;
     const MAX_VIBE = 100;
+    // Cue frequency modes (persisted as the cueMode setting).
+    const CUE_LOOP_STARTS = 0; // one cue per loop (loop A and loop B both)
+    const CUE_EVERY_BEAT = 1;  // classic full metronome
+    const CUE_CYCLE_TOP = 2;   // one cue per full pattern cycle (top of loop A)
 
     private var _timer as Timer.Timer;
     private var _bpm as Number = DEFAULT_BPM;
@@ -30,7 +34,7 @@ class Metronome {
     private var _pattern as Array<Number> = [4] as Array<Number>;
     private var _cycleBeats as Number = 4;
     private var _accentEnabled as Boolean = true;
-    private var _cueEveryBeat as Boolean = false;
+    private var _cueMode as Number = CUE_LOOP_STARTS;
 
     function initialize() {
         _timer = new Timer.Timer();
@@ -79,7 +83,7 @@ class Metronome {
             }
             var cm = Application.Properties.getValue("cueMode");
             if (cm instanceof Number) {
-                setCueEveryBeat(cm == 1);
+                setCueMode(cm);
             }
         } catch (e) {}
     }
@@ -137,16 +141,29 @@ class Metronome {
         return false;
     }
 
-    function setCueEveryBeat(everyBeat as Boolean) as Void {
-        _cueEveryBeat = everyBeat;
+    // The top of a full pattern cycle: the first beat of loop A. For a
+    // single-loop pattern this coincides with every round start.
+    function isCycleStart(beatNumber as Number) as Boolean {
+        return (beatNumber - 1) % _cycleBeats == 0;
     }
 
-    // Round cues (the default) pulse only on loop boundaries, cutting
-    // vibration power by the beats-per-round factor; every-beat mode is
-    // the classic full metronome. Degenerates to every beat when a
-    // round is a single beat.
+    function setCueMode(mode as Number) as Void {
+        _cueMode = clampNum(mode, CUE_LOOP_STARTS, CUE_CYCLE_TOP);
+    }
+
+    // Loop-start cues (the default) pulse on every loop boundary; cycle-top
+    // cues fire once per full pattern (halving cues on a 4-2 by skipping the
+    // loop B switch); every-beat is the classic full metronome. All modes
+    // degenerate to every beat when a round is a single beat, since there is
+    // nothing coarser to mark.
     function shouldCue(beatNumber as Number) as Boolean {
-        return _cueEveryBeat || _cycleBeats == _pattern.size() || isRoundStart(beatNumber);
+        if (_cueMode == CUE_EVERY_BEAT || _cycleBeats == _pattern.size()) {
+            return true;
+        }
+        if (_cueMode == CUE_CYCLE_TOP) {
+            return isCycleStart(beatNumber);
+        }
+        return isRoundStart(beatNumber);
     }
 
     private function clampNum(v as Number, lo as Number, hi as Number) as Number {

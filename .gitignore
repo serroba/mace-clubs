@@ -6,3 +6,4 @@ gen/
 *.mir
 developer_key*
 .DS_Store
+dist/

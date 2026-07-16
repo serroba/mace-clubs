@@ -14,8 +14,9 @@
     <string id="SettingAccentEnabled">Accent first beat of each round</string>
     <string id="SettingCueMode">Metronome cues on</string>
     <string id="SettingMotionCapture">Motion capture (research, uses more battery)</string>
-    <string id="CueRoundStarts">Round starts (battery friendly)</string>
+    <string id="CueRoundStarts">Every loop (A and B)</string>
     <string id="CueEveryBeat">Every beat</string>
+    <string id="CueCycleTop">Cycle top (once per pattern)</string>
     <string id="SettingCircleShows">Instinct circle shows</string>
     <string id="CircleRounds">Rounds</string>
     <string id="CircleHeartRate">Heart rate</string>
