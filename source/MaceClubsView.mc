@@ -43,6 +43,12 @@ class MaceClubsView extends WatchUi.View {
     // AppBase.onSettingsChanged when edited mid-session.
     function loadSettings() as Void {
         metronome.loadSettings();
+        // metronome.loadSettings re-applies the phone pattern; a running
+        // workout keeps its own preset pattern, so restore it.
+        if (workout.isStarted()) {
+            var preset = selectedPreset();
+            metronome.applyPattern(preset[:beatsA] as Number, preset[:beatsB] as Number);
+        }
         try {
             var c = Application.Properties.getValue("circleShows");
             if (c instanceof Number) {
@@ -68,6 +74,14 @@ class MaceClubsView extends WatchUi.View {
         return Presets.get(presetIndex);
     }
 
+    // Short pattern tag for the idle screen: "4-2" for a varying club
+    // pattern, "fixed 4" for a single uniform loop.
+    private function patternLabel(preset as Dictionary) as String {
+        var a = preset[:beatsA] as Number;
+        var b = preset[:beatsB] as Number;
+        return b > 0 ? Lang.format("$1$-$2$", [a, b]) : Lang.format("fixed $1$", [a]);
+    }
+
     function cyclePreset(dir as Number) as Void {
         var n = Presets.count();
         presetIndex = (presetIndex + dir + n) % n;
@@ -86,6 +100,7 @@ class MaceClubsView extends WatchUi.View {
         done = false;
         _lastPhase = null;
         metronome.resetBeatCount();
+        metronome.applyPattern(preset[:beatsA] as Number, preset[:beatsB] as Number);
         workout.start();
         metronome.start();
     }
@@ -210,7 +225,7 @@ class MaceClubsView extends WatchUi.View {
                 cx,
                 h * 66 / 100,
                 Graphics.FONT_TINY,
-                Lang.format("$1$ bpm", [metronome.getBpm()]),
+                Lang.format("$1$ bpm | $2$", [metronome.getBpm(), patternLabel(selectedPreset())]),
                 Graphics.TEXT_JUSTIFY_CENTER
             );
             dc.drawText(cx, h * 78 / 100, Graphics.FONT_SMALL, "SELECT to start", Graphics.TEXT_JUSTIFY_CENTER);

@@ -110,6 +110,32 @@ function testCustomClampKeepsValuesSane(logger as Test.Logger) as Boolean {
 }
 
 (:test)
+function testBuiltInPresetsCarryLoopPatterns(logger as Test.Logger) as Boolean {
+    // Baked patterns per the chosen mapping: the two |1:00 shapes are 4-2,
+    // the others fixed. beatsB == 0 means a single uniform loop.
+    var varying = Presets.get(1); // 5 x 2:00 | 1:00
+    Test.assertEqualMessage(varying[:beatsA] as Number, 4, "loop A is 4");
+    Test.assertEqualMessage(varying[:beatsB] as Number, 2, "5x2:00|1:00 is a 4-2");
+
+    var fixed = Presets.get(2); // 5 x 2:00 | 2:00
+    Test.assertEqualMessage(fixed[:beatsB] as Number, 0, "5x2:00|2:00 is a fixed loop");
+
+    Test.assertEqualMessage(Presets.get(3)[:beatsB] as Number, 2, "3x2:00|1:00 is a 4-2");
+    Test.assertEqualMessage(Presets.get(4)[:beatsB] as Number, 0, "10x1:00|0:30 is fixed");
+    return true;
+}
+
+(:test)
+function testCustomPresetCarriesPhonePattern(logger as Test.Logger) as Boolean {
+    // With no phone overrides in the test harness, the pattern defaults to
+    // a uniform 4-beat loop.
+    var q = Presets.get(Presets.count() - 1);
+    Test.assertEqualMessage(q[:beatsA] as Number, 4, "default loop A is 4");
+    Test.assertEqualMessage(q[:beatsB] as Number, 0, "default is a single loop");
+    return true;
+}
+
+(:test)
 function testPresetsAreWellFormed(logger as Test.Logger) as Boolean {
     Test.assertMessage(Presets.LIST.size() >= 2, "at least free + one preset");
     var free = Presets.LIST[0] as Dictionary;

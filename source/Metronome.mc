@@ -78,7 +78,7 @@ class Metronome {
             if (bpr2 instanceof Number) {
                 b = clampNum(bpr2, 0, 16);
             }
-            setPattern(b > 0 ? ([a, b] as Array<Number>) : ([a] as Array<Number>));
+            applyPattern(a, b);
             var accent = Application.Properties.getValue("accentEnabled");
             if (accent instanceof Boolean) {
                 _accentEnabled = accent;
@@ -93,6 +93,13 @@ class Metronome {
     // Rounds derive exactly from the beat count: the metronome defines
     // the movement cadence, so beats / beatsPerRound is the number of
     // completed movement loops. Reset at each work interval / set mark.
+    // Set the loop pattern from a loop-A / loop-B pair: loopB == 0 is a
+    // single uniform loop, loopB > 0 alternates the two (the club 4-2).
+    // Each workout preset applies its own pattern through here on start.
+    function applyPattern(loopA as Number, loopB as Number) as Void {
+        setPattern(loopB > 0 ? ([loopA, loopB] as Array<Number>) : ([loopA] as Array<Number>));
+    }
+
     function setPattern(pattern as Array<Number>) as Void {
         if (pattern.size() == 0) {
             pattern = [4] as Array<Number>;

@@ -214,6 +214,27 @@ function testMixedPatternRoundCues(logger as Test.Logger) as Boolean {
 }
 
 (:test)
+function testApplyPatternSingleLoopWhenBIsZero(logger as Test.Logger) as Boolean {
+    var m = new Metronome();
+    m.applyPattern(4, 0); // loop B = 0 -> uniform single loop
+    Test.assertMessage(m.isRoundStart(1), "beat 1 starts a round");
+    Test.assertMessage(!m.isRoundStart(2), "beat 2 is mid-loop");
+    Test.assertMessage(m.isRoundStart(5), "beat 5 starts the next round");
+    return true;
+}
+
+(:test)
+function testApplyPatternVaryingWhenBIsPositive(logger as Test.Logger) as Boolean {
+    var m = new Metronome();
+    m.applyPattern(4, 2); // the club 4-2
+    Test.assertMessage(m.isRoundStart(1), "beat 1 starts loop A");
+    Test.assertMessage(m.isRoundStart(5), "beat 5 starts loop B");
+    Test.assertMessage(!m.isRoundStart(6), "beat 6 is inside loop B");
+    Test.assertMessage(m.isRoundStart(7), "beat 7 starts the next cycle");
+    return true;
+}
+
+(:test)
 function testMetronomeStartsAndStops(logger as Test.Logger) as Boolean {
     var m = new Metronome();
     Test.assertMessage(!m.isRunning(), "should not run before start");

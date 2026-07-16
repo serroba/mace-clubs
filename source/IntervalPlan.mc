@@ -60,13 +60,20 @@ module Intervals {
 // Workout shapes shown on the idle screen. :sets == 0 is free training
 // (no interval plan, manual set marking). The last slot is the Custom
 // preset, built from phone-editable app settings on every read.
+//
+// Each preset also carries its own metronome loop pattern: :beatsA is
+// the loop length and :beatsB the optional second loop (0 = single,
+// uniform loop; >0 = a varying A-B pattern like the club 4-2). Built-in
+// shapes bake a sensible pattern; Free training and Custom take theirs
+// from the phone (beatsPerRound / beatsPerRound2) so there is always a
+// fully tunable slot.
 module Presets {
     const LIST = [
-        {:label => "Free training", :sets => 0, :work => 0, :rest => 0},
-        {:label => "5 x 2:00 | 1:00", :sets => 5, :work => 120, :rest => 60},
-        {:label => "5 x 2:00 | 2:00", :sets => 5, :work => 120, :rest => 120},
-        {:label => "3 x 2:00 | 1:00", :sets => 3, :work => 120, :rest => 60},
-        {:label => "10 x 1:00 | 0:30", :sets => 10, :work => 60, :rest => 30}
+        {:label => "Free training", :sets => 0, :work => 0, :rest => 0, :beatsA => 4, :beatsB => 0},
+        {:label => "5 x 2:00 | 1:00", :sets => 5, :work => 120, :rest => 60, :beatsA => 4, :beatsB => 2},
+        {:label => "5 x 2:00 | 2:00", :sets => 5, :work => 120, :rest => 120, :beatsA => 4, :beatsB => 0},
+        {:label => "3 x 2:00 | 1:00", :sets => 3, :work => 120, :rest => 60, :beatsA => 4, :beatsB => 2},
+        {:label => "10 x 1:00 | 0:30", :sets => 10, :work => 60, :rest => 30, :beatsA => 4, :beatsB => 0}
     ] as Array<Dictionary>;
 
     function count() as Number {
@@ -75,9 +82,41 @@ module Presets {
 
     function get(index as Number) as Dictionary {
         if (index < LIST.size()) {
-            return LIST[index] as Dictionary;
+            var p = LIST[index] as Dictionary;
+            // Free training has no fixed shape, so its pattern comes from
+            // the phone like Custom's does, not from the baked placeholder.
+            if ((p[:sets] as Number) == 0) {
+                var pat = phonePattern();
+                return {
+                    :label  => p[:label],
+                    :sets   => 0,
+                    :work   => 0,
+                    :rest   => 0,
+                    :beatsA => pat[0],
+                    :beatsB => pat[1]
+                };
+            }
+            return p;
         }
         return custom();
+    }
+
+    // Loop pattern from the phone settings, clamped: [loopA, loopB] with
+    // loopB == 0 meaning a single uniform loop.
+    function phonePattern() as Array<Number> {
+        var a = 4;
+        var b = 0;
+        try {
+            var bpr = Application.Properties.getValue("beatsPerRound");
+            if (bpr instanceof Number) {
+                a = clamp(bpr, 1, 16);
+            }
+            var bpr2 = Application.Properties.getValue("beatsPerRound2");
+            if (bpr2 instanceof Number) {
+                b = clamp(bpr2, 0, 16);
+            }
+        } catch (e) {}
+        return [a, b] as Array<Number>;
     }
 
     // The Custom preset reads customSets / customWorkSecs / customRestSecs
@@ -101,11 +140,14 @@ module Presets {
                 rest = clamp(r, 0, 3600);
             }
         } catch (e) {}
+        var pat = phonePattern();
         return {
             :label  => Lang.format("$1$ x $2$ | $3$", [sets, mmss(work), mmss(rest)]),
             :sets   => sets,
             :work   => work,
             :rest   => rest,
+            :beatsA => pat[0],
+            :beatsB => pat[1],
             :custom => true
         };
     }
