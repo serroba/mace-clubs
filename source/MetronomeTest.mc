@@ -119,10 +119,46 @@ function testRoundCueModeIsDefaultAndPulsesOnLoops(logger as Test.Logger) as Boo
 (:test)
 function testEveryBeatCueModeCuesAll(logger as Test.Logger) as Boolean {
     var m = new Metronome();
-    m.setCueEveryBeat(true);
+    m.setCueMode(1); // every beat
     Test.assertMessage(m.shouldCue(1), "beat 1 cues");
     Test.assertMessage(m.shouldCue(2), "beat 2 cues");
     Test.assertMessage(m.shouldCue(3), "beat 3 cues");
+    return true;
+}
+
+(:test)
+function testCycleTopCueModeCuesOncePerPattern(logger as Test.Logger) as Boolean {
+    var m = new Metronome();
+    m.setPattern([4, 2] as Toybox.Lang.Array<Toybox.Lang.Number>);
+    m.setCueMode(2); // cycle top only
+    Test.assertMessage(m.shouldCue(1), "cue at the top of the 4-2 cycle");
+    Test.assertMessage(!m.shouldCue(5), "loop B start is silent in cycle-top mode");
+    Test.assertMessage(!m.shouldCue(2), "silent inside loop A");
+    Test.assertMessage(m.shouldCue(7), "cue at the top of the next cycle");
+    Test.assertMessage(!m.shouldCue(11), "loop B start of cycle 2 is silent");
+    return true;
+}
+
+(:test)
+function testCycleTopMatchesLoopStartsForSingleLoop(logger as Test.Logger) as Boolean {
+    // A single-loop pattern has one loop per cycle, so cycle-top and
+    // loop-start modes are indistinguishable - no behaviour change.
+    var m = new Metronome(); // default 4 beats, single loop
+    m.setCueMode(2);
+    Test.assertMessage(m.shouldCue(1), "cue on beat 1");
+    Test.assertMessage(!m.shouldCue(2), "silent mid-loop");
+    Test.assertMessage(m.shouldCue(5), "cue on beat 5");
+    return true;
+}
+
+(:test)
+function testCueModeClampsToKnownRange(logger as Test.Logger) as Boolean {
+    var m = new Metronome();
+    m.setPattern([4, 2] as Toybox.Lang.Array<Toybox.Lang.Number>);
+    m.setCueMode(99); // clamps to 2 (cycle top)
+    Test.assertMessage(m.shouldCue(1), "clamped-high mode still cues loop A start");
+    m.setCueMode(-5); // clamps to 0 (loop starts)
+    Test.assertMessage(m.shouldCue(1), "clamped-low mode still cues loop A start");
     return true;
 }
 
