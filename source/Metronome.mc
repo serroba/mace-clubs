@@ -23,7 +23,9 @@ class Metronome {
     private var _intervalMs as Float = 1200.0;
     private var _nextBeat as Float = 0.0;
     private var _running as Boolean = false;
-    private var _toneEnabled as Boolean = true;
+    // Beat feedback channels, independently toggleable from the phone.
+    // Default is vibration-only: both at once is heavy on the wrist.
+    private var _toneEnabled as Boolean = false;
     private var _vibeEnabled as Boolean = true;
     private var _vibeStrength as Number = 50;
     private var _softTone as Boolean = true;
@@ -174,6 +176,16 @@ class Metronome {
             return hi;
         }
         return v;
+    }
+
+    // Feedback channels; also consulted by the interval transition cue so
+    // a silenced channel stays silent at set boundaries, not just on beats.
+    function isToneEnabled() as Boolean {
+        return _toneEnabled;
+    }
+
+    function isVibeEnabled() as Boolean {
+        return _vibeEnabled;
     }
 
     function getVibeStrength() as Number {

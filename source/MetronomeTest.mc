@@ -52,6 +52,16 @@ function testAdjustBpmDoesNotCrossLimits(logger as Test.Logger) as Boolean {
 }
 
 (:test)
+function testBeatFeedbackDefaultsToVibrationOnly(logger as Test.Logger) as Boolean {
+    // Both channels at once is heavy; ship vibration-only out of the box
+    // and let the rider add the beep. Both stay independently toggleable.
+    var m = new Metronome();
+    Test.assertMessage(!m.isToneEnabled(), "beep should default off");
+    Test.assertMessage(m.isVibeEnabled(), "vibration should default on");
+    return true;
+}
+
+(:test)
 function testVibeStrengthDefaultsTo50(logger as Test.Logger) as Boolean {
     var m = new Metronome();
     Test.assertEqualMessage(m.getVibeStrength(), 50, "default vibe strength should be 50");

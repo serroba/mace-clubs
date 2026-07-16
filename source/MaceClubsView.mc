@@ -144,11 +144,13 @@ class MaceClubsView extends WatchUi.View {
         }
     }
 
+    // Honours the same beep/vibrate toggles as the beat cue, so turning a
+    // channel off silences it at set boundaries too, not just on beats.
     private function playTransitionCue(finished as Boolean) as Void {
-        if (Attention has :playTone) {
+        if (metronome.isToneEnabled() && Attention has :playTone) {
             Attention.playTone(finished ? Attention.TONE_SUCCESS : Attention.TONE_INTERVAL_ALERT);
         }
-        if (Attention has :vibrate) {
+        if (metronome.isVibeEnabled() && Attention has :vibrate) {
             Attention.vibrate([new Attention.VibeProfile(100, 400)]);
         }
     }
