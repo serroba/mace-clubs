@@ -29,21 +29,54 @@ vibration cues, run the metronome only during work, and count sets automatically
 
 ## Development
 
-Requires the [Connect IQ SDK](https://developer.garmin.com/connect-iq/sdk/) (install via
-the SDK Manager, which also provides the Instinct 3 device files) and a developer key
-(`Connect IQ: Generate a Developer Key` in the VS Code extension, or `openssl`).
+Requires:
+
+- a Java runtime available to the shell (`java -version` must succeed; a Homebrew
+  OpenJDK install works even when macOS's `/usr/libexec/java_home` cannot find it);
+- the [Connect IQ SDK](https://developer.garmin.com/connect-iq/sdk/), installed via SDK
+  Manager with the Instinct 3 Solar 45 mm device files; and
+- a developer key (`Connect IQ: Generate a Developer Key` in the VS Code extension,
+  or generate one with `openssl`).
+
+`monkeyc`, `monkeydo`, and `connectiq` must be on `PATH`. SDK Manager does not always
+add them automatically. On macOS, add the selected SDK's `bin` directory for the
+current shell (replace the example with the directory installed on your machine):
+
+```sh
+export PATH="$HOME/Library/Application Support/Garmin/ConnectIQ/Sdks/connectiq-sdk-mac-9.2.0/bin:$PATH"
+```
 
 ```sh
 # Build
 monkeyc -f monkey.jungle -d instinct3solar45mm -o bin/mace-clubs.prg -y /path/to/developer_key
 
-# Run in the simulator (start `connectiq` first)
+# In another terminal, launch the simulator and leave it running
+connectiq
+
+# Build, then load the app into the running simulator
 monkeydo bin/mace-clubs.prg instinct3solar45mm
 
 # Unit tests
 monkeyc -f monkey.jungle -d instinct3solar45mm -o bin/mace-clubs-test.prg -y /path/to/developer_key --unit-test
 monkeydo bin/mace-clubs-test.prg instinct3solar45mm -t
 ```
+
+If `monkeyc` reports that it cannot locate a Java runtime but Java is installed, ensure
+the JDK's `bin` directory precedes `/usr/bin` on `PATH` and re-run `java -version`
+before retrying. Homebrew's default location on Apple Silicon is
+`/opt/homebrew/opt/openjdk/bin`. If `monkeydo` cannot connect, confirm that the Connect
+IQ simulator is already open and has finished starting.
+
+For the complete pre-push quality check, install the formatter and linter described
+below, then run:
+
+```sh
+make check              # XML, formatting, lint, app build, and test build
+make simulator-test     # also execute the tests in a running simulator
+```
+
+The Makefile generates an ignored local developer key when `developer_key.der` is
+absent. Override `DEVICE`, `DEVELOPER_KEY`, `MONKEYC`, or `MONKEYDO` when needed.
 
 ### Formatting and linting
 

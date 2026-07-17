@@ -140,29 +140,35 @@ class MaceClubsView extends WatchUi.View {
         if (oldPhase == null || phase == oldPhase && set == oldSet) {
             return;
         }
-        onPlanTransition(oldPhase as Number, phase);
+        onPlanTransition(oldPhase as Number, oldSet, phase, set);
     }
 
-    private function onPlanTransition(oldPhase as Number, phase as Number) as Void {
-        if (phase == Intervals.PHASE_DONE) {
+    private function onPlanTransition(
+        oldPhase as Number,
+        oldSet as Number,
+        phase as Number,
+        set as Number
+    ) as Void {
+        var actions = Intervals.actionsForTransition(oldPhase, oldSet, phase, set);
+        var setsToAdd = actions[:setsToAdd] as Number;
+        for (var i = 0; i < setsToAdd; i++) {
             workout.addSet();
+        }
+        if (actions[:stopMetronome] as Boolean) {
             metronome.stop();
-            playTransitionCue(true);
+        }
+        if (actions[:resetBeatCount] as Boolean) {
+            metronome.resetBeatCount();
+        }
+        if (actions[:startMetronome] as Boolean) {
+            metronome.start();
+        }
+        var finished = actions[:finished] as Boolean;
+        playTransitionCue(finished);
+        if (actions[:pauseWorkout] as Boolean) {
             workout.pause();
             paused = true;
             done = true;
-        } else if (phase == Intervals.PHASE_REST) {
-            workout.addSet();
-            metronome.stop();
-            playTransitionCue(false);
-        } else {
-            // WORK begins; WORK -> WORK is a set rollover on zero-rest plans
-            if (oldPhase == Intervals.PHASE_WORK) {
-                workout.addSet();
-            }
-            metronome.resetBeatCount();
-            metronome.start();
-            playTransitionCue(false);
         }
     }
 

@@ -85,6 +85,53 @@ function testCompletedSetsDuringPlan(logger as Test.Logger) as Boolean {
 }
 
 (:test)
+function testWorkToRestCountsSetAndStopsMetronome(logger as Test.Logger) as Boolean {
+    var a = Intervals.actionsForTransition(Intervals.PHASE_WORK, 1, Intervals.PHASE_REST, 1);
+    Test.assertEqualMessage(a[:setsToAdd] as Number, 1, "finishing work counts a set");
+    Test.assertMessage(a[:stopMetronome] as Boolean, "rest stops the metronome");
+    Test.assertMessage(!(a[:startMetronome] as Boolean), "rest does not restart the metronome");
+    Test.assertMessage(!(a[:pauseWorkout] as Boolean), "rest keeps the workout active");
+    return true;
+}
+
+(:test)
+function testRestToWorkRestartsWithoutCountingSet(logger as Test.Logger) as Boolean {
+    var a = Intervals.actionsForTransition(Intervals.PHASE_REST, 1, Intervals.PHASE_WORK, 2);
+    Test.assertEqualMessage(a[:setsToAdd] as Number, 0, "set was already counted when rest began");
+    Test.assertMessage(a[:resetBeatCount] as Boolean, "new work resets the beat count");
+    Test.assertMessage(a[:startMetronome] as Boolean, "new work starts the metronome");
+    Test.assertMessage(!(a[:finished] as Boolean), "another work interval is not completion");
+    return true;
+}
+
+(:test)
+function testZeroRestRolloverCountsSetAndKeepsWorking(logger as Test.Logger) as Boolean {
+    var a = Intervals.actionsForTransition(Intervals.PHASE_WORK, 1, Intervals.PHASE_WORK, 2);
+    Test.assertEqualMessage(a[:setsToAdd] as Number, 1, "work-to-work rollover counts the completed set");
+    Test.assertMessage(a[:resetBeatCount] as Boolean, "rollover resets the beat count");
+    Test.assertMessage(a[:startMetronome] as Boolean, "rollover keeps the metronome running");
+    Test.assertMessage(!(a[:pauseWorkout] as Boolean), "rollover does not pause the workout");
+    return true;
+}
+
+(:test)
+function testCompletionCountsFinalSetAndPauses(logger as Test.Logger) as Boolean {
+    var a = Intervals.actionsForTransition(Intervals.PHASE_WORK, 5, Intervals.PHASE_DONE, 5);
+    Test.assertEqualMessage(a[:setsToAdd] as Number, 1, "completion counts the final set");
+    Test.assertMessage(a[:stopMetronome] as Boolean, "completion stops the metronome");
+    Test.assertMessage(a[:pauseWorkout] as Boolean, "completion pauses the FIT session");
+    Test.assertMessage(a[:finished] as Boolean, "completion selects the finished cue and UI");
+    return true;
+}
+
+(:test)
+function testSkippedRefreshCountsEveryCompletedSet(logger as Test.Logger) as Boolean {
+    var a = Intervals.actionsForTransition(Intervals.PHASE_WORK, 1, Intervals.PHASE_WORK, 4);
+    Test.assertEqualMessage(a[:setsToAdd] as Number, 3, "skipping two boundaries still counts all three sets");
+    return true;
+}
+
+(:test)
 function testCustomPresetIsLastAndWellFormed(logger as Test.Logger) as Boolean {
     Test.assertEqualMessage(
         Presets.count(),
