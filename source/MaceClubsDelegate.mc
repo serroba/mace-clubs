@@ -5,6 +5,7 @@ import Toybox.WatchUi;
 //   SELECT (top right)  - start workout / mark a set / (paused) save & exit
 //   BACK (bottom right) - pause / (paused) resume / (idle) quit
 //   UP / DOWN (left)    - idle: choose workout preset; in workout: tempo +-5 bpm
+//   MENU (hold CTRL)    - idle: settings menu; in workout: discard & exit
 class MaceClubsDelegate extends WatchUi.BehaviorDelegate {
     private var _view as MaceClubsView;
 
@@ -47,6 +48,22 @@ class MaceClubsDelegate extends WatchUi.BehaviorDelegate {
             return true;
         }
         return false;
+    }
+
+    // MENU (hold the CTRL / up-left button): opens the settings menu when
+    // idle, or a discard-and-exit (behind a confirmation, so a stray press
+    // cannot bin a real session) once a workout is running.
+    function onMenu() as Boolean {
+        if (_view.workout.isStarted()) {
+            WatchUi.pushView(
+                new WatchUi.Confirmation("Discard workout?"),
+                new DiscardConfirmationDelegate(_view),
+                WatchUi.SLIDE_IMMEDIATE
+            );
+        } else {
+            WatchUi.pushView(SettingsMenu.build(), new SettingsMenuDelegate(_view), WatchUi.SLIDE_UP);
+        }
+        return true;
     }
 
     function onPreviousPage() as Boolean {
