@@ -111,6 +111,13 @@ class MaceClubsView extends WatchUi.View {
         metronome.resetBeatCount();
     }
 
+    // Throw the session away without saving and leave the app. Reached
+    // from the paused/done screen via MENU (behind a confirmation).
+    function discardWorkout() as Void {
+        metronome.stop();
+        workout.discardAndExit();
+    }
+
     // Detect work/rest/done transitions once per refresh tick and fire
     // the matching cues. Plan state comes from the FIT timer, so a
     // paused session holds its phase automatically.
@@ -185,21 +192,28 @@ class MaceClubsView extends WatchUi.View {
         if (paused) {
             dc.drawText(
                 cx,
-                h * 38 / 100,
+                h * 28 / 100,
                 Graphics.FONT_MEDIUM,
                 done ? "DONE!" : "PAUSED",
                 Graphics.TEXT_JUSTIFY_CENTER
             );
-            dc.drawText(cx, h * 56 / 100, Graphics.FONT_SMALL, "SELECT: save", Graphics.TEXT_JUSTIFY_CENTER);
+            dc.drawText(cx, h * 46 / 100, Graphics.FONT_SMALL, "SELECT: save", Graphics.TEXT_JUSTIFY_CENTER);
             if (!done) {
                 dc.drawText(
                     cx,
-                    h * 71 / 100,
+                    h * 60 / 100,
                     Graphics.FONT_SMALL,
                     "BACK: resume",
                     Graphics.TEXT_JUSTIFY_CENTER
                 );
             }
+            dc.drawText(
+                cx,
+                h * (done ? 60 : 74) / 100,
+                Graphics.FONT_SMALL,
+                "MENU: discard",
+                Graphics.TEXT_JUSTIFY_CENTER
+            );
             return;
         }
 
@@ -218,17 +232,15 @@ class MaceClubsView extends WatchUi.View {
                 selectedPreset()[:label] as String,
                 Graphics.TEXT_JUSTIFY_CENTER
             );
-            var isCustom = selectedPreset()[:custom] as Boolean?;
-            var hint = isCustom != null ? "custom - edit on phone" : "UP/DOWN: workout";
-            dc.drawText(cx, h * 54 / 100, Graphics.FONT_TINY, hint, Graphics.TEXT_JUSTIFY_CENTER);
             dc.drawText(
                 cx,
-                h * 66 / 100,
+                h * 54 / 100,
                 Graphics.FONT_TINY,
                 Lang.format("$1$ bpm | $2$", [metronome.getBpm(), patternLabel(selectedPreset())]),
                 Graphics.TEXT_JUSTIFY_CENTER
             );
-            dc.drawText(cx, h * 78 / 100, Graphics.FONT_SMALL, "SELECT to start", Graphics.TEXT_JUSTIFY_CENTER);
+            dc.drawText(cx, h * 68 / 100, Graphics.FONT_SMALL, "SELECT to start", Graphics.TEXT_JUSTIFY_CENTER);
+            dc.drawText(cx, h * 82 / 100, Graphics.FONT_TINY, "MENU: settings", Graphics.TEXT_JUSTIFY_CENTER);
             return;
         }
 
@@ -395,19 +407,28 @@ class MaceClubsView extends WatchUi.View {
     private function drawSubwindowMetric(dc as Dc, value as String) as Void {
         var sx = dc.getWidth() * 82 / 100;
         var sy = dc.getHeight() * 17 / 100;
+        var sw = dc.getWidth() * 20 / 100;
+        var sh = dc.getHeight() * 20 / 100;
         if (WatchUi has :getSubscreen) {
             var sub = WatchUi.getSubscreen();
             if (sub != null) {
                 sx = (sub.x as Number) + (sub.width as Number) / 2;
                 sy = (sub.y as Number) + (sub.height as Number) / 2;
+                sw = sub.width as Number;
+                sh = sub.height as Number;
             }
         }
-        dc.drawText(
-            sx,
-            sy,
-            Graphics.FONT_SMALL,
-            value,
-            Graphics.TEXT_JUSTIFY_CENTER | Graphics.TEXT_JUSTIFY_VCENTER
-        );
+        // Fill the circle: pick the largest font whose text fits the
+        // subwindow, rather than a fixed small one floating in the middle.
+        var fonts = [Graphics.FONT_LARGE, Graphics.FONT_MEDIUM, Graphics.FONT_SMALL, Graphics.FONT_TINY] as Array<Graphics.FontDefinition>;
+        var font = Graphics.FONT_TINY;
+        for (var i = 0; i < fonts.size(); i++) {
+            var dims = dc.getTextDimensions(value, fonts[i]);
+            if (dims[0] <= sw * 90 / 100 && dims[1] <= sh * 95 / 100) {
+                font = fonts[i];
+                break;
+            }
+        }
+        dc.drawText(sx, sy, font, value, Graphics.TEXT_JUSTIFY_CENTER | Graphics.TEXT_JUSTIFY_VCENTER);
     }
 }
