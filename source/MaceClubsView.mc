@@ -126,7 +126,9 @@ class MaceClubsView extends WatchUi.View {
         _startTimer.start(method(:beginWorkout), START_DELAY_MS, false);
     }
 
-    private function beginWorkout() as Void {
+    // Timer callbacks must be public methods: resolving a private method via
+    // method(:beginWorkout) compiles but raises Invalid Value at runtime.
+    function beginWorkout() as Void {
         if (!_starting) {
             return;
         }
