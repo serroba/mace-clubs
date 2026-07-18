@@ -152,11 +152,19 @@ class MaceClubsView extends WatchUi.View {
         metronome.resetBeatCount();
     }
 
-    // Throw the session away without saving and leave the app. Reached
-    // from the paused/done screen via MENU (behind a confirmation).
+    // Throw the session away without saving and reset to the app's initial
+    // preset screen. Reached via MENU behind a confirmation.
     function discardWorkout() as Void {
         metronome.stop();
-        workout.discardAndExit();
+        workout.discard();
+        paused = false;
+        done = false;
+        plan = null;
+        _lastPhase = null;
+        _lastSet = 0;
+        _warnedSet = 0;
+        metronome.resetBeatCount();
+        WatchUi.requestUpdate();
     }
 
     // Detect work/rest/done transitions once per refresh tick and fire
@@ -311,7 +319,7 @@ class MaceClubsView extends WatchUi.View {
                 cx,
                 h * (done ? 68 : 81) / 100,
                 Graphics.FONT_SMALL,
-                "MENU: discard",
+                "MENU: home",
                 Graphics.TEXT_JUSTIFY_CENTER
             );
             return;

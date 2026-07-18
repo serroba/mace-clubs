@@ -295,7 +295,9 @@ class WorkoutSession {
         return used < 0.0 ? 0.0 : used;
     }
 
-    function discardAndExit() as Void {
+    // Discard the current FIT session and return this wrapper to its idle
+    // state. Unlike saveAndExit(), this deliberately keeps the app open.
+    function discard() as Void {
         stopMotionCapture();
         var session = _session;
         if (session != null) {
@@ -305,6 +307,15 @@ class WorkoutSession {
             session.discard();
             _session = null;
         }
-        System.exit();
+        _setsField = null;
+        _batteryField = null;
+        _rmsField = null;
+        _peakField = null;
+        _zcField = null;
+        _sets = 0;
+        _started = false;
+        _startBattery = null;
+        _smoothnessEnabled = false;
+        _smoothness = new Smoothness.Tracker();
     }
 }
