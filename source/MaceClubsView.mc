@@ -126,7 +126,9 @@ class MaceClubsView extends WatchUi.View {
         _startTimer.start(method(:beginWorkout), START_DELAY_MS, false);
     }
 
-    private function beginWorkout() as Void {
+    // Timer callbacks must be public methods: resolving a private method via
+    // method(:beginWorkout) compiles but raises Invalid Value at runtime.
+    function beginWorkout() as Void {
         if (!_starting) {
             return;
         }
@@ -319,7 +321,7 @@ class MaceClubsView extends WatchUi.View {
                 cx,
                 h * (done ? 68 : 81) / 100,
                 Graphics.FONT_SMALL,
-                "MENU: home",
+                "UP: home",
                 Graphics.TEXT_JUSTIFY_CENTER
             );
             return;
@@ -328,51 +330,43 @@ class MaceClubsView extends WatchUi.View {
         if (!workout.isStarted()) {
             // crossed mace-and-club art above the preset label; on subwindow
             // devices shifted left of the cut-out, elsewhere centered
+            var preset = selectedPreset();
+            var isFreeTraining = preset[:sets] as Number == 0;
             var iconY = h * 38 / 100 - 70;
             if (iconY < 2) {
                 iconY = 2;
             }
             dc.drawBitmap(_subwindow ? cx - 45 : cx - 31, iconY, _icon);
-            dc.drawText(
-                cx,
-                h * 38 / 100,
-                Graphics.FONT_MEDIUM,
-                selectedPreset()[:label] as String,
-                Graphics.TEXT_JUSTIFY_CENTER
-            );
-            dc.drawText(
-                cx,
-                h * 54 / 100,
-                Graphics.FONT_TINY,
-                Lang.format("$1$ bpm | $2$", [metronome.getBpm(), patternLabel(selectedPreset())]),
-                Graphics.TEXT_JUSTIFY_CENTER
-            );
-            dc.drawText(cx, h * 68 / 100, Graphics.FONT_SMALL, "SELECT to start", Graphics.TEXT_JUSTIFY_CENTER);
-            var previousSmoothness = smoothnessText(false);
-            if (previousSmoothness == "") {
+            if (!isFreeTraining) {
                 dc.drawText(
                     cx,
-                    h * 82 / 100,
-                    Graphics.FONT_TINY,
-                    "MENU: settings",
-                    Graphics.TEXT_JUSTIFY_CENTER
-                );
-            } else {
-                dc.drawText(
-                    cx,
-                    h * 80 / 100,
-                    Graphics.FONT_TINY,
-                    previousSmoothness,
-                    Graphics.TEXT_JUSTIFY_CENTER
-                );
-                dc.drawText(
-                    cx,
-                    h * 90 / 100,
-                    Graphics.FONT_TINY,
-                    "MENU: settings",
+                    h * 38 / 100,
+                    Graphics.FONT_MEDIUM,
+                    preset[:label] as String,
                     Graphics.TEXT_JUSTIFY_CENTER
                 );
             }
+            dc.drawText(
+                cx,
+                h * (isFreeTraining ? 42 : 50) / 100,
+                isFreeTraining ? Graphics.FONT_SMALL : Graphics.FONT_TINY,
+                Lang.format("$1$ bpm | $2$", [metronome.getBpm(), patternLabel(preset)]),
+                Graphics.TEXT_JUSTIFY_CENTER
+            );
+            dc.drawText(
+                cx,
+                h * (isFreeTraining ? 53 : 57) / 100,
+                isFreeTraining ? Graphics.FONT_SMALL : Graphics.FONT_TINY,
+                "SELECT to start",
+                Graphics.TEXT_JUSTIFY_CENTER
+            );
+            dc.drawText(
+                cx,
+                h * 64 / 100,
+                Graphics.FONT_TINY,
+                "MENU opens settings",
+                Graphics.TEXT_JUSTIFY_CENTER
+            );
             return;
         }
 
