@@ -31,6 +31,51 @@ module Intervals {
         return phase == PHASE_REST && remaining > 0 && remaining <= 5 && set < totalSets && set != warnedSet;
     }
 
+    // Side effects MaceClubsView should apply when the plan changes state.
+    // Keeping this decision pure makes transition behavior testable without
+    // a live FIT session, timers, tones, or vibration hardware.
+    function completedSetsInState(phase as Number, set as Number) as Number {
+        if (phase == PHASE_WORK) {
+            return set - 1;
+        }
+        return set;
+    }
+
+    function actionsForTransition(oldPhase as Number, oldSet as Number, phase as Number, set as Number) as Dictionary {
+        var setsToAdd = completedSetsInState(phase, set) - completedSetsInState(oldPhase, oldSet);
+        if (setsToAdd < 0) {
+            setsToAdd = 0;
+        }
+        if (phase == PHASE_DONE) {
+            return {
+                :setsToAdd      => setsToAdd,
+                :startMetronome => false,
+                :stopMetronome  => true,
+                :resetBeatCount => false,
+                :pauseWorkout   => true,
+                :finished       => true
+            };
+        }
+        if (phase == PHASE_REST) {
+            return {
+                :setsToAdd      => setsToAdd,
+                :startMetronome => false,
+                :stopMetronome  => true,
+                :resetBeatCount => false,
+                :pauseWorkout   => false,
+                :finished       => false
+            };
+        }
+        return {
+            :setsToAdd      => setsToAdd,
+            :startMetronome => true,
+            :stopMetronome  => false,
+            :resetBeatCount => true,
+            :pauseWorkout   => false,
+            :finished       => false
+        };
+    }
+
     class Plan {
         private var _sets as Number;
         private var _workSecs as Number;

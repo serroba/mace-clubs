@@ -7,7 +7,7 @@ import Toybox.Timer;
 // Beat timer that re-anchors against System.getTimer() every beat,
 // so the tempo does not drift over a long session.
 class Metronome {
-    const MIN_BPM = 20;
+    const MIN_BPM = 5;
     const MAX_BPM = 240;
     const BPM_STEP = 5;
     const DEFAULT_BPM = 50;
