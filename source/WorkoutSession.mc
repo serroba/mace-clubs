@@ -28,7 +28,7 @@ class WorkoutSession {
     private var _capturing as Boolean = false;
     private var _smoothnessEnabled as Boolean = false;
     private var _smoothness as Smoothness.Tracker;
-    private var _smoothnessHistory = [] as Array<Array<Number>>;
+    private var _smoothnessHistory as Array<Number> = [];
 
     function initialize() {
         _smoothness = new Smoothness.Tracker();
@@ -223,7 +223,7 @@ class WorkoutSession {
         if (_smoothnessHistory.size() == 0) {
             return -1;
         }
-        return _smoothnessHistory[_smoothnessHistory.size() - 1][0];
+        return _smoothnessHistory[_smoothnessHistory.size() - 2];
     }
 
     function getSmoothnessDelta() as Number {
@@ -231,9 +231,9 @@ class WorkoutSession {
         if (current >= 0 && _smoothnessHistory.size() > 0) {
             return current - getLastSmoothnessScore();
         }
-        if (_smoothnessHistory.size() >= 2) {
-            var last = _smoothnessHistory.size() - 1;
-            return _smoothnessHistory[last][0] - _smoothnessHistory[last - 1][0];
+        if (_smoothnessHistory.size() >= 4) {
+            var lastScore = _smoothnessHistory.size() - 2;
+            return _smoothnessHistory[lastScore] - _smoothnessHistory[lastScore - 2];
         }
         return 0;
     }
@@ -242,7 +242,7 @@ class WorkoutSession {
         if (getSmoothnessScore() >= 0) {
             return _smoothnessHistory.size() > 0;
         }
-        return _smoothnessHistory.size() >= 2;
+        return _smoothnessHistory.size() >= 4;
     }
 
     private function loadSmoothnessHistory() as Void {
@@ -251,19 +251,15 @@ class WorkoutSession {
             if (!(stored instanceof Array)) {
                 return;
             }
-            var entries = stored as Array;
-            for (var i = 0; i < entries.size(); i++) {
-                var entry = entries[i];
-                if (entry instanceof Array
-                    && entry.size() == 2
-                    && entry[0] instanceof Number
-                    && entry[1] instanceof Number)
-                {
-                    _smoothnessHistory.add([entry[0] as Number, entry[1] as Number] as Array<Number>);
+            var entries = stored as Array<Storage.ValueType>;
+            for (var i = 0; i + 1 < entries.size(); i += 2) {
+                if (entries[i] instanceof Number && entries[i + 1] instanceof Number) {
+                    _smoothnessHistory.add(entries[i] as Number);
+                    _smoothnessHistory.add(entries[i + 1] as Number);
                 }
             }
         } catch (e) {
-            _smoothnessHistory = [] as Array<Array<Number>>;
+            _smoothnessHistory = [];
         }
     }
 
@@ -275,7 +271,11 @@ class WorkoutSession {
         }
         _smoothnessHistory = Smoothness.appendSummary(_smoothnessHistory, score, windows);
         try {
-            Storage.setValue("smoothnessHistoryV1", _smoothnessHistory);
+            var stored = [] as Array<Storage.ValueType>;
+            for (var i = 0; i < _smoothnessHistory.size(); i++) {
+                stored.add(_smoothnessHistory[i]);
+            }
+            Storage.setValue("smoothnessHistoryV1", stored);
         } catch (e) {}
     }
 

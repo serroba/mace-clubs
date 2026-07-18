@@ -40,13 +40,13 @@ function testSmoothnessPenalizesDifferentEffortAndTiming(logger as Test.Logger) 
 
 (:test)
 function testSmoothnessHistoryKeepsLatestTwelveSessions(logger as Test.Logger) as Boolean {
-    var history = [] as Array<Array<Number>>;
+    var history = [] as Array<Number>;
     for (var i = 0; i < 14; i++) {
         history = Smoothness.appendSummary(history, 60 + i, 20 + i);
     }
-    Test.assertEqualMessage(history.size(), 12, "history is bounded for watch storage");
-    Test.assertEqualMessage(history[0][0], 62, "oldest two sessions are discarded");
-    Test.assertEqualMessage(history[11][0], 73, "latest session is retained");
-    Test.assertEqualMessage(history[11][1], 33, "scored-window count travels with the score");
+    Test.assertEqualMessage(history.size(), 24, "twelve score/window pairs are retained");
+    Test.assertEqualMessage(history[0], 62, "oldest two sessions are discarded");
+    Test.assertEqualMessage(history[22], 73, "latest session is retained");
+    Test.assertEqualMessage(history[23], 33, "scored-window count travels with the score");
     return true;
 }

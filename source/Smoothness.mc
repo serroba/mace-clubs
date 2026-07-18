@@ -41,13 +41,15 @@ module Smoothness {
 
     // Return a new bounded history so callers can test the persistence policy
     // without touching Application.Storage.
-    function appendSummary(history as Array<Array<Number>>, score as Number, windows as Number) as Array<Array<Number>> {
-        var result = [] as Array<Array<Number>>;
-        var start = history.size() >= HISTORY_LIMIT ? history.size() - HISTORY_LIMIT + 1 : 0;
+    function appendSummary(history as Array<Number>, score as Number, windows as Number) as Array<Number> {
+        var result = [] as Array<Number>;
+        var storedSessions = history.size() / 2;
+        var start = storedSessions >= HISTORY_LIMIT ? 2 : 0;
         for (var i = start; i < history.size(); i++) {
             result.add(history[i]);
         }
-        result.add([score, windows] as Array<Number>);
+        result.add(score);
+        result.add(windows);
         return result;
     }
 
