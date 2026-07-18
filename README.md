@@ -13,6 +13,7 @@ target is the **Instinct 3 Solar**; the manifest supports 120 Garmin wearables
 
 - Records a "Mace & Clubs" activity to Garmin Connect (sport: Training / Strength)
 - Configurable metronome (20–240 bpm) with tone and vibration cues
+- Five-second start delay and advance warning before each new work interval
 - Set counter written to the FIT file as a developer field
 - Tempo, tone, and vibration configurable from the Garmin Connect phone app
 

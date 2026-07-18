@@ -85,6 +85,54 @@ function testCompletedSetsDuringPlan(logger as Test.Logger) as Boolean {
 }
 
 (:test)
+function testStartCountdownRoundsUpAndStopsAtDeadline(logger as Test.Logger) as Boolean {
+    Test.assertEqualMessage(Intervals.countdownSeconds(1000, 6000), 5, "five seconds at countdown start");
+    Test.assertEqualMessage(Intervals.countdownSeconds(1999, 6000), 5, "partial seconds round up");
+    Test.assertEqualMessage(Intervals.countdownSeconds(2000, 6000), 4, "countdown advances on the second");
+    Test.assertEqualMessage(Intervals.countdownSeconds(6000, 6000), 0, "zero at the deadline");
+    Test.assertEqualMessage(Intervals.countdownSeconds(7000, 6000), 0, "never becomes negative");
+    return true;
+}
+
+(:test)
+function testAdvanceWarningFiresOnceWithinFiveSeconds(logger as Test.Logger) as Boolean {
+    Test.assertMessage(
+        !Intervals.shouldWarnNextWork(Intervals.PHASE_REST, 6, 1, 5, 0),
+        "six seconds is too early"
+    );
+    Test.assertMessage(
+        Intervals.shouldWarnNextWork(Intervals.PHASE_REST, 5, 1, 5, 0),
+        "warning fires at five seconds"
+    );
+    Test.assertMessage(
+        Intervals.shouldWarnNextWork(Intervals.PHASE_REST, 4, 1, 5, 0),
+        "a delayed refresh still warns"
+    );
+    Test.assertMessage(
+        !Intervals.shouldWarnNextWork(Intervals.PHASE_REST, 4, 1, 5, 1),
+        "the same rest phase warns only once"
+    );
+    return true;
+}
+
+(:test)
+function testAdvanceWarningOnlyPrecedesAnotherWorkSet(logger as Test.Logger) as Boolean {
+    Test.assertMessage(
+        !Intervals.shouldWarnNextWork(Intervals.PHASE_WORK, 5, 1, 5, 0),
+        "work countdown does not produce an advance warning"
+    );
+    Test.assertMessage(
+        !Intervals.shouldWarnNextWork(Intervals.PHASE_REST, 5, 5, 5, 0),
+        "final set has no next work interval"
+    );
+    Test.assertMessage(
+        !Intervals.shouldWarnNextWork(Intervals.PHASE_REST, 0, 1, 5, 0),
+        "zero remaining belongs to the transition"
+    );
+    return true;
+}
+
+(:test)
 function testCustomPresetIsLastAndWellFormed(logger as Test.Logger) as Boolean {
     Test.assertEqualMessage(
         Presets.count(),

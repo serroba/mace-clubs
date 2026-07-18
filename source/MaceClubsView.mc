@@ -13,6 +13,8 @@ import Toybox.WatchUi;
 // shapes (round, rectangle) get centered top anchors, which stay inside a
 // round screen's visible chord.
 class MaceClubsView extends WatchUi.View {
+    const START_DELAY_MS = 5000;
+
     var metronome as Metronome;
     var workout as WorkoutSession;
     var paused as Boolean = false;
@@ -21,8 +23,12 @@ class MaceClubsView extends WatchUi.View {
     var plan as Intervals.Plan?;
 
     private var _refreshTimer as Timer.Timer;
+    private var _startTimer as Timer.Timer;
+    private var _starting as Boolean = false;
+    private var _startDeadline as Number = 0;
     private var _lastPhase as Number?;
     private var _lastSet as Number = 0;
+    private var _warnedSet as Number = 0;
     private var _icon as WatchUi.BitmapResource;
     private var _subwindow as Boolean = false;
     private var _circleRounds as Boolean = true;
@@ -32,6 +38,7 @@ class MaceClubsView extends WatchUi.View {
         metronome = new Metronome();
         workout = new WorkoutSession();
         _refreshTimer = new Timer.Timer();
+        _startTimer = new Timer.Timer();
         _icon = WatchUi.loadResource(Rez.Drawables.LauncherIcon) as WatchUi.BitmapResource;
         if (System has :SCREEN_SHAPE_SEMI_OCTAGON) {
             _subwindow = System.getDeviceSettings().screenShape == System.SCREEN_SHAPE_SEMI_OCTAGON;
@@ -87,9 +94,20 @@ class MaceClubsView extends WatchUi.View {
         presetIndex = (presetIndex + dir + n) % n;
     }
 
-    // Start recording with the currently selected preset. Presets with
-    // :sets == 0 are free training (no interval plan).
+    function isStarting() as Boolean {
+        return _starting;
+    }
+
+    function getStartCountdownRemaining() as Number {
+        return _starting ? Intervals.countdownSeconds(System.getTimer(), _startDeadline) : 0;
+    }
+
+    // Prepare the selected preset, then wait five seconds before recording
+    // or starting the metronome so the athlete can get into position.
     function startWorkout() as Void {
+        if (_starting || workout.isStarted()) {
+            return;
+        }
         var preset = selectedPreset();
         var sets = preset[:sets] as Number;
         if (sets > 0) {
@@ -99,10 +117,33 @@ class MaceClubsView extends WatchUi.View {
         }
         done = false;
         _lastPhase = null;
+        _lastSet = 0;
+        _warnedSet = 0;
         metronome.resetBeatCount();
         metronome.applyPattern(preset[:beatsA] as Number, preset[:beatsB] as Number);
+        _starting = true;
+        _startDeadline = System.getTimer() + START_DELAY_MS;
+        _startTimer.start(method(:beginWorkout), START_DELAY_MS, false);
+    }
+
+    private function beginWorkout() as Void {
+        if (!_starting) {
+            return;
+        }
+        _starting = false;
         workout.start();
         metronome.start();
+        playTransitionCue(false);
+        WatchUi.requestUpdate();
+    }
+
+    function cancelStartCountdown() as Void {
+        if (_starting) {
+            _startTimer.stop();
+            _starting = false;
+            plan = null;
+            WatchUi.requestUpdate();
+        }
     }
 
     // Free-training set mark: log the set and start a fresh round count.
@@ -133,6 +174,11 @@ class MaceClubsView extends WatchUi.View {
         var s = p.stateAt(info.timerTime as Number);
         var phase = s[:phase] as Number;
         var set = s[:set] as Number;
+        var remaining = s[:remaining] as Number;
+        if (Intervals.shouldWarnNextWork(phase, remaining, set, p.getSets(), _warnedSet)) {
+            _warnedSet = set;
+            playAdvanceWarningCue();
+        }
         var oldPhase = _lastPhase;
         var oldSet = _lastSet;
         _lastPhase = phase;
@@ -177,6 +223,23 @@ class MaceClubsView extends WatchUi.View {
         }
     }
 
+    // A double pulse distinguishes the five-second warning from the longer
+    // transition pulse that announces the actual start of work.
+    private function playAdvanceWarningCue() as Void {
+        if (metronome.isToneEnabled() && Attention has :playTone) {
+            Attention.playTone(Attention.TONE_INTERVAL_ALERT);
+        }
+        if (metronome.isVibeEnabled() && Attention has :vibrate) {
+            Attention.vibrate(
+                [
+                    new Attention.VibeProfile(100, 120),
+                    new Attention.VibeProfile(0, 80),
+                    new Attention.VibeProfile(100, 120)
+                ]
+            );
+        }
+    }
+
     private function formatSecs(total as Number) as String {
         return Lang.format("$1$:$2$", [total / 60, (total % 60).format("%02d")]);
     }
@@ -188,6 +251,25 @@ class MaceClubsView extends WatchUi.View {
         var w = dc.getWidth();
         var cx = w / 2;
         var h = dc.getHeight();
+
+        if (_starting) {
+            dc.drawText(cx, h * 20 / 100, Graphics.FONT_SMALL, "GET READY", Graphics.TEXT_JUSTIFY_CENTER);
+            dc.drawText(
+                cx,
+                h * 38 / 100,
+                Graphics.FONT_NUMBER_HOT,
+                getStartCountdownRemaining().toString(),
+                Graphics.TEXT_JUSTIFY_CENTER
+            );
+            dc.drawText(
+                cx,
+                h * 74 / 100,
+                Graphics.FONT_TINY,
+                selectedPreset()[:label] as String,
+                Graphics.TEXT_JUSTIFY_CENTER
+            );
+            return;
+        }
 
         if (paused) {
             dc.drawText(

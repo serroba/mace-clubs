@@ -18,6 +18,8 @@ class MaceClubsDelegate extends WatchUi.BehaviorDelegate {
         if (_view.paused) {
             _view.metronome.stop();
             _view.workout.saveAndExit();
+        } else if (_view.isStarting()) {
+            return true;
         } else if (!_view.workout.isStarted()) {
             _view.startWorkout();
         } else if (_view.plan == null) {
@@ -29,6 +31,10 @@ class MaceClubsDelegate extends WatchUi.BehaviorDelegate {
     }
 
     function onBack() as Boolean {
+        if (_view.isStarting()) {
+            _view.cancelStartCountdown();
+            return true;
+        }
         if (_view.done) {
             // a finished interval workout can only be saved
             return true;
@@ -54,6 +60,9 @@ class MaceClubsDelegate extends WatchUi.BehaviorDelegate {
     // idle, or a discard-and-exit (behind a confirmation, so a stray press
     // cannot bin a real session) once a workout is running.
     function onMenu() as Boolean {
+        if (_view.isStarting()) {
+            return true;
+        }
         if (_view.workout.isStarted()) {
             WatchUi.pushView(
                 new WatchUi.Confirmation("Discard workout?"),
@@ -67,7 +76,9 @@ class MaceClubsDelegate extends WatchUi.BehaviorDelegate {
     }
 
     function onPreviousPage() as Boolean {
-        if (_view.workout.isStarted()) {
+        if (_view.isStarting()) {
+            return true;
+        } else if (_view.workout.isStarted()) {
             _view.metronome.adjustBpm(1);
         } else {
             _view.cyclePreset(-1);
@@ -77,7 +88,9 @@ class MaceClubsDelegate extends WatchUi.BehaviorDelegate {
     }
 
     function onNextPage() as Boolean {
-        if (_view.workout.isStarted()) {
+        if (_view.isStarting()) {
+            return true;
+        } else if (_view.workout.isStarted()) {
             _view.metronome.adjustBpm(-1);
         } else {
             _view.cyclePreset(1);
