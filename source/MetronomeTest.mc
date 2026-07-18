@@ -4,7 +4,7 @@ import Toybox.Test;
 // Run with: monkeydo bin/mace-clubs.prg instinct3solar45mm -t
 // (build with `monkeyc ... --unit-test` first)
 //
-// Limits are asserted as literals (20/240/50) rather than through the
+// Limits are asserted as literals (5/240/50) rather than through the
 // class constants: Monkey C does not expose class consts as static
 // symbols, and the literals pin the documented contract anyway.
 
@@ -18,8 +18,8 @@ function testDefaultBpmIs50(logger as Test.Logger) as Boolean {
 (:test)
 function testBpmClampsToMinimum(logger as Test.Logger) as Boolean {
     var m = new Metronome();
-    m.setBpm(5);
-    Test.assertEqualMessage(m.getBpm(), 20, "bpm should clamp to minimum");
+    m.setBpm(0);
+    Test.assertEqualMessage(m.getBpm(), 5, "bpm should clamp to minimum");
     return true;
 }
 
@@ -45,9 +45,9 @@ function testAdjustBpmMovesInSteps(logger as Test.Logger) as Boolean {
 (:test)
 function testAdjustBpmDoesNotCrossLimits(logger as Test.Logger) as Boolean {
     var m = new Metronome();
-    m.setBpm(20);
+    m.setBpm(5);
     m.adjustBpm(-1);
-    Test.assertEqualMessage(m.getBpm(), 20, "adjust below min should stay at min");
+    Test.assertEqualMessage(m.getBpm(), 5, "adjust below min should stay at min");
     return true;
 }
 
