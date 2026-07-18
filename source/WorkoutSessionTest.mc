@@ -25,6 +25,21 @@ function testAddSetCounts(logger as Test.Logger) as Boolean {
 }
 
 (:test)
+function testDiscardResetsSessionForAnotherWorkout(logger as Test.Logger) as Boolean {
+    var session = new WorkoutSession();
+    session.addSet();
+    session.discard();
+    Test.assertMessage(!session.isStarted(), "discard returns the session to idle");
+    Test.assertEqualMessage(session.getSets(), 0, "discard clears the workout set count");
+    Test.assertEqualMessage(
+        session.getSmoothnessScore(),
+        -1,
+        "discard clears the in-progress smoothness score"
+    );
+    return true;
+}
+
+(:test)
 function testBatteryDeltaMeasuresDrain(logger as Test.Logger) as Boolean {
     var ws = new WorkoutSession();
     Test.assertEqualMessage(ws.batteryDelta(80.0, 75.5), 4.5, "normal drain is start minus end");

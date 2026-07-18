@@ -1,8 +1,8 @@
 import Toybox.Lang;
 import Toybox.WatchUi;
 
-// Confirms the destructive "discard workout" before throwing the session
-// away; any response other than an explicit Yes leaves the workout intact.
+// Confirms the destructive "discard workout" before returning to the app's
+// home screen; any response other than an explicit Yes leaves it intact.
 class DiscardConfirmationDelegate extends WatchUi.ConfirmationDelegate {
     private var _view as MaceClubsView;
 

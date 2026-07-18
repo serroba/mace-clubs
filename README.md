@@ -26,6 +26,7 @@ target is the **Instinct 3 Solar**; the manifest supports 120 Garmin wearables
 | SELECT | Start workout | Mark a set (free training) | Save & exit |
 | BACK | Quit | Pause | Resume (unless finished) |
 | UP / DOWN | Choose workout preset | Tempo ±5 bpm | — |
+| MENU | Settings | Discard and return home | Discard and return home |
 
 Interval presets (e.g. 5 × 2:00 work / 1:00 rest) call work and rest with tone and
 vibration cues, run the metronome only during work, and count sets automatically.
