@@ -27,6 +27,8 @@ metronome and interval timer built for steel mace and Indian club training.
   frequency, and whether the corner shows rounds or heart rate.
 - Optional motion capture logs accelerometer features each second for
   offline swing analysis.
+- Optional smoothness scoring estimates wrist-motion repeatability and keeps a
+  compact 12-session trend on the watch; the score is not uploaded.
 
 ## Category
 Health & Fitness

@@ -14,6 +14,8 @@ target is the **Instinct 3 Solar**; the manifest supports 120 Garmin wearables
 - Records a "Mace & Clubs" activity to Garmin Connect (sport: Training / Strength)
 - Configurable metronome (5–240 bpm) with tone and vibration cues
 - Five-second start delay and advance warning before each new work interval
+- Optional on-watch smoothness score with a 12-session local trend; no account,
+  network request, or smoothness data upload
 - Set counter written to the FIT file as a developer field
 - Tempo, tone, and vibration configurable from the Garmin Connect phone app
 
@@ -101,6 +103,9 @@ git tag v0.1.0 && git push origin v0.1.0
 ```
 
 ## Workflow
+
+The smoothness model, privacy boundary, equations, assumptions, and validation
+plan are documented in [docs/smoothness-physics.md](docs/smoothness-physics.md).
 
 - Small, focused PRs — one feature or concern per PR, stacked when they depend on each other.
 - TDD where the code is testable: unit tests (`(:test)` functions) accompany or precede the

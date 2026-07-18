@@ -43,6 +43,9 @@
     <setting propertyKey="@Properties.motionCapture" title="@Strings.SettingMotionCapture">
         <settingConfig type="boolean"/>
     </setting>
+    <setting propertyKey="@Properties.smoothnessEnabled" title="@Strings.SettingSmoothnessEnabled">
+        <settingConfig type="boolean"/>
+    </setting>
     <setting propertyKey="@Properties.circleShows" title="@Strings.SettingCircleShows">
         <settingConfig type="list">
             <listEntry value="0">@Strings.CircleRounds</listEntry>

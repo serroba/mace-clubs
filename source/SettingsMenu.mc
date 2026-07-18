@@ -43,6 +43,15 @@ module SettingsMenu {
         );
         menu.addItem(
             new WatchUi.ToggleMenuItem(
+                "Local smoothness",
+                null,
+                "smoothnessEnabled",
+                boolProp("smoothnessEnabled", false),
+                null
+            )
+        );
+        menu.addItem(
+            new WatchUi.ToggleMenuItem(
                 "Motion capture",
                 null,
                 "motionCapture",

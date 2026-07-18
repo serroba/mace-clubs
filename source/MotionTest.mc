@@ -10,6 +10,8 @@ function testMotionFeaturesOfStillWrist(logger as Test.Logger) as Boolean {
     Test.assertEqualMessage(f[:rms] as Number, 1000, "constant magnitude has rms = magnitude");
     Test.assertEqualMessage(f[:peak] as Number, 1000, "peak equals the constant magnitude");
     Test.assertEqualMessage(f[:zc] as Number, 0, "no crossings when nothing moves");
+    Test.assertEqualMessage(f[:dynamicRms] as Number, 0, "gravity is removed from dynamic RMS");
+    Test.assertEqualMessage(f[:dynamicPeak] as Number, 0, "gravity is removed from dynamic peak");
     return true;
 }
 
@@ -23,6 +25,8 @@ function testMotionFeaturesOfSwing(logger as Test.Logger) as Boolean {
     Test.assertEqualMessage(f[:zc] as Number, 5, "each alternation crosses the mean");
     var rms = f[:rms] as Number;
     Test.assertMessage(rms > 2000 && rms < 2500, "rms sits between soft and hard magnitudes");
+    Test.assertEqualMessage(f[:dynamicRms] as Number, 1000, "dynamic RMS measures variation around gravity");
+    Test.assertEqualMessage(f[:dynamicPeak] as Number, 1000, "dynamic peak measures the largest deviation");
     return true;
 }
 
@@ -34,5 +38,6 @@ function testMotionFeaturesRejectBadBuffers(logger as Test.Logger) as Boolean {
     Test.assertEqualMessage(f[:rms] as Number, 0, "empty buffer yields zeros");
     var g = Motion.features(one, empty, one);
     Test.assertEqualMessage(g[:peak] as Number, 0, "mismatched axis lengths yield zeros");
+    Test.assertEqualMessage(g[:dynamicRms] as Number, 0, "bad buffers have no dynamic RMS");
     return true;
 }
