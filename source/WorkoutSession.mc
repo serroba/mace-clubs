@@ -1,6 +1,7 @@
 import Toybox.Activity;
 import Toybox.ActivityRecording;
 import Toybox.Application;
+import Toybox.Application.Storage;
 import Toybox.Attention;
 import Toybox.FitContributor;
 import Toybox.Lang;
@@ -25,6 +26,14 @@ class WorkoutSession {
     private var _started as Boolean = false;
     private var _startBattery as Float?;
     private var _capturing as Boolean = false;
+    private var _smoothnessEnabled as Boolean = false;
+    private var _smoothness as Smoothness.Tracker;
+    private var _smoothnessHistory as Array<Number> = [];
+
+    function initialize() {
+        _smoothness = new Smoothness.Tracker();
+        loadSmoothnessHistory();
+    }
 
     function isStarted() as Boolean {
         return _started;
@@ -73,34 +82,42 @@ class WorkoutSession {
     // the FIT record stream for offline swing analysis. Accel only -
     // gyro support on the Instinct is unverified.
     private function startMotionCapture(session as ActivityRecording.Session) as Void {
-        var enabled = false;
+        var exportEnabled = false;
         try {
             var mc = Application.Properties.getValue("motionCapture");
             if (mc instanceof Boolean) {
-                enabled = mc;
+                exportEnabled = mc;
+            }
+            var smooth = Application.Properties.getValue("smoothnessEnabled");
+            if (smooth instanceof Boolean) {
+                _smoothnessEnabled = smooth;
             }
         } catch (e) {}
-        if (!enabled || !(Sensor has :registerSensorDataListener)) {
+        if (!exportEnabled && !_smoothnessEnabled || !(Sensor has :registerSensorDataListener)) {
             return;
         }
-        _rmsField = session.createField(
-            "accel_rms",
-            FIELD_ID_ACCEL_RMS,
-            FitContributor.DATA_TYPE_UINT16,
-            {:mesgType => FitContributor.MESG_TYPE_RECORD, :units => "mg"}
-        );
-        _peakField = session.createField(
-            "accel_peak",
-            FIELD_ID_ACCEL_PEAK,
-            FitContributor.DATA_TYPE_UINT16,
-            {:mesgType => FitContributor.MESG_TYPE_RECORD, :units => "mg"}
-        );
-        _zcField = session.createField(
-            "accel_zc",
-            FIELD_ID_ACCEL_ZC,
-            FitContributor.DATA_TYPE_UINT8,
-            {:mesgType => FitContributor.MESG_TYPE_RECORD, :units => "crossings"}
-        );
+        // Local smoothness does not create FIT fields. The separate research
+        // setting remains the explicit opt-in path for exporting summaries.
+        if (exportEnabled) {
+            _rmsField = session.createField(
+                "accel_rms",
+                FIELD_ID_ACCEL_RMS,
+                FitContributor.DATA_TYPE_UINT16,
+                {:mesgType => FitContributor.MESG_TYPE_RECORD, :units => "mg"}
+            );
+            _peakField = session.createField(
+                "accel_peak",
+                FIELD_ID_ACCEL_PEAK,
+                FitContributor.DATA_TYPE_UINT16,
+                {:mesgType => FitContributor.MESG_TYPE_RECORD, :units => "mg"}
+            );
+            _zcField = session.createField(
+                "accel_zc",
+                FIELD_ID_ACCEL_ZC,
+                FitContributor.DATA_TYPE_UINT8,
+                {:mesgType => FitContributor.MESG_TYPE_RECORD, :units => "crossings"}
+            );
+        }
         try {
             Sensor.registerSensorDataListener(
                 method(:onSensorData),
@@ -113,11 +130,18 @@ class WorkoutSession {
     }
 
     function onSensorData(data as Sensor.SensorData) as Void {
+        var session = _session;
+        if (session == null || !session.isRecording()) {
+            return;
+        }
         var accel = data.accelerometerData;
         if (accel == null) {
             return;
         }
         var f = Motion.features(accel.x as Array<Number>, accel.y as Array<Number>, accel.z as Array<Number>);
+        if (_smoothnessEnabled) {
+            _smoothness.add(f);
+        }
         var rms = _rmsField;
         var peak = _peakField;
         var zc = _zcField;
@@ -180,10 +204,79 @@ class WorkoutSession {
                 session.stop();
             }
             recordBatteryUsed();
+            saveSmoothnessSummary();
             session.save();
             _session = null;
         }
         System.exit();
+    }
+
+    function getSmoothnessScore() as Number {
+        return _smoothness.getScore();
+    }
+
+    function getSmoothnessWindows() as Number {
+        return _smoothness.getScoredWindows();
+    }
+
+    function getLastSmoothnessScore() as Number {
+        if (_smoothnessHistory.size() == 0) {
+            return -1;
+        }
+        return _smoothnessHistory[_smoothnessHistory.size() - 2];
+    }
+
+    function getSmoothnessDelta() as Number {
+        var current = getSmoothnessScore();
+        if (current >= 0 && _smoothnessHistory.size() > 0) {
+            return current - getLastSmoothnessScore();
+        }
+        if (_smoothnessHistory.size() >= 4) {
+            var lastScore = _smoothnessHistory.size() - 2;
+            return _smoothnessHistory[lastScore] - _smoothnessHistory[lastScore - 2];
+        }
+        return 0;
+    }
+
+    function hasSmoothnessDelta() as Boolean {
+        if (getSmoothnessScore() >= 0) {
+            return _smoothnessHistory.size() > 0;
+        }
+        return _smoothnessHistory.size() >= 4;
+    }
+
+    private function loadSmoothnessHistory() as Void {
+        try {
+            var stored = Storage.getValue("smoothnessHistoryV1");
+            if (!(stored instanceof Array)) {
+                return;
+            }
+            var entries = stored as Array<Storage.ValueType>;
+            for (var i = 0; i + 1 < entries.size(); i += 2) {
+                if (entries[i] instanceof Number && entries[i + 1] instanceof Number) {
+                    _smoothnessHistory.add(entries[i] as Number);
+                    _smoothnessHistory.add(entries[i + 1] as Number);
+                }
+            }
+        } catch (e) {
+            _smoothnessHistory = [];
+        }
+    }
+
+    private function saveSmoothnessSummary() as Void {
+        var score = getSmoothnessScore();
+        var windows = getSmoothnessWindows();
+        if (!_smoothnessEnabled || score < 0 || windows == 0) {
+            return;
+        }
+        _smoothnessHistory = Smoothness.appendSummary(_smoothnessHistory, score, windows);
+        try {
+            var stored = [] as Array<Storage.ValueType>;
+            for (var i = 0; i < _smoothnessHistory.size(); i++) {
+                stored.add(_smoothnessHistory[i]);
+            }
+            Storage.setValue("smoothnessHistoryV1", stored);
+        } catch (e) {}
     }
 
     // Session-level battery cost: start minus end, floored at zero

@@ -245,6 +245,19 @@ class MaceClubsView extends WatchUi.View {
         return Lang.format("$1$:$2$", [total / 60, (total % 60).format("%02d")]);
     }
 
+    private function smoothnessText(useCurrent as Boolean) as String {
+        var score = useCurrent ? workout.getSmoothnessScore() : workout.getLastSmoothnessScore();
+        if (score < 0) {
+            return "";
+        }
+        if (!workout.hasSmoothnessDelta()) {
+            return Lang.format("smooth $1$", [score]);
+        }
+        var delta = workout.getSmoothnessDelta();
+        var change = delta > 0 ? Lang.format("+$1$", [delta]) : delta.toString();
+        return Lang.format("smooth $1$ ($2$)", [score, change]);
+    }
+
     function onUpdate(dc as Dc) as Void {
         dc.setColor(Graphics.COLOR_WHITE, Graphics.COLOR_BLACK);
         dc.clear();
@@ -275,16 +288,20 @@ class MaceClubsView extends WatchUi.View {
         if (paused) {
             dc.drawText(
                 cx,
-                h * 28 / 100,
+                h * 22 / 100,
                 Graphics.FONT_MEDIUM,
                 done ? "DONE!" : "PAUSED",
                 Graphics.TEXT_JUSTIFY_CENTER
             );
-            dc.drawText(cx, h * 46 / 100, Graphics.FONT_SMALL, "SELECT: save", Graphics.TEXT_JUSTIFY_CENTER);
+            var smoothness = smoothnessText(true);
+            if (smoothness != "") {
+                dc.drawText(cx, h * 39 / 100, Graphics.FONT_TINY, smoothness, Graphics.TEXT_JUSTIFY_CENTER);
+            }
+            dc.drawText(cx, h * 53 / 100, Graphics.FONT_SMALL, "SELECT: save", Graphics.TEXT_JUSTIFY_CENTER);
             if (!done) {
                 dc.drawText(
                     cx,
-                    h * 60 / 100,
+                    h * 67 / 100,
                     Graphics.FONT_SMALL,
                     "BACK: resume",
                     Graphics.TEXT_JUSTIFY_CENTER
@@ -292,7 +309,7 @@ class MaceClubsView extends WatchUi.View {
             }
             dc.drawText(
                 cx,
-                h * (done ? 60 : 74) / 100,
+                h * (done ? 68 : 81) / 100,
                 Graphics.FONT_SMALL,
                 "MENU: discard",
                 Graphics.TEXT_JUSTIFY_CENTER
@@ -323,7 +340,31 @@ class MaceClubsView extends WatchUi.View {
                 Graphics.TEXT_JUSTIFY_CENTER
             );
             dc.drawText(cx, h * 68 / 100, Graphics.FONT_SMALL, "SELECT to start", Graphics.TEXT_JUSTIFY_CENTER);
-            dc.drawText(cx, h * 82 / 100, Graphics.FONT_TINY, "MENU: settings", Graphics.TEXT_JUSTIFY_CENTER);
+            var previousSmoothness = smoothnessText(false);
+            if (previousSmoothness == "") {
+                dc.drawText(
+                    cx,
+                    h * 82 / 100,
+                    Graphics.FONT_TINY,
+                    "MENU: settings",
+                    Graphics.TEXT_JUSTIFY_CENTER
+                );
+            } else {
+                dc.drawText(
+                    cx,
+                    h * 80 / 100,
+                    Graphics.FONT_TINY,
+                    previousSmoothness,
+                    Graphics.TEXT_JUSTIFY_CENTER
+                );
+                dc.drawText(
+                    cx,
+                    h * 90 / 100,
+                    Graphics.FONT_TINY,
+                    "MENU: settings",
+                    Graphics.TEXT_JUSTIFY_CENTER
+                );
+            }
             return;
         }
 
