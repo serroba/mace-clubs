@@ -344,37 +344,19 @@ class MaceClubsView extends WatchUi.View {
             );
             dc.drawText(
                 cx,
-                h * 54 / 100,
+                h * 50 / 100,
                 Graphics.FONT_TINY,
                 Lang.format("$1$ bpm | $2$", [metronome.getBpm(), patternLabel(selectedPreset())]),
                 Graphics.TEXT_JUSTIFY_CENTER
             );
-            dc.drawText(cx, h * 68 / 100, Graphics.FONT_SMALL, "SELECT to start", Graphics.TEXT_JUSTIFY_CENTER);
-            var previousSmoothness = smoothnessText(false);
-            if (previousSmoothness == "") {
-                dc.drawText(
-                    cx,
-                    h * 82 / 100,
-                    Graphics.FONT_TINY,
-                    "MENU: settings",
-                    Graphics.TEXT_JUSTIFY_CENTER
-                );
-            } else {
-                dc.drawText(
-                    cx,
-                    h * 80 / 100,
-                    Graphics.FONT_TINY,
-                    previousSmoothness,
-                    Graphics.TEXT_JUSTIFY_CENTER
-                );
-                dc.drawText(
-                    cx,
-                    h * 90 / 100,
-                    Graphics.FONT_TINY,
-                    "MENU: settings",
-                    Graphics.TEXT_JUSTIFY_CENTER
-                );
-            }
+            dc.drawText(cx, h * 57 / 100, Graphics.FONT_TINY, "SELECT to start", Graphics.TEXT_JUSTIFY_CENTER);
+            dc.drawText(
+                cx,
+                h * 64 / 100,
+                Graphics.FONT_TINY,
+                "MENU opens settings",
+                Graphics.TEXT_JUSTIFY_CENTER
+            );
             return;
         }
 
