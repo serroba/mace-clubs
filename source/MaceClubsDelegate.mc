@@ -64,11 +64,7 @@ class MaceClubsDelegate extends WatchUi.BehaviorDelegate {
             return true;
         }
         if (_view.workout.isStarted()) {
-            WatchUi.pushView(
-                new WatchUi.Confirmation("Discard & go home?"),
-                new DiscardConfirmationDelegate(_view),
-                WatchUi.SLIDE_IMMEDIATE
-            );
+            showHomeConfirmation();
         } else {
             WatchUi.pushView(SettingsMenu.build(), new SettingsMenuDelegate(_view), WatchUi.SLIDE_UP);
         }
@@ -76,15 +72,26 @@ class MaceClubsDelegate extends WatchUi.BehaviorDelegate {
     }
 
     function onPreviousPage() as Boolean {
-        if (_view.isStarting()) {
+        var action = Navigation.previousPageAction(_view.isStarting(), _view.workout.isStarted(), _view.paused);
+        if (action == Navigation.PREVIOUS_IGNORE) {
             return true;
-        } else if (_view.workout.isStarted()) {
+        } else if (action == Navigation.PREVIOUS_HOME) {
+            showHomeConfirmation();
+        } else if (action == Navigation.PREVIOUS_TEMPO_UP) {
             _view.metronome.adjustBpm(1);
         } else {
             _view.cyclePreset(-1);
         }
         WatchUi.requestUpdate();
         return true;
+    }
+
+    private function showHomeConfirmation() as Void {
+        WatchUi.pushView(
+            new WatchUi.Confirmation("Discard & go home?"),
+            new DiscardConfirmationDelegate(_view),
+            WatchUi.SLIDE_IMMEDIATE
+        );
     }
 
     function onNextPage() as Boolean {

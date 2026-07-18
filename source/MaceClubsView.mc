@@ -321,7 +321,7 @@ class MaceClubsView extends WatchUi.View {
                 cx,
                 h * (done ? 68 : 81) / 100,
                 Graphics.FONT_SMALL,
-                "MENU: home",
+                "UP: home",
                 Graphics.TEXT_JUSTIFY_CENTER
             );
             return;
