@@ -143,12 +143,7 @@ class MaceClubsView extends WatchUi.View {
         onPlanTransition(oldPhase as Number, oldSet, phase, set);
     }
 
-    private function onPlanTransition(
-        oldPhase as Number,
-        oldSet as Number,
-        phase as Number,
-        set as Number
-    ) as Void {
+    private function onPlanTransition(oldPhase as Number, oldSet as Number, phase as Number, set as Number) as Void {
         var actions = Intervals.actionsForTransition(oldPhase, oldSet, phase, set);
         var setsToAdd = actions[:setsToAdd] as Number;
         for (var i = 0; i < setsToAdd; i++) {

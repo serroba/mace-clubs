@@ -19,43 +19,38 @@ module Intervals {
         return set;
     }
 
-    function actionsForTransition(
-        oldPhase as Number,
-        oldSet as Number,
-        phase as Number,
-        set as Number
-    ) as Dictionary {
+    function actionsForTransition(oldPhase as Number, oldSet as Number, phase as Number, set as Number) as Dictionary {
         var setsToAdd = completedSetsInState(phase, set) - completedSetsInState(oldPhase, oldSet);
         if (setsToAdd < 0) {
             setsToAdd = 0;
         }
         if (phase == PHASE_DONE) {
             return {
-                :setsToAdd => setsToAdd,
+                :setsToAdd      => setsToAdd,
                 :startMetronome => false,
-                :stopMetronome => true,
+                :stopMetronome  => true,
                 :resetBeatCount => false,
-                :pauseWorkout => true,
-                :finished => true
+                :pauseWorkout   => true,
+                :finished       => true
             };
         }
         if (phase == PHASE_REST) {
             return {
-                :setsToAdd => setsToAdd,
+                :setsToAdd      => setsToAdd,
                 :startMetronome => false,
-                :stopMetronome => true,
+                :stopMetronome  => true,
                 :resetBeatCount => false,
-                :pauseWorkout => false,
-                :finished => false
+                :pauseWorkout   => false,
+                :finished       => false
             };
         }
         return {
-            :setsToAdd => setsToAdd,
+            :setsToAdd      => setsToAdd,
             :startMetronome => true,
-            :stopMetronome => false,
+            :stopMetronome  => false,
             :resetBeatCount => true,
-            :pauseWorkout => false,
-            :finished => false
+            :pauseWorkout   => false,
+            :finished       => false
         };
     }
 
