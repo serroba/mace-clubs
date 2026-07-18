@@ -330,26 +330,36 @@ class MaceClubsView extends WatchUi.View {
         if (!workout.isStarted()) {
             // crossed mace-and-club art above the preset label; on subwindow
             // devices shifted left of the cut-out, elsewhere centered
+            var preset = selectedPreset();
+            var isFreeTraining = preset[:sets] as Number == 0;
             var iconY = h * 38 / 100 - 70;
             if (iconY < 2) {
                 iconY = 2;
             }
             dc.drawBitmap(_subwindow ? cx - 45 : cx - 31, iconY, _icon);
+            if (!isFreeTraining) {
+                dc.drawText(
+                    cx,
+                    h * 38 / 100,
+                    Graphics.FONT_MEDIUM,
+                    preset[:label] as String,
+                    Graphics.TEXT_JUSTIFY_CENTER
+                );
+            }
             dc.drawText(
                 cx,
-                h * 38 / 100,
-                Graphics.FONT_MEDIUM,
-                selectedPreset()[:label] as String,
+                h * (isFreeTraining ? 42 : 50) / 100,
+                isFreeTraining ? Graphics.FONT_SMALL : Graphics.FONT_TINY,
+                Lang.format("$1$ bpm | $2$", [metronome.getBpm(), patternLabel(preset)]),
                 Graphics.TEXT_JUSTIFY_CENTER
             );
             dc.drawText(
                 cx,
-                h * 50 / 100,
-                Graphics.FONT_TINY,
-                Lang.format("$1$ bpm | $2$", [metronome.getBpm(), patternLabel(selectedPreset())]),
+                h * (isFreeTraining ? 53 : 57) / 100,
+                isFreeTraining ? Graphics.FONT_SMALL : Graphics.FONT_TINY,
+                "SELECT to start",
                 Graphics.TEXT_JUSTIFY_CENTER
             );
-            dc.drawText(cx, h * 57 / 100, Graphics.FONT_TINY, "SELECT to start", Graphics.TEXT_JUSTIFY_CENTER);
             dc.drawText(
                 cx,
                 h * 64 / 100,
