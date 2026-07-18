@@ -9,6 +9,28 @@ module Intervals {
     const PHASE_REST = 1;
     const PHASE_DONE = 2;
 
+    // Whole seconds to show during a deadline-based countdown. Rounding up
+    // keeps "5" visible immediately after a five-second countdown starts.
+    function countdownSeconds(nowMs as Number, deadlineMs as Number) as Number {
+        var remaining = deadlineMs - nowMs;
+        if (remaining <= 0) {
+            return 0;
+        }
+        return (remaining + 999) / 1000;
+    }
+
+    // Warn once when an interval plan enters the final five seconds before
+    // another work set. <= 5 tolerates a delayed one-second UI refresh.
+    function shouldWarnNextWork(
+        phase as Number,
+        remaining as Number,
+        set as Number,
+        totalSets as Number,
+        warnedSet as Number
+    ) as Boolean {
+        return phase == PHASE_REST && remaining > 0 && remaining <= 5 && set < totalSets && set != warnedSet;
+    }
+
     // Side effects MaceClubsView should apply when the plan changes state.
     // Keeping this decision pure makes transition behavior testable without
     // a live FIT session, timers, tones, or vibration hardware.
