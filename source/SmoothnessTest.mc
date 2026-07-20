@@ -50,3 +50,67 @@ function testSmoothnessHistoryKeepsLatestTwelveSessions(logger as Test.Logger) a
     Test.assertEqualMessage(history[23], 33, "scored-window count travels with the score");
     return true;
 }
+
+(:test)
+function testSetSummaryUsesCumulativeSnapshotDifference(logger as Test.Logger) as Boolean {
+    var sets = new SmoothnessSetSummaries();
+    sets.begin(0, 0);
+    sets.complete(360, 4);
+    sets.begin(360, 4);
+    sets.complete(600, 7);
+
+    Test.assertEqualMessage(sets.count(), 2, "two completed boundaries create two summaries");
+    Test.assertEqualMessage(sets.score(0), 90, "first set averages its four scored windows");
+    Test.assertEqualMessage(sets.windows(0), 4, "first set retains its confidence count");
+    Test.assertEqualMessage(sets.score(1), 80, "second set uses only the cumulative difference");
+    Test.assertEqualMessage(sets.windows(1), 3, "second set excludes earlier windows");
+    return true;
+}
+
+(:test)
+function testSetSummaryRejectsShortSet(logger as Test.Logger) as Boolean {
+    var sets = new SmoothnessSetSummaries();
+    sets.begin(0, 0);
+    sets.complete(180, 2);
+
+    Test.assertEqualMessage(sets.count(), 1, "short completed set is retained");
+    Test.assertEqualMessage(sets.score(0), -1, "fewer than three scored seconds is not enough motion");
+    Test.assertEqualMessage(sets.windows(0), 2, "short set keeps its observed window count");
+    return true;
+}
+
+(:test)
+function testSetSummaryExcludesClosedRestWindow(logger as Test.Logger) as Boolean {
+    var sets = new SmoothnessSetSummaries();
+    sets.begin(0, 0);
+    sets.complete(360, 4);
+    sets.begin(460, 5);
+    sets.complete(730, 8);
+
+    Test.assertEqualMessage(sets.score(1), 90, "new baseline excludes samples accumulated while closed");
+    return true;
+}
+
+(:test)
+function testSetSummaryCompletesBoundaryOnce(logger as Test.Logger) as Boolean {
+    var sets = new SmoothnessSetSummaries();
+    sets.begin(0, 0);
+    sets.complete(360, 4);
+    sets.complete(720, 8);
+
+    Test.assertEqualMessage(sets.count(), 1, "duplicate completion does not invent another set");
+    return true;
+}
+
+(:test)
+function testSetSummaryPreservesMissingBoundary(logger as Test.Logger) as Boolean {
+    var sets = new SmoothnessSetSummaries();
+    sets.begin(0, 0);
+    sets.complete(360, 4);
+    sets.completeMissing();
+
+    Test.assertEqualMessage(sets.count(), 2, "missing boundary preserves the set number");
+    Test.assertEqualMessage(sets.score(1), -1, "missing boundary does not invent a score");
+    Test.assertEqualMessage(sets.windows(1), 0, "missing boundary has no confidence samples");
+    return true;
+}

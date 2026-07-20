@@ -101,5 +101,9 @@ module Smoothness {
         function getScoredWindows() as Number {
             return _scoredWindows;
         }
+
+        function getScoreTotal() as Number {
+            return _scoreTotal;
+        }
     }
 }

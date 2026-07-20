@@ -27,7 +27,13 @@ function testAddSetCounts(logger as Test.Logger) as Boolean {
 (:test)
 function testDiscardResetsSessionForAnotherWorkout(logger as Test.Logger) as Boolean {
     var session = new WorkoutSession();
+    session.beginSmoothnessSet();
     session.addSet();
+    Test.assertEqualMessage(
+        session.getSetSmoothnessCount(),
+        0,
+        "disabled smoothness does not create an empty summary"
+    );
     session.discard();
     Test.assertMessage(!session.isStarted(), "discard returns the session to idle");
     Test.assertEqualMessage(session.getSets(), 0, "discard clears the workout set count");
@@ -36,6 +42,7 @@ function testDiscardResetsSessionForAnotherWorkout(logger as Test.Logger) as Boo
         -1,
         "discard clears the in-progress smoothness score"
     );
+    Test.assertEqualMessage(session.getSetSmoothnessCount(), 0, "discard clears per-set summaries");
     return true;
 }
 
