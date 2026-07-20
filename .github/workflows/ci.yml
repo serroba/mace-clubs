@@ -13,7 +13,7 @@ jobs:
     name: Lint XML resources
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
       - name: Validate XML files
         run: |
           sudo apt-get update -q && sudo apt-get install -y -q libxml2-utils
@@ -26,7 +26,7 @@ jobs:
       # bombsimon/monkey-c-rs revision; bump deliberately (no releases yet)
       MONKEY_C_RS_REV: 3cbdbfccf24b1695559cb40136673e5b9ed81330
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
       - name: Cache monkey-c tools
         id: cache-tools
         uses: actions/cache@v4
@@ -51,7 +51,7 @@ jobs:
       # same image the test job's action uses: monkeyc on PATH, device files preinstalled
       image: ghcr.io/matco/connectiq-tester:latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
       - name: Compile for each product in the manifest
         shell: bash
         run: |
@@ -87,7 +87,7 @@ jobs:
           - venusq               # rectangle
           - vivoactive6          # newest API level 6
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
       - name: Compile and run unit tests
         uses: matco/action-connectiq-tester@v1
         with:
