@@ -3,6 +3,21 @@
     <setting propertyKey="@Properties.defaultBpm" title="@Strings.SettingDefaultBpm">
         <settingConfig type="numeric" min="5" max="240"/>
     </setting>
+    <setting propertyKey="@Properties.equipmentType" title="@Strings.SettingEquipmentType">
+        <settingConfig type="list">
+            <listEntry value="0">@Strings.EquipmentMace</listEntry>
+            <listEntry value="1">@Strings.EquipmentClubs</listEntry>
+        </settingConfig>
+    </setting>
+    <setting propertyKey="@Properties.equipmentCount" title="@Strings.SettingEquipmentCount">
+        <settingConfig type="list">
+            <listEntry value="1">@Strings.EquipmentOne</listEntry>
+            <listEntry value="2">@Strings.EquipmentTwo</listEntry>
+        </settingConfig>
+    </setting>
+    <setting propertyKey="@Properties.equipmentWeightGrams" title="@Strings.SettingEquipmentWeight">
+        <settingConfig type="numeric" min="0" max="50000"/>
+    </setting>
     <setting propertyKey="@Properties.toneEnabled" title="@Strings.SettingToneEnabled">
         <settingConfig type="boolean"/>
     </setting>

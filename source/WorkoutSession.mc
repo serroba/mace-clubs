@@ -15,6 +15,9 @@ class WorkoutSession {
     const FIELD_ID_ACCEL_RMS = 2;
     const FIELD_ID_ACCEL_PEAK = 3;
     const FIELD_ID_ACCEL_ZC = 4;
+    const FIELD_ID_EQUIPMENT_TYPE = 5;
+    const FIELD_ID_EQUIPMENT_COUNT = 6;
+    const FIELD_ID_EQUIPMENT_WEIGHT = 7;
 
     private var _session as ActivityRecording.Session?;
     private var _setsField as FitContributor.Field?;
@@ -30,11 +33,12 @@ class WorkoutSession {
     private var _smoothness as Smoothness.Tracker;
     private var _setSmoothness as SmoothnessSetSummaries;
     private var _smoothnessHistory as Array<Number> = [];
+    private var _smoothnessHistoryKey as String = "";
 
     function initialize() {
         _smoothness = new Smoothness.Tracker();
         _setSmoothness = new SmoothnessSetSummaries();
-        loadSmoothnessHistory();
+        reloadEquipment();
     }
 
     function isStarted() as Boolean {
@@ -52,9 +56,10 @@ class WorkoutSession {
 
     function start() as Void {
         if (_session == null) {
+            reloadEquipment();
             var session = ActivityRecording.createSession(
                 {
-                    :name     => "Mace & Clubs",
+                    :name     => Equipment.label(),
                     :sport    => Activity.SPORT_TRAINING,
                     :subSport => Activity.SUB_SPORT_STRENGTH_TRAINING
                 }
@@ -71,6 +76,27 @@ class WorkoutSession {
                 FitContributor.DATA_TYPE_FLOAT,
                 {:mesgType => FitContributor.MESG_TYPE_SESSION, :units => "%"}
             );
+            var equipmentType = session.createField(
+                "implement_type",
+                FIELD_ID_EQUIPMENT_TYPE,
+                FitContributor.DATA_TYPE_UINT8,
+                {:mesgType => FitContributor.MESG_TYPE_SESSION, :units => "0=mace 1=clubs"}
+            );
+            var equipmentCount = session.createField(
+                "implement_count",
+                FIELD_ID_EQUIPMENT_COUNT,
+                FitContributor.DATA_TYPE_UINT8,
+                {:mesgType => FitContributor.MESG_TYPE_SESSION, :units => "implements"}
+            );
+            var equipmentWeight = session.createField(
+                "implement_weight",
+                FIELD_ID_EQUIPMENT_WEIGHT,
+                FitContributor.DATA_TYPE_UINT16,
+                {:mesgType => FitContributor.MESG_TYPE_SESSION, :units => "g"}
+            );
+            equipmentType.setData(Equipment.type());
+            equipmentCount.setData(Equipment.count());
+            equipmentWeight.setData(Equipment.weightGrams());
             _startBattery = System.getSystemStats().battery;
             _session = session;
             startMotionCapture(session);
@@ -275,9 +301,18 @@ class WorkoutSession {
         return _smoothnessHistory.size() >= 4;
     }
 
+    function reloadEquipment() as Void {
+        if (_started) {
+            return;
+        }
+        _smoothnessHistoryKey = Equipment.historyKey();
+        _smoothnessHistory = [];
+        loadSmoothnessHistory();
+    }
+
     private function loadSmoothnessHistory() as Void {
         try {
-            var stored = Storage.getValue("smoothnessHistoryV1");
+            var stored = Storage.getValue(_smoothnessHistoryKey);
             if (!(stored instanceof Array)) {
                 return;
             }
@@ -305,7 +340,7 @@ class WorkoutSession {
             for (var i = 0; i < _smoothnessHistory.size(); i++) {
                 stored.add(_smoothnessHistory[i]);
             }
-            Storage.setValue("smoothnessHistoryV1", stored);
+            Storage.setValue(_smoothnessHistoryKey, stored);
         } catch (e) {}
     }
 

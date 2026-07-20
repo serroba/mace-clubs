@@ -50,6 +50,7 @@ class MaceClubsView extends WatchUi.View {
     // AppBase.onSettingsChanged when edited mid-session.
     function loadSettings() as Void {
         metronome.loadSettings();
+        workout.reloadEquipment();
         // metronome.loadSettings re-applies the phone pattern; a running
         // workout keeps its own preset pattern, so restore it.
         if (workout.isStarted()) {
@@ -300,13 +301,7 @@ class MaceClubsView extends WatchUi.View {
                 getStartCountdownRemaining().toString(),
                 Graphics.TEXT_JUSTIFY_CENTER
             );
-            dc.drawText(
-                cx,
-                h * 74 / 100,
-                Graphics.FONT_TINY,
-                selectedPreset()[:label] as String,
-                Graphics.TEXT_JUSTIFY_CENTER
-            );
+            dc.drawText(cx, h * 74 / 100, Graphics.FONT_TINY, Equipment.label(), Graphics.TEXT_JUSTIFY_CENTER);
             return;
         }
 
@@ -359,29 +354,29 @@ class MaceClubsView extends WatchUi.View {
             if (!isFreeTraining) {
                 dc.drawText(
                     cx,
-                    h * 38 / 100,
-                    Graphics.FONT_MEDIUM,
+                    h * 35 / 100,
+                    Graphics.FONT_SMALL,
                     preset[:label] as String,
                     Graphics.TEXT_JUSTIFY_CENTER
                 );
             }
             dc.drawText(
                 cx,
-                h * (isFreeTraining ? 42 : 50) / 100,
+                h * (isFreeTraining ? 40 : 49) / 100,
                 isFreeTraining ? Graphics.FONT_SMALL : Graphics.FONT_TINY,
                 Lang.format("$1$ bpm | $2$", [metronome.getBpm(), patternLabel(preset)]),
                 Graphics.TEXT_JUSTIFY_CENTER
             );
             dc.drawText(
                 cx,
-                h * (isFreeTraining ? 53 : 57) / 100,
+                h * (isFreeTraining ? 55 : 62) / 100,
                 isFreeTraining ? Graphics.FONT_SMALL : Graphics.FONT_TINY,
                 "SELECT to start",
                 Graphics.TEXT_JUSTIFY_CENTER
             );
             dc.drawText(
                 cx,
-                h * 64 / 100,
+                h * (isFreeTraining ? 70 : 75) / 100,
                 Graphics.FONT_TINY,
                 "MENU opens settings",
                 Graphics.TEXT_JUSTIFY_CENTER
