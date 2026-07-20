@@ -10,9 +10,9 @@ The Garmin Connect app settings define:
 - weight of each implement in grams
 
 The weight is per implement: `Clubs: 2 x 2.5 kg` means two 2.5 kg clubs, not
-2.5 kg combined. The app displays this profile before a workout, uses it as the
-activity name, and writes type, count, and weight as session-level FIT developer
-fields.
+2.5 kg combined. The app confirms this profile during the five-second start
+countdown, uses it as the activity name, and writes type, count, and weight as
+session-level FIT developer fields.
 
 Smoothness histories are keyed by the exact profile. A score recorded with a
 mace is never compared with clubs, and changing quantity or weight starts a
