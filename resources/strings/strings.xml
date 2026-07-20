@@ -4,7 +4,8 @@
     <string id="SettingDefaultBpm">Default tempo (bpm)</string>
     <string id="SettingEquipmentType">Training implement</string>
     <string id="SettingEquipmentCount">Number of clubs</string>
-    <string id="SettingEquipmentWeight">Weight of each implement (grams)</string>
+    <string id="SettingMaceWeight">Default mace weight (grams)</string>
+    <string id="SettingClubWeight">Default weight of each club (grams)</string>
     <string id="EquipmentMace">Mace</string>
     <string id="EquipmentClubs">Clubs</string>
     <string id="EquipmentOne">One</string>

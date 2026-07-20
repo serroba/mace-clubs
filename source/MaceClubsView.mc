@@ -127,6 +127,10 @@ class MaceClubsView extends WatchUi.View {
         _startTimer.start(method(:beginWorkout), START_DELAY_MS, false);
     }
 
+    function chooseEquipment(kind as Number, quantity as Number) as Void {
+        workout.selectEquipment(kind, quantity);
+    }
+
     // Timer callbacks must be public methods: resolving a private method via
     // method(:beginWorkout) compiles but raises Invalid Value at runtime.
     function beginWorkout() as Void {
@@ -301,7 +305,13 @@ class MaceClubsView extends WatchUi.View {
                 getStartCountdownRemaining().toString(),
                 Graphics.TEXT_JUSTIFY_CENTER
             );
-            dc.drawText(cx, h * 74 / 100, Graphics.FONT_TINY, Equipment.label(), Graphics.TEXT_JUSTIFY_CENTER);
+            dc.drawText(
+                cx,
+                h * 74 / 100,
+                Graphics.FONT_TINY,
+                workout.getEquipmentLabel(),
+                Graphics.TEXT_JUSTIFY_CENTER
+            );
             return;
         }
 

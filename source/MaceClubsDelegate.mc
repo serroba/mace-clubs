@@ -21,7 +21,7 @@ class MaceClubsDelegate extends WatchUi.BehaviorDelegate {
         } else if (_view.isStarting()) {
             return true;
         } else if (!_view.workout.isStarted()) {
-            _view.startWorkout();
+            WatchUi.pushView(EquipmentMenu.build(), new EquipmentMenuDelegate(_view), WatchUi.SLIDE_UP);
         } else if (_view.plan == null) {
             // manual set marking is free-training only; presets count sets
             _view.markSet();

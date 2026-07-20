@@ -17,5 +17,6 @@
     <property id="smoothnessEnabled" type="boolean">false</property>
     <property id="equipmentType" type="number">0</property>
     <property id="equipmentCount" type="number">2</property>
-    <property id="equipmentWeightGrams" type="number">10000</property>
+    <property id="maceWeightGrams" type="number">4000</property>
+    <property id="clubWeightGrams" type="number">4000</property>
 </properties>
