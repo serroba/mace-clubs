@@ -20,10 +20,10 @@ class SettingsMenuDelegate extends WatchUi.Menu2InputDelegate {
             Application.Properties.setValue(id, (item as WatchUi.ToggleMenuItem).isEnabled());
         } else if (id.equals("circleShows")) {
             Application.Properties.setValue("circleShows", SettingsMenu.numProp("circleShows", 0) == 0 ? 1 : 0);
-            item.setSubLabel(SettingsMenu.cornerLabel());
+            item.setLabel(SettingsMenu.cornerLabel());
         } else if (id.equals("cueMode")) {
             Application.Properties.setValue("cueMode", (SettingsMenu.numProp("cueMode", 0) + 1) % 3);
-            item.setSubLabel(SettingsMenu.cueLabel());
+            item.setLabel(SettingsMenu.cueLabel());
         }
         _view.loadSettings();
         WatchUi.requestUpdate();

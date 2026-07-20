@@ -9,20 +9,16 @@ import Toybox.WatchUi;
 module SettingsMenu {
     function build() as WatchUi.Menu2 {
         var menu = new WatchUi.Menu2({:title => "Settings"});
-        menu.addItem(new WatchUi.MenuItem("Corner", cornerLabel(), "circleShows", null));
-        menu.addItem(new WatchUi.MenuItem("Beat cues", cueLabel(), "cueMode", null));
+        // Instinct's circular safe area is too short for Menu2's secondary
+        // labels. Keep the current value in one compact primary label.
+        menu.addItem(new WatchUi.MenuItem(cornerLabel(), null, "circleShows", null));
+        menu.addItem(new WatchUi.MenuItem(cueLabel(), null, "cueMode", null));
         menu.addItem(
-            new WatchUi.ToggleMenuItem(
-                "Beep on beat",
-                null,
-                "toneEnabled",
-                boolProp("toneEnabled", false),
-                null
-            )
+            new WatchUi.ToggleMenuItem("Beat beep", null, "toneEnabled", boolProp("toneEnabled", false), null)
         );
         menu.addItem(
             new WatchUi.ToggleMenuItem(
-                "Vibrate on beat",
+                "Beat vibration",
                 null,
                 "vibeEnabled",
                 boolProp("vibeEnabled", true),
@@ -34,7 +30,7 @@ module SettingsMenu {
         );
         menu.addItem(
             new WatchUi.ToggleMenuItem(
-                "Accent downbeat",
+                "Downbeat accent",
                 null,
                 "accentEnabled",
                 boolProp("accentEnabled", true),
@@ -43,7 +39,7 @@ module SettingsMenu {
         );
         menu.addItem(
             new WatchUi.ToggleMenuItem(
-                "Local smoothness",
+                "Smoothness",
                 null,
                 "smoothnessEnabled",
                 boolProp("smoothnessEnabled", false),
@@ -52,7 +48,7 @@ module SettingsMenu {
         );
         menu.addItem(
             new WatchUi.ToggleMenuItem(
-                "Motion capture",
+                "Motion logging",
                 null,
                 "motionCapture",
                 boolProp("motionCapture", false),
@@ -64,19 +60,26 @@ module SettingsMenu {
 
     // circleShows: 0 = rounds (default), 1 = heart rate.
     function cornerLabel() as String {
-        return numProp("circleShows", 0) == 0 ? "Rounds" : "Heart rate";
+        return cornerLabelFor(numProp("circleShows", 0));
+    }
+
+    function cornerLabelFor(value as Number) as String {
+        return value == 0 ? "Corner: rounds" : "Corner: HR";
     }
 
     // cueMode: 0 = every loop (default), 1 = every beat, 2 = cycle top.
     function cueLabel() as String {
-        var m = numProp("cueMode", 0);
-        if (m == 1) {
-            return "Every beat";
+        return cueLabelFor(numProp("cueMode", 0));
+    }
+
+    function cueLabelFor(value as Number) as String {
+        if (value == 1) {
+            return "Cues: every beat";
         }
-        if (m == 2) {
-            return "Cycle top";
+        if (value == 2) {
+            return "Cues: cycle top";
         }
-        return "Every loop";
+        return "Cues: every loop";
     }
 
     function boolProp(key as String, dflt as Boolean) as Boolean {
