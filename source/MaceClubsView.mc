@@ -50,6 +50,7 @@ class MaceClubsView extends WatchUi.View {
     // AppBase.onSettingsChanged when edited mid-session.
     function loadSettings() as Void {
         metronome.loadSettings();
+        workout.reloadEquipment();
         // metronome.loadSettings re-applies the phone pattern; a running
         // workout keeps its own preset pattern, so restore it.
         if (workout.isStarted()) {
@@ -379,13 +380,7 @@ class MaceClubsView extends WatchUi.View {
                 "SELECT to start",
                 Graphics.TEXT_JUSTIFY_CENTER
             );
-            dc.drawText(
-                cx,
-                h * 64 / 100,
-                Graphics.FONT_TINY,
-                "MENU opens settings",
-                Graphics.TEXT_JUSTIFY_CENTER
-            );
+            dc.drawText(cx, h * 64 / 100, Graphics.FONT_TINY, Equipment.label(), Graphics.TEXT_JUSTIFY_CENTER);
             return;
         }
 

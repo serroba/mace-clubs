@@ -2,6 +2,13 @@
 <strings>
     <string id="AppName">Mace and Clubs</string>
     <string id="SettingDefaultBpm">Default tempo (bpm)</string>
+    <string id="SettingEquipmentType">Training implement</string>
+    <string id="SettingEquipmentCount">Number of clubs</string>
+    <string id="SettingEquipmentWeight">Weight of each implement (grams)</string>
+    <string id="EquipmentMace">Mace</string>
+    <string id="EquipmentClubs">Clubs</string>
+    <string id="EquipmentOne">One</string>
+    <string id="EquipmentTwo">Two</string>
     <string id="SettingToneEnabled">Beep on beat</string>
     <string id="SettingVibeEnabled">Vibrate on beat</string>
     <string id="SettingBeatVibeStrength">Beat vibration strength (10-100)</string>

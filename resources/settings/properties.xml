@@ -15,4 +15,7 @@
     <property id="cueMode" type="number">0</property>
     <property id="motionCapture" type="boolean">false</property>
     <property id="smoothnessEnabled" type="boolean">false</property>
+    <property id="equipmentType" type="number">0</property>
+    <property id="equipmentCount" type="number">2</property>
+    <property id="equipmentWeightGrams" type="number">10000</property>
 </properties>
