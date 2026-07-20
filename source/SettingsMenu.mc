@@ -13,6 +13,10 @@ module SettingsMenu {
         // labels. Keep the current value in one compact primary label.
         menu.addItem(new WatchUi.MenuItem(cornerLabel(), null, "circleShows", null));
         menu.addItem(new WatchUi.MenuItem(cueLabel(), null, "cueMode", null));
+        menu.addItem(new WatchUi.MenuItem(equipmentWeightLabel(Equipment.TYPE_MACE), null, "maceWeight", null));
+        menu.addItem(
+            new WatchUi.MenuItem(equipmentWeightLabel(Equipment.TYPE_CLUBS), null, "clubWeight", null)
+        );
         menu.addItem(
             new WatchUi.ToggleMenuItem("Beat beep", null, "toneEnabled", boolProp("toneEnabled", false), null)
         );
@@ -80,6 +84,11 @@ module SettingsMenu {
             return "Cues: cycle top";
         }
         return "Cues: every loop";
+    }
+
+    function equipmentWeightLabel(kind as Number) as String {
+        var name = kind == Equipment.TYPE_CLUBS ? "Club" : "Mace";
+        return Lang.format("$1$: $2$", [name, Equipment.weightLabel(Equipment.defaultWeightGrams(kind))]);
     }
 
     function boolProp(key as String, dflt as Boolean) as Boolean {

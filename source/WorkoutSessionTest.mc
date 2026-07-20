@@ -25,6 +25,22 @@ function testAddSetCounts(logger as Test.Logger) as Boolean {
 }
 
 (:test)
+function testEquipmentSelectionPreparesChosenSessionProfile(logger as Test.Logger) as Boolean {
+    var session = new WorkoutSession();
+    session.selectEquipment(Equipment.TYPE_CLUBS, 2);
+    Test.assertEqualMessage(session.getEquipmentType(), Equipment.TYPE_CLUBS, "clubs selected");
+    Test.assertEqualMessage(session.getEquipmentCount(), 2, "pair selected");
+    Test.assertEqualMessage(
+        session.getEquipmentWeightGrams(),
+        Equipment.defaultWeightGrams(Equipment.TYPE_CLUBS),
+        "selection uses the configured club default"
+    );
+    session.selectEquipment(Equipment.TYPE_MACE, 2);
+    Test.assertEqualMessage(session.getEquipmentCount(), 1, "mace quantity is always one");
+    return true;
+}
+
+(:test)
 function testDiscardResetsSessionForAnotherWorkout(logger as Test.Logger) as Boolean {
     var session = new WorkoutSession();
     session.beginSmoothnessSet();

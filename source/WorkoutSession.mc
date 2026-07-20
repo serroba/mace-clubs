@@ -34,6 +34,9 @@ class WorkoutSession {
     private var _setSmoothness as SmoothnessSetSummaries;
     private var _smoothnessHistory as Array<Number> = [];
     private var _smoothnessHistoryKey as String = "";
+    private var _equipmentType as Number = Equipment.TYPE_MACE;
+    private var _equipmentCount as Number = 1;
+    private var _equipmentWeightGrams as Number = 4000;
 
     function initialize() {
         _smoothness = new Smoothness.Tracker();
@@ -54,12 +57,37 @@ class WorkoutSession {
         return _sets;
     }
 
+    function selectEquipment(kind as Number, quantity as Number) as Void {
+        if (_started) {
+            return;
+        }
+        _equipmentType = kind;
+        _equipmentCount = kind == Equipment.TYPE_MACE ? 1 : quantity;
+        _equipmentWeightGrams = Equipment.defaultWeightGrams(kind);
+        loadComparableHistory();
+    }
+
+    function getEquipmentLabel() as String {
+        return Equipment.labelFor(_equipmentType, _equipmentCount, _equipmentWeightGrams);
+    }
+
+    function getEquipmentType() as Number {
+        return _equipmentType;
+    }
+
+    function getEquipmentCount() as Number {
+        return _equipmentCount;
+    }
+
+    function getEquipmentWeightGrams() as Number {
+        return _equipmentWeightGrams;
+    }
+
     function start() as Void {
         if (_session == null) {
-            reloadEquipment();
             var session = ActivityRecording.createSession(
                 {
-                    :name     => Equipment.label(),
+                    :name     => getEquipmentLabel(),
                     :sport    => Activity.SPORT_TRAINING,
                     :subSport => Activity.SUB_SPORT_STRENGTH_TRAINING
                 }
@@ -94,9 +122,9 @@ class WorkoutSession {
                 FitContributor.DATA_TYPE_UINT16,
                 {:mesgType => FitContributor.MESG_TYPE_SESSION, :units => "g"}
             );
-            equipmentType.setData(Equipment.type());
-            equipmentCount.setData(Equipment.count());
-            equipmentWeight.setData(Equipment.weightGrams());
+            equipmentType.setData(_equipmentType);
+            equipmentCount.setData(_equipmentCount);
+            equipmentWeight.setData(_equipmentWeightGrams);
             _startBattery = System.getSystemStats().battery;
             _session = session;
             startMotionCapture(session);
@@ -305,7 +333,14 @@ class WorkoutSession {
         if (_started) {
             return;
         }
-        _smoothnessHistoryKey = Equipment.historyKey();
+        _equipmentType = Equipment.type();
+        _equipmentCount = Equipment.count();
+        _equipmentWeightGrams = Equipment.defaultWeightGrams(_equipmentType);
+        loadComparableHistory();
+    }
+
+    private function loadComparableHistory() as Void {
+        _smoothnessHistoryKey = Equipment.historyKeyFor(_equipmentType, _equipmentCount, _equipmentWeightGrams);
         _smoothnessHistory = [];
         loadSmoothnessHistory();
     }

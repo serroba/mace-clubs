@@ -24,6 +24,10 @@ class SettingsMenuDelegate extends WatchUi.Menu2InputDelegate {
         } else if (id.equals("cueMode")) {
             Application.Properties.setValue("cueMode", (SettingsMenu.numProp("cueMode", 0) + 1) % 3);
             item.setLabel(SettingsMenu.cueLabel());
+        } else if (id.equals("maceWeight") || id.equals("clubWeight")) {
+            var kind = id.equals("clubWeight") ? Equipment.TYPE_CLUBS : Equipment.TYPE_MACE;
+            var editor = new WeightEditorView(kind);
+            WatchUi.pushView(editor, new WeightEditorDelegate(editor, _view, item, kind), WatchUi.SLIDE_UP);
         }
         _view.loadSettings();
         WatchUi.requestUpdate();
