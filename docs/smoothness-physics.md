@@ -71,6 +71,29 @@ can follow fatigue or a planned tempo change without treating a single odd
 swing as the new normal. Pauses and the five-second start delay do not add
 samples because sensor capture begins with the recorded workout.
 
+## Per-set summaries
+
+The tracker keeps one calibration and adaptive reference for the whole
+workout. At the beginning and end of each work set, the app snapshots the
+cumulative score total and scored-window count. The set score is the difference
+between those snapshots:
+
+```text
+set_score = (score_total_end - score_total_start)
+            / (scored_windows_end - scored_windows_start)
+```
+
+This avoids repeating the four-window warm-up for every set and makes all sets
+comparable against the same session reference. Scoring closes when a set ends
+and reopens when the next work interval begins, so movement during rest does
+not contaminate the following set. Free training opens the next set immediately
+after the athlete marks the previous one complete.
+
+A set needs at least three scored one-second windows. Shorter sets remain
+counted but display `not enough motion` rather than a low-confidence score. Set
+summaries are transient, watch-local values used on the pause/completion screen;
+they do not add FIT fields or alter the feature's privacy boundary.
+
 This first version measures consistency between one-second windows. It does
 not yet align individual swing waveforms to beats, distinguish left and right
 hands, or compare acceleration at the exact start and end of each swing.

@@ -151,6 +151,7 @@ class MaceClubsView extends WatchUi.View {
     // Free-training set mark: log the set and start a fresh round count.
     function markSet() as Void {
         workout.addSet();
+        workout.beginSmoothnessSet();
         metronome.resetBeatCount();
     }
 
@@ -212,6 +213,7 @@ class MaceClubsView extends WatchUi.View {
             metronome.resetBeatCount();
         }
         if (actions[:startMetronome] as Boolean) {
+            workout.beginSmoothnessSet();
             metronome.start();
         }
         var finished = actions[:finished] as Boolean;
@@ -268,6 +270,19 @@ class MaceClubsView extends WatchUi.View {
         return Lang.format("smooth $1$ ($2$)", [score, change]);
     }
 
+    private function lastSetSmoothnessText() as String {
+        var count = workout.getSetSmoothnessCount();
+        if (count == 0) {
+            return "";
+        }
+        var index = count - 1;
+        var score = workout.getSetSmoothnessScore(index);
+        if (score < 0) {
+            return Lang.format("set $1$: not enough motion", [count]);
+        }
+        return Lang.format("set $1$: $2$ ($3$s)", [count, score, workout.getSetSmoothnessWindows(index)]);
+    }
+
     function onUpdate(dc as Dc) as Void {
         dc.setColor(Graphics.COLOR_WHITE, Graphics.COLOR_BLACK);
         dc.clear();
@@ -305,7 +320,11 @@ class MaceClubsView extends WatchUi.View {
             );
             var smoothness = smoothnessText(true);
             if (smoothness != "") {
-                dc.drawText(cx, h * 39 / 100, Graphics.FONT_TINY, smoothness, Graphics.TEXT_JUSTIFY_CENTER);
+                dc.drawText(cx, h * 34 / 100, Graphics.FONT_TINY, smoothness, Graphics.TEXT_JUSTIFY_CENTER);
+            }
+            var setSmoothness = lastSetSmoothnessText();
+            if (setSmoothness != "") {
+                dc.drawText(cx, h * 42 / 100, Graphics.FONT_TINY, setSmoothness, Graphics.TEXT_JUSTIFY_CENTER);
             }
             dc.drawText(cx, h * 53 / 100, Graphics.FONT_SMALL, "SELECT: save", Graphics.TEXT_JUSTIFY_CENTER);
             if (!done) {

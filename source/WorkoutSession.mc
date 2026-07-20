@@ -28,10 +28,12 @@ class WorkoutSession {
     private var _capturing as Boolean = false;
     private var _smoothnessEnabled as Boolean = false;
     private var _smoothness as Smoothness.Tracker;
+    private var _setSmoothness as SmoothnessSetSummaries;
     private var _smoothnessHistory as Array<Number> = [];
 
     function initialize() {
         _smoothness = new Smoothness.Tracker();
+        _setSmoothness = new SmoothnessSetSummaries();
         loadSmoothnessHistory();
     }
 
@@ -72,6 +74,7 @@ class WorkoutSession {
             _startBattery = System.getSystemStats().battery;
             _session = session;
             startMotionCapture(session);
+            beginSmoothnessSet();
         }
         (_session as ActivityRecording.Session).start();
         _started = true;
@@ -139,7 +142,7 @@ class WorkoutSession {
             return;
         }
         var f = Motion.features(accel.x as Array<Number>, accel.y as Array<Number>, accel.z as Array<Number>);
-        if (_smoothnessEnabled) {
+        if (_smoothnessEnabled && _setSmoothness.isOpen()) {
             _smoothness.add(f);
         }
         var rms = _rmsField;
@@ -180,6 +183,15 @@ class WorkoutSession {
 
     // Each SELECT press during a workout marks a completed set.
     function addSet() as Void {
+        if (_smoothnessEnabled) {
+            if (_setSmoothness.isOpen()) {
+                _setSmoothness.complete(_smoothness.getScoreTotal(), _smoothness.getScoredWindows());
+            } else {
+                // A delayed plan refresh can discover multiple completed sets
+                // together. Preserve their numbering without inventing scores.
+                _setSmoothness.completeMissing();
+            }
+        }
         _sets++;
         var field = _setsField;
         if (field != null) {
@@ -193,6 +205,12 @@ class WorkoutSession {
                     new Attention.VibeProfile(100, 80)
                 ]
             );
+        }
+    }
+
+    function beginSmoothnessSet() as Void {
+        if (_smoothnessEnabled) {
+            _setSmoothness.begin(_smoothness.getScoreTotal(), _smoothness.getScoredWindows());
         }
     }
 
@@ -217,6 +235,18 @@ class WorkoutSession {
 
     function getSmoothnessWindows() as Number {
         return _smoothness.getScoredWindows();
+    }
+
+    function getSetSmoothnessCount() as Number {
+        return _setSmoothness.count();
+    }
+
+    function getSetSmoothnessScore(index as Number) as Number {
+        return _setSmoothness.score(index);
+    }
+
+    function getSetSmoothnessWindows(index as Number) as Number {
+        return _setSmoothness.windows(index);
     }
 
     function getLastSmoothnessScore() as Number {
@@ -317,5 +347,6 @@ class WorkoutSession {
         _startBattery = null;
         _smoothnessEnabled = false;
         _smoothness = new Smoothness.Tracker();
+        _setSmoothness = new SmoothnessSetSummaries();
     }
 }
