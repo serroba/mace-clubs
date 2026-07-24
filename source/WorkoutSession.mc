@@ -18,9 +18,11 @@ class WorkoutSession {
     const FIELD_ID_EQUIPMENT_TYPE = 5;
     const FIELD_ID_EQUIPMENT_COUNT = 6;
     const FIELD_ID_EQUIPMENT_WEIGHT = 7;
+    const FIELD_ID_SET_NUMBER = 8;
 
     private var _session as ActivityRecording.Session?;
     private var _setsField as FitContributor.Field?;
+    private var _setNumberField as FitContributor.Field?;
     private var _batteryField as FitContributor.Field?;
     private var _rmsField as FitContributor.Field?;
     private var _peakField as FitContributor.Field?;
@@ -97,6 +99,12 @@ class WorkoutSession {
                 FIELD_ID_SETS,
                 FitContributor.DATA_TYPE_UINT16,
                 {:mesgType => FitContributor.MESG_TYPE_SESSION, :units => "sets"}
+            );
+            _setNumberField = session.createField(
+                "set_number",
+                FIELD_ID_SET_NUMBER,
+                FitContributor.DATA_TYPE_UINT16,
+                {:mesgType => FitContributor.MESG_TYPE_LAP, :units => "set"}
             );
             _batteryField = session.createField(
                 "battery_used",
@@ -251,6 +259,15 @@ class WorkoutSession {
         if (field != null) {
             field.setData(_sets);
         }
+        // Connect IQ cannot emit Garmin's native strength-set messages. A lap
+        // is the supported FIT boundary that preserves each completed set's
+        // timestamp and duration for Garmin Connect and exported FIT analysis.
+        var setNumberField = _setNumberField;
+        var session = _session;
+        if (setNumberField != null && session != null && session.isRecording()) {
+            setNumberField.setData(_sets);
+            session.addLap();
+        }
         if (Attention has :vibrate) {
             Attention.vibrate(
                 [
@@ -259,6 +276,17 @@ class WorkoutSession {
                     new Attention.VibeProfile(100, 80)
                 ]
             );
+        }
+    }
+
+    // Close the rest segment before a timed plan starts its next work set.
+    // A zero set number distinguishes rest laps from completed work-set laps.
+    function endRestLap() as Void {
+        var setNumberField = _setNumberField;
+        var session = _session;
+        if (setNumberField != null && session != null && session.isRecording()) {
+            setNumberField.setData(0);
+            session.addLap();
         }
     }
 
@@ -408,6 +436,7 @@ class WorkoutSession {
             _session = null;
         }
         _setsField = null;
+        _setNumberField = null;
         _batteryField = null;
         _rmsField = null;
         _peakField = null;

@@ -5,9 +5,11 @@
     <property id="vibeEnabled" type="boolean">true</property>
     <property id="beatVibeStrength" type="number">50</property>
     <property id="softBeep" type="boolean">true</property>
-    <property id="customSets" type="number">4</property>
-    <property id="customWorkSecs" type="number">90</property>
-    <property id="customRestSecs" type="number">60</property>
+    <property id="customSets" type="number">5</property>
+    <property id="customWorkMinutes" type="number">2</property>
+    <property id="customWorkSeconds" type="number">0</property>
+    <property id="customRestMinutes" type="number">2</property>
+    <property id="customRestSeconds" type="number">0</property>
     <property id="beatsPerRound" type="number">4</property>
     <property id="beatsPerRound2" type="number">0</property>
     <property id="circleShows" type="number">0</property>

@@ -218,6 +218,9 @@ class MaceClubsView extends WatchUi.View {
             metronome.resetBeatCount();
         }
         if (actions[:startMetronome] as Boolean) {
+            if (oldPhase == Intervals.PHASE_REST) {
+                workout.endRestLap();
+            }
             workout.beginSmoothnessSet();
             metronome.start();
         }

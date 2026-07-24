@@ -135,6 +135,10 @@ module Intervals {
 // from the phone (beatsPerRound / beatsPerRound2) so there is always a
 // fully tunable slot.
 module Presets {
+    const DEFAULT_CUSTOM_SETS = 5;
+    const DEFAULT_CUSTOM_WORK_MINUTES = 2;
+    const DEFAULT_CUSTOM_REST_MINUTES = 2;
+
     const LIST = [
         {:label => "Free training", :sets => 0, :work => 0, :rest => 0, :beatsA => 4, :beatsB => 0},
         {:label => "5 x 2:00 | 1:00", :sets => 5, :work => 120, :rest => 60, :beatsA => 4, :beatsB => 2},
@@ -186,27 +190,40 @@ module Presets {
         return [a, b] as Array<Number>;
     }
 
-    // The Custom preset reads customSets / customWorkSecs / customRestSecs
-    // from app settings (Garmin Connect on the phone), clamped to sane
-    // ranges; defaults apply when a key is missing.
+    // The Custom preset reads separate minute/second values from app settings
+    // (Garmin Connect on the phone), then normalizes them to whole seconds.
+    // Separate inputs avoid making the athlete convert a duration such as
+    // 2:30 into 150 seconds.
     function custom() as Dictionary {
-        var sets = 4;
-        var work = 90;
-        var rest = 60;
+        var sets = DEFAULT_CUSTOM_SETS;
+        var workMinutes = DEFAULT_CUSTOM_WORK_MINUTES;
+        var workSeconds = 0;
+        var restMinutes = DEFAULT_CUSTOM_REST_MINUTES;
+        var restSeconds = 0;
         try {
             var s = Application.Properties.getValue("customSets");
             if (s instanceof Number) {
                 sets = clamp(s, 1, 50);
             }
-            var wk = Application.Properties.getValue("customWorkSecs");
-            if (wk instanceof Number) {
-                work = clamp(wk, 10, 3600);
+            var wm = Application.Properties.getValue("customWorkMinutes");
+            if (wm instanceof Number) {
+                workMinutes = clamp(wm, 0, 60);
             }
-            var r = Application.Properties.getValue("customRestSecs");
-            if (r instanceof Number) {
-                rest = clamp(r, 0, 3600);
+            var ws = Application.Properties.getValue("customWorkSeconds");
+            if (ws instanceof Number) {
+                workSeconds = clamp(ws, 0, 59);
+            }
+            var rm = Application.Properties.getValue("customRestMinutes");
+            if (rm instanceof Number) {
+                restMinutes = clamp(rm, 0, 60);
+            }
+            var rs = Application.Properties.getValue("customRestSeconds");
+            if (rs instanceof Number) {
+                restSeconds = clamp(rs, 0, 59);
             }
         } catch (e) {}
+        var work = clamp(workMinutes * 60 + workSeconds, 10, 3600);
+        var rest = clamp(restMinutes * 60 + restSeconds, 0, 3600);
         var pat = phonePattern();
         return {
             :label  => Lang.format("$1$ x $2$ | $3$", [sets, mmss(work), mmss(rest)]),
