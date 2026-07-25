@@ -15,3 +15,10 @@ function testSettingsMenuCueLabels(logger as Test.Logger) as Boolean {
     Test.assertEqualMessage(SettingsMenu.cueLabelFor(2), "Cues: cycle top", "cycle cue label is compact");
     return true;
 }
+
+(:test)
+function testSettingsMenuWristLabels(logger as Test.Logger) as Boolean {
+    Test.assertEqualMessage(SettingsMenu.wristLabelFor(0), "Wrist: left", "left wrist label is compact");
+    Test.assertEqualMessage(SettingsMenu.wristLabelFor(1), "Wrist: right", "right wrist label is compact");
+    return true;
+}

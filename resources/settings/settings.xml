@@ -64,4 +64,10 @@
             <listEntry value="1">@Strings.CircleHeartRate</listEntry>
         </settingConfig>
     </setting>
+    <setting propertyKey="@Properties.watchWrist" title="@Strings.SettingWatchWrist">
+        <settingConfig type="list">
+            <listEntry value="0">@Strings.WristLeft</listEntry>
+            <listEntry value="1">@Strings.WristRight</listEntry>
+        </settingConfig>
+    </setting>
 </settings>

@@ -23,8 +23,8 @@ class MaceClubsDelegate extends WatchUi.BehaviorDelegate {
         } else if (!_view.workout.isStarted()) {
             WatchUi.pushView(EquipmentMenu.build(), new EquipmentMenuDelegate(_view), WatchUi.SLIDE_UP);
         } else if (_view.plan == null) {
-            // manual set marking is free-training only; presets count sets
-            _view.markSet();
+            // Free training alternates explicit work and rest phases.
+            _view.advanceFreeTraining();
         }
         WatchUi.requestUpdate();
         return true;
@@ -42,11 +42,16 @@ class MaceClubsDelegate extends WatchUi.BehaviorDelegate {
         if (_view.paused) {
             _view.paused = false;
             _view.workout.resume();
-            _view.metronome.start();
+            if (!_view.isFreeResting()) {
+                _view.metronome.start();
+            }
             WatchUi.requestUpdate();
             return true;
         }
         if (_view.workout.isStarted()) {
+            if (_view.isFreeResting()) {
+                _view.workout.endRestLap();
+            }
             _view.paused = true;
             _view.workout.pause();
             _view.metronome.stop();

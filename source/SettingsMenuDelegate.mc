@@ -21,6 +21,9 @@ class SettingsMenuDelegate extends WatchUi.Menu2InputDelegate {
         } else if (id.equals("circleShows")) {
             Application.Properties.setValue("circleShows", SettingsMenu.numProp("circleShows", 0) == 0 ? 1 : 0);
             item.setLabel(SettingsMenu.cornerLabel());
+        } else if (id.equals("watchWrist")) {
+            Application.Properties.setValue("watchWrist", SettingsMenu.numProp("watchWrist", 0) == 0 ? 1 : 0);
+            item.setLabel(SettingsMenu.wristLabel());
         } else if (id.equals("cueMode")) {
             Application.Properties.setValue("cueMode", (SettingsMenu.numProp("cueMode", 0) + 1) % 3);
             item.setLabel(SettingsMenu.cueLabel());
