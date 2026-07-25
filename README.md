@@ -16,6 +16,7 @@ target is the **Instinct 3 Solar**; the manifest supports 120 Garmin wearables
 - Five-second start delay and advance warning before each new work interval
 - Optional on-watch smoothness score with a 12-session local trend; no account,
   network request, or smoothness data upload
+- Watch-wrist and equipment metadata written into each FIT session
 - Set total written to the FIT session, with work sets and timed rests recorded
   as separate lap boundaries for analysis in Garmin Connect and exported FIT files
 - Tempo, tone, and vibration configurable from the Garmin Connect phone app
@@ -24,7 +25,7 @@ target is the **Instinct 3 Solar**; the manifest supports 120 Garmin wearables
 
 | Button | Idle | Recording | Paused |
 |---|---|---|---|
-| SELECT | Start workout | Mark a set (free training) | Save & exit |
+| SELECT | Start workout | Free training: switch work/rest | Save & exit |
 | BACK | Quit | Pause | Resume (unless finished) |
 | UP / DOWN | Choose workout preset | Tempo ±5 bpm | UP: discard and return home |
 | MENU | Settings | Discard and return home | Discard and return home |
@@ -35,6 +36,9 @@ The Custom preset defaults to 5 × 2:00 work / 2:00 rest. Configure it directly
 on the watch from MENU → Settings → Custom workout, or from the Garmin Connect
 phone app. The on-watch editor walks through sets, work duration, and rest
 duration; duration controls move in 30-second steps.
+In Free training, SELECT completes the current set and enters REST; press SELECT
+again to begin the next WORK phase. Rest keeps activity and heart-rate recording
+running. BACK remains a true whole-session pause/resume control.
 Garmin may label recorded set and rest boundaries as laps or splits. Work laps
 carry their one-based `set_number`; rest laps carry zero. Connect IQ does not
 expose Garmin's native strength-set message type, so the Strength summary can

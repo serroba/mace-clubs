@@ -10,6 +10,7 @@ module SettingsMenu {
         // Instinct's circular safe area is too short for Menu2's secondary
         // labels. Keep the current value in one compact primary label.
         menu.addItem(new WatchUi.MenuItem(cornerLabel(), null, "circleShows", null));
+        menu.addItem(new WatchUi.MenuItem(wristLabel(), null, "watchWrist", null));
         menu.addItem(new WatchUi.MenuItem(cueLabel(), null, "cueMode", null));
         menu.addItem(new WatchUi.MenuItem(customWorkoutLabel(), null, "customWorkout", null));
         menu.addItem(new WatchUi.MenuItem(equipmentWeightLabel(Equipment.TYPE_MACE), null, "maceWeight", null));
@@ -68,6 +69,14 @@ module SettingsMenu {
 
     function cornerLabelFor(value as Number) as String {
         return value == 0 ? "Corner: rounds" : "Corner: HR";
+    }
+
+    function wristLabel() as String {
+        return wristLabelFor(numProp("watchWrist", 0));
+    }
+
+    function wristLabelFor(value as Number) as String {
+        return value == 1 ? "Wrist: right" : "Wrist: left";
     }
 
     // cueMode: 0 = every loop (default), 1 = every beat, 2 = cycle top.

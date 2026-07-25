@@ -21,6 +21,7 @@ class MaceClubsView extends WatchUi.View {
     var done as Boolean = false;
     var presetIndex as Number = 0;
     var plan as Intervals.Plan?;
+    var freePhase as Number = FreeTraining.PHASE_WORK;
 
     private var _refreshTimer as Timer.Timer;
     private var _startTimer as Timer.Timer;
@@ -120,6 +121,7 @@ class MaceClubsView extends WatchUi.View {
         _lastPhase = null;
         _lastSet = 0;
         _warnedSet = 0;
+        freePhase = FreeTraining.PHASE_WORK;
         metronome.resetBeatCount();
         metronome.applyPattern(preset[:beatsA] as Number, preset[:beatsB] as Number);
         _starting = true;
@@ -153,11 +155,25 @@ class MaceClubsView extends WatchUi.View {
         }
     }
 
-    // Free-training set mark: log the set and start a fresh round count.
-    function markSet() as Void {
-        workout.addSet();
-        workout.beginSmoothnessSet();
-        metronome.resetBeatCount();
+    // Free training advances explicitly between work and rest. Unlike Pause,
+    // rest keeps FIT recording and heart-rate capture running.
+    function advanceFreeTraining() as Void {
+        if (FreeTraining.completesSet(freePhase)) {
+            workout.addSet();
+            metronome.stop();
+        } else {
+            workout.endRestLap();
+            workout.beginSmoothnessSet();
+            metronome.resetBeatCount();
+            metronome.start();
+        }
+        freePhase = FreeTraining.nextPhase(freePhase);
+        playTransitionCue(false);
+        WatchUi.requestUpdate();
+    }
+
+    function isFreeResting() as Boolean {
+        return plan == null && freePhase == FreeTraining.PHASE_REST;
     }
 
     // Throw the session away without saving and reset to the app's initial
@@ -171,6 +187,7 @@ class MaceClubsView extends WatchUi.View {
         _lastPhase = null;
         _lastSet = 0;
         _warnedSet = 0;
+        freePhase = FreeTraining.PHASE_WORK;
         metronome.resetBeatCount();
         WatchUi.requestUpdate();
     }
@@ -494,51 +511,44 @@ class MaceClubsView extends WatchUi.View {
             return;
         }
 
-        // Free training: elapsed time front and center, tempo and manual
-        // set counter below; HR in the subwindow where the screen has one
+        // Free training: elapsed time front and center, with SELECT advancing
+        // between WORK and REST while FIT recording continues.
+        var freeResting = freePhase == FreeTraining.PHASE_REST;
+        var phaseText = freeResting ? "REST" : "WORK";
+        var mainValue = freeResting ? "REST" : metronome.getBpm().toString();
+        var mainLabel = freeResting ? "SELECT: work" : "bpm";
         if (_subwindow) {
             drawSubwindowMetric(dc, circleValue);
             dc.drawText(
                 cx,
                 h * 22 / 100,
-                Graphics.FONT_NUMBER_MILD,
-                formatSecs(timerMs / 1000),
-                Graphics.TEXT_JUSTIFY_CENTER
-            );
-            dc.drawText(
-                cx,
-                h * 48 / 100,
                 Graphics.FONT_MEDIUM,
-                Lang.format("$1$ bpm", [metronome.getBpm()]),
+                Lang.format("$1$  $2$", [phaseText, formatSecs(timerMs / 1000)]),
                 Graphics.TEXT_JUSTIFY_CENTER
             );
+            dc.drawText(cx, h * 48 / 100, Graphics.FONT_MEDIUM, mainValue, Graphics.TEXT_JUSTIFY_CENTER);
+            dc.drawText(cx, h * 58 / 100, Graphics.FONT_TINY, mainLabel, Graphics.TEXT_JUSTIFY_CENTER);
             dc.drawText(
                 cx - 30,
-                h * 64 / 100,
+                h * 70 / 100,
                 Graphics.FONT_MEDIUM,
                 workout.getSets().toString(),
                 Graphics.TEXT_JUSTIFY_CENTER
             );
-            dc.drawText(cx - 30, h * 80 / 100, Graphics.FONT_TINY, "sets", Graphics.TEXT_JUSTIFY_CENTER);
-            dc.drawText(cx + 30, h * 64 / 100, Graphics.FONT_MEDIUM, otherValue, Graphics.TEXT_JUSTIFY_CENTER);
-            dc.drawText(cx + 30, h * 80 / 100, Graphics.FONT_TINY, otherLabel, Graphics.TEXT_JUSTIFY_CENTER);
+            dc.drawText(cx - 30, h * 84 / 100, Graphics.FONT_TINY, "sets", Graphics.TEXT_JUSTIFY_CENTER);
+            dc.drawText(cx + 30, h * 70 / 100, Graphics.FONT_MEDIUM, otherValue, Graphics.TEXT_JUSTIFY_CENTER);
+            dc.drawText(cx + 30, h * 84 / 100, Graphics.FONT_TINY, otherLabel, Graphics.TEXT_JUSTIFY_CENTER);
             return;
         }
         dc.drawText(
             cx,
             h * 6 / 100,
             Graphics.FONT_MEDIUM,
-            formatSecs(timerMs / 1000),
+            Lang.format("$1$  $2$", [phaseText, formatSecs(timerMs / 1000)]),
             Graphics.TEXT_JUSTIFY_CENTER
         );
-        dc.drawText(
-            cx,
-            h * 32 / 100,
-            Graphics.FONT_NUMBER_HOT,
-            metronome.getBpm().toString(),
-            Graphics.TEXT_JUSTIFY_CENTER
-        );
-        dc.drawText(cx, h * 56 / 100, Graphics.FONT_TINY, "bpm", Graphics.TEXT_JUSTIFY_CENTER);
+        dc.drawText(cx, h * 32 / 100, Graphics.FONT_NUMBER_HOT, mainValue, Graphics.TEXT_JUSTIFY_CENTER);
+        dc.drawText(cx, h * 56 / 100, Graphics.FONT_TINY, mainLabel, Graphics.TEXT_JUSTIFY_CENTER);
         dc.drawText(
             cx - 50,
             h * 68 / 100,

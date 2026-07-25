@@ -31,4 +31,7 @@
     <string id="SettingCircleShows">Instinct circle shows</string>
     <string id="CircleRounds">Rounds</string>
     <string id="CircleHeartRate">Heart rate</string>
+    <string id="SettingWatchWrist">Watch wrist</string>
+    <string id="WristLeft">Left</string>
+    <string id="WristRight">Right</string>
 </strings>

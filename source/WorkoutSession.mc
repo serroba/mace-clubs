@@ -19,6 +19,7 @@ class WorkoutSession {
     const FIELD_ID_EQUIPMENT_COUNT = 6;
     const FIELD_ID_EQUIPMENT_WEIGHT = 7;
     const FIELD_ID_SET_NUMBER = 8;
+    const FIELD_ID_WATCH_WRIST = 9;
 
     private var _session as ActivityRecording.Session?;
     private var _setsField as FitContributor.Field?;
@@ -39,6 +40,7 @@ class WorkoutSession {
     private var _equipmentType as Number = Equipment.TYPE_MACE;
     private var _equipmentCount as Number = 1;
     private var _equipmentWeightGrams as Number = 4000;
+    private var _watchWrist as Number = 0;
 
     function initialize() {
         _smoothness = new Smoothness.Tracker();
@@ -130,9 +132,16 @@ class WorkoutSession {
                 FitContributor.DATA_TYPE_UINT16,
                 {:mesgType => FitContributor.MESG_TYPE_SESSION, :units => "g"}
             );
+            var watchWrist = session.createField(
+                "watch_wrist",
+                FIELD_ID_WATCH_WRIST,
+                FitContributor.DATA_TYPE_UINT8,
+                {:mesgType => FitContributor.MESG_TYPE_SESSION, :units => "0=left 1=right"}
+            );
             equipmentType.setData(_equipmentType);
             equipmentCount.setData(_equipmentCount);
             equipmentWeight.setData(_equipmentWeightGrams);
+            watchWrist.setData(_watchWrist);
             _startBattery = System.getSystemStats().battery;
             _session = session;
             startMotionCapture(session);
@@ -364,6 +373,14 @@ class WorkoutSession {
         _equipmentType = Equipment.type();
         _equipmentCount = Equipment.count();
         _equipmentWeightGrams = Equipment.defaultWeightGrams(_equipmentType);
+        try {
+            var wrist = Application.Properties.getValue("watchWrist");
+            if (wrist instanceof Number) {
+                _watchWrist = wrist == 1 ? 1 : 0;
+            }
+        } catch (e) {
+            _watchWrist = 0;
+        }
         loadComparableHistory();
     }
 
