@@ -40,7 +40,11 @@ In Free training, SELECT completes the current set and enters REST; press SELECT
 again to begin the next WORK phase. Rest keeps activity and heart-rate recording
 running. BACK remains a true whole-session pause/resume control.
 Garmin may label recorded set and rest boundaries as laps or splits. Work laps
-carry their one-based `set_number`; rest laps carry zero. Connect IQ does not
+carry their one-based `set_number`; rest laps carry zero. Each boundary also
+records its work/rest phase, duration, implement weight, watch wrist, and
+set smoothness where available. The paused and completed screens provide an
+on-watch set summary; use UP/DOWN to inspect individual work/rest durations.
+Connect IQ does not
 expose Garmin's native strength-set message type, so the Strength summary can
 still show `-- Sets`.
 

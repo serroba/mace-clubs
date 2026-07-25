@@ -91,6 +91,14 @@ module Intervals {
             return _sets;
         }
 
+        function getWorkSeconds() as Number {
+            return _workSecs;
+        }
+
+        function getRestSeconds() as Number {
+            return _restSecs;
+        }
+
         // Phase, 1-based set number, and seconds remaining in the phase
         // at the given timer time. The last set has no trailing rest.
         function stateAt(timerMs as Number) as Dictionary {

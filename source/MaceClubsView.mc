@@ -33,6 +33,8 @@ class MaceClubsView extends WatchUi.View {
     private var _icon as WatchUi.BitmapResource;
     private var _subwindow as Boolean = false;
     private var _circleRounds as Boolean = true;
+    private var _freePhaseStartMs as Number = 0;
+    private var _summarySet as Number = 0;
 
     function initialize() {
         View.initialize();
@@ -141,6 +143,7 @@ class MaceClubsView extends WatchUi.View {
         }
         _starting = false;
         workout.start();
+        _freePhaseStartMs = 0;
         metronome.start();
         playTransitionCue(false);
         WatchUi.requestUpdate();
@@ -158,15 +161,19 @@ class MaceClubsView extends WatchUi.View {
     // Free training advances explicitly between work and rest. Unlike Pause,
     // rest keeps FIT recording and heart-rate capture running.
     function advanceFreeTraining() as Void {
+        var elapsedMs = activityTimerMs();
+        var duration = (elapsedMs - _freePhaseStartMs) / 1000;
         if (FreeTraining.completesSet(freePhase)) {
-            workout.addSet();
+            workout.addSetWithDuration(duration);
             metronome.stop();
         } else {
-            workout.endRestLap();
+            workout.endRestLapWithDuration(duration);
             workout.beginSmoothnessSet();
             metronome.resetBeatCount();
             metronome.start();
         }
+        _freePhaseStartMs = elapsedMs;
+        _summarySet = workout.getSets() - 1;
         freePhase = FreeTraining.nextPhase(freePhase);
         playTransitionCue(false);
         WatchUi.requestUpdate();
@@ -223,10 +230,11 @@ class MaceClubsView extends WatchUi.View {
     }
 
     private function onPlanTransition(oldPhase as Number, oldSet as Number, phase as Number, set as Number) as Void {
+        var p = plan as Intervals.Plan;
         var actions = Intervals.actionsForTransition(oldPhase, oldSet, phase, set);
         var setsToAdd = actions[:setsToAdd] as Number;
         for (var i = 0; i < setsToAdd; i++) {
-            workout.addSet();
+            workout.addSetWithDuration(p.getWorkSeconds());
         }
         if (actions[:stopMetronome] as Boolean) {
             metronome.stop();
@@ -236,7 +244,7 @@ class MaceClubsView extends WatchUi.View {
         }
         if (actions[:startMetronome] as Boolean) {
             if (oldPhase == Intervals.PHASE_REST) {
-                workout.endRestLap();
+                workout.endRestLapWithDuration(p.getRestSeconds());
             }
             workout.beginSmoothnessSet();
             metronome.start();
@@ -247,7 +255,34 @@ class MaceClubsView extends WatchUi.View {
             workout.pause();
             paused = true;
             done = true;
+            _summarySet = workout.getSets() - 1;
         }
+    }
+
+    private function activityTimerMs() as Number {
+        var info = Activity.getActivityInfo();
+        if (info != null && info.timerTime != null) {
+            return info.timerTime as Number;
+        }
+        return 0;
+    }
+
+    function cycleSummary(direction as Number) as Void {
+        var count = workout.getSets();
+        if (count == 0) {
+            _summarySet = 0;
+            return;
+        }
+        _summarySet = (_summarySet + direction + count) % count;
+        WatchUi.requestUpdate();
+    }
+
+    private function summarySmoothness(index as Number) as String {
+        if (index >= workout.getSetSmoothnessCount()) {
+            return "";
+        }
+        var score = workout.getSetSmoothnessScore(index);
+        return score < 0 ? "smooth --" : Lang.format("smooth $1$", [score]);
     }
 
     // Honours the same beep/vibrate toggles as the beat cue, so turning a
@@ -343,29 +378,54 @@ class MaceClubsView extends WatchUi.View {
                 done ? "DONE!" : "PAUSED",
                 Graphics.TEXT_JUSTIFY_CENTER
             );
-            var smoothness = smoothnessText(true);
-            if (smoothness != "") {
-                dc.drawText(cx, h * 34 / 100, Graphics.FONT_TINY, smoothness, Graphics.TEXT_JUSTIFY_CENTER);
-            }
-            var setSmoothness = lastSetSmoothnessText();
-            if (setSmoothness != "") {
-                dc.drawText(cx, h * 42 / 100, Graphics.FONT_TINY, setSmoothness, Graphics.TEXT_JUSTIFY_CENTER);
-            }
-            dc.drawText(cx, h * 53 / 100, Graphics.FONT_SMALL, "SELECT: save", Graphics.TEXT_JUSTIFY_CENTER);
-            if (!done) {
+            var count = workout.getSets();
+            dc.drawText(
+                cx,
+                h * 35 / 100,
+                Graphics.FONT_TINY,
+                Lang.format("$1$ sets  $2$ work", [count, formatSecs(workout.getTotalWorkSeconds())]),
+                Graphics.TEXT_JUSTIFY_CENTER
+            );
+            if (count > 0) {
+                var index = _summarySet;
+                if (index < 0 || index >= count) {
+                    index = count - 1;
+                }
                 dc.drawText(
                     cx,
-                    h * 67 / 100,
-                    Graphics.FONT_SMALL,
-                    "BACK: resume",
+                    h * 45 / 100,
+                    Graphics.FONT_TINY,
+                    Lang.format(
+                        "set $1$/$2$  $3$ / $4$",
+                        [
+                            index + 1,
+                            count,
+                            formatSecs(workout.getSetWorkSeconds(index)),
+                            formatSecs(workout.getSetRestSeconds(index))
+                        ]
+                    ),
                     Graphics.TEXT_JUSTIFY_CENTER
                 );
+                var setSmoothness = summarySmoothness(index);
+                if (setSmoothness != "") {
+                    dc.drawText(
+                        cx,
+                        h * 54 / 100,
+                        Graphics.FONT_TINY,
+                        setSmoothness,
+                        Graphics.TEXT_JUSTIFY_CENTER
+                    );
+                }
+            }
+            dc.drawText(cx, h * 64 / 100, Graphics.FONT_SMALL, "SELECT: save", Graphics.TEXT_JUSTIFY_CENTER);
+            if (!done) {
+                dc.drawText(cx, h * 77 / 100, Graphics.FONT_TINY, "BACK: resume", Graphics.TEXT_JUSTIFY_CENTER);
             }
             dc.drawText(
                 cx,
-                h * (done ? 68 : 81) / 100,
-                Graphics.FONT_SMALL,
-                "UP: home",
+                h * (done ? 79 : 88) / 100,
+                Graphics.FONT_TINY,
+                count > 1 ? "UP/DOWN: sets" : "MENU: discard",
                 Graphics.TEXT_JUSTIFY_CENTER
             );
             return;

@@ -20,10 +20,20 @@ class WorkoutSession {
     const FIELD_ID_EQUIPMENT_WEIGHT = 7;
     const FIELD_ID_SET_NUMBER = 8;
     const FIELD_ID_WATCH_WRIST = 9;
+    const FIELD_ID_PHASE = 10;
+    const FIELD_ID_PHASE_DURATION = 11;
+    const FIELD_ID_LAP_WEIGHT = 12;
+    const FIELD_ID_LAP_WRIST = 13;
+    const FIELD_ID_SET_SMOOTHNESS = 14;
 
     private var _session as ActivityRecording.Session?;
     private var _setsField as FitContributor.Field?;
     private var _setNumberField as FitContributor.Field?;
+    private var _phaseField as FitContributor.Field?;
+    private var _phaseDurationField as FitContributor.Field?;
+    private var _lapWeightField as FitContributor.Field?;
+    private var _lapWristField as FitContributor.Field?;
+    private var _setSmoothnessField as FitContributor.Field?;
     private var _batteryField as FitContributor.Field?;
     private var _rmsField as FitContributor.Field?;
     private var _peakField as FitContributor.Field?;
@@ -41,6 +51,8 @@ class WorkoutSession {
     private var _equipmentCount as Number = 1;
     private var _equipmentWeightGrams as Number = 4000;
     private var _watchWrist as Number = 0;
+    private var _setWorkSeconds as Array<Number> = [];
+    private var _setRestSeconds as Array<Number> = [];
 
     function initialize() {
         _smoothness = new Smoothness.Tracker();
@@ -59,6 +71,30 @@ class WorkoutSession {
 
     function getSets() as Number {
         return _sets;
+    }
+
+    function getSetWorkSeconds(index as Number) as Number {
+        return index >= 0 && index < _setWorkSeconds.size() ? _setWorkSeconds[index] : 0;
+    }
+
+    function getSetRestSeconds(index as Number) as Number {
+        return index >= 0 && index < _setRestSeconds.size() ? _setRestSeconds[index] : 0;
+    }
+
+    function getTotalWorkSeconds() as Number {
+        return sumDurations(_setWorkSeconds);
+    }
+
+    function getTotalRestSeconds() as Number {
+        return sumDurations(_setRestSeconds);
+    }
+
+    private function sumDurations(values as Array<Number>) as Number {
+        var total = 0;
+        for (var i = 0; i < values.size(); i++) {
+            total += values[i];
+        }
+        return total;
     }
 
     function selectEquipment(kind as Number, quantity as Number) as Void {
@@ -107,6 +143,36 @@ class WorkoutSession {
                 FIELD_ID_SET_NUMBER,
                 FitContributor.DATA_TYPE_UINT16,
                 {:mesgType => FitContributor.MESG_TYPE_LAP, :units => "set"}
+            );
+            _phaseField = session.createField(
+                "phase",
+                FIELD_ID_PHASE,
+                FitContributor.DATA_TYPE_UINT8,
+                {:mesgType => FitContributor.MESG_TYPE_LAP, :units => "0=rest 1=work"}
+            );
+            _phaseDurationField = session.createField(
+                "phase_duration",
+                FIELD_ID_PHASE_DURATION,
+                FitContributor.DATA_TYPE_UINT16,
+                {:mesgType => FitContributor.MESG_TYPE_LAP, :units => "s"}
+            );
+            _lapWeightField = session.createField(
+                "implement_weight",
+                FIELD_ID_LAP_WEIGHT,
+                FitContributor.DATA_TYPE_UINT16,
+                {:mesgType => FitContributor.MESG_TYPE_LAP, :units => "g"}
+            );
+            _lapWristField = session.createField(
+                "watch_wrist",
+                FIELD_ID_LAP_WRIST,
+                FitContributor.DATA_TYPE_UINT8,
+                {:mesgType => FitContributor.MESG_TYPE_LAP, :units => "0=left 1=right"}
+            );
+            _setSmoothnessField = session.createField(
+                "set_smoothness",
+                FIELD_ID_SET_SMOOTHNESS,
+                FitContributor.DATA_TYPE_SINT16,
+                {:mesgType => FitContributor.MESG_TYPE_LAP, :units => "score"}
             );
             _batteryField = session.createField(
                 "battery_used",
@@ -254,6 +320,10 @@ class WorkoutSession {
 
     // Each SELECT press during a workout marks a completed set.
     function addSet() as Void {
+        addSetWithDuration(0);
+    }
+
+    function addSetWithDuration(durationSeconds as Number) as Void {
         if (_smoothnessEnabled) {
             if (_setSmoothness.isOpen()) {
                 _setSmoothness.complete(_smoothness.getScoreTotal(), _smoothness.getScoredWindows());
@@ -264,6 +334,8 @@ class WorkoutSession {
             }
         }
         _sets++;
+        _setWorkSeconds.add(clampDuration(durationSeconds));
+        _setRestSeconds.add(0);
         var field = _setsField;
         if (field != null) {
             field.setData(_sets);
@@ -275,6 +347,8 @@ class WorkoutSession {
         var session = _session;
         if (setNumberField != null && session != null && session.isRecording()) {
             setNumberField.setData(_sets);
+            var smoothness = _sets <= getSetSmoothnessCount() ? getSetSmoothnessScore(_sets - 1) : -1;
+            setLapMetadata(1, durationSeconds, smoothness);
             session.addLap();
         }
         if (Attention has :vibrate) {
@@ -291,11 +365,49 @@ class WorkoutSession {
     // Close the rest segment before a timed plan starts its next work set.
     // A zero set number distinguishes rest laps from completed work-set laps.
     function endRestLap() as Void {
+        endRestLapWithDuration(0);
+    }
+
+    function endRestLapWithDuration(durationSeconds as Number) as Void {
+        if (_sets > 0) {
+            _setRestSeconds[_sets - 1] = clampDuration(durationSeconds);
+        }
         var setNumberField = _setNumberField;
         var session = _session;
         if (setNumberField != null && session != null && session.isRecording()) {
             setNumberField.setData(0);
+            setLapMetadata(0, durationSeconds, -1);
             session.addLap();
+        }
+    }
+
+    private function clampDuration(durationSeconds as Number) as Number {
+        if (durationSeconds < 0) {
+            return 0;
+        }
+        return durationSeconds > 65535 ? 65535 : durationSeconds;
+    }
+
+    private function setLapMetadata(phase as Number, durationSeconds as Number, smoothness as Number) as Void {
+        var phaseField = _phaseField;
+        var durationField = _phaseDurationField;
+        var weightField = _lapWeightField;
+        var wristField = _lapWristField;
+        var smoothnessField = _setSmoothnessField;
+        if (phaseField != null) {
+            phaseField.setData(phase);
+        }
+        if (durationField != null) {
+            durationField.setData(clampDuration(durationSeconds));
+        }
+        if (weightField != null) {
+            weightField.setData(_equipmentWeightGrams);
+        }
+        if (wristField != null) {
+            wristField.setData(_watchWrist);
+        }
+        if (smoothnessField != null) {
+            smoothnessField.setData(smoothness);
         }
     }
 
@@ -454,11 +566,18 @@ class WorkoutSession {
         }
         _setsField = null;
         _setNumberField = null;
+        _phaseField = null;
+        _phaseDurationField = null;
+        _lapWeightField = null;
+        _lapWristField = null;
+        _setSmoothnessField = null;
         _batteryField = null;
         _rmsField = null;
         _peakField = null;
         _zcField = null;
         _sets = 0;
+        _setWorkSeconds = [];
+        _setRestSeconds = [];
         _started = false;
         _startBattery = null;
         _smoothnessEnabled = false;

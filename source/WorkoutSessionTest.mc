@@ -25,6 +25,21 @@ function testAddSetCounts(logger as Test.Logger) as Boolean {
 }
 
 (:test)
+function testSetSummaryTracksWorkAndRestDurations(logger as Test.Logger) as Boolean {
+    var ws = new WorkoutSession();
+    ws.addSetWithDuration(120);
+    ws.endRestLapWithDuration(60);
+    ws.addSetWithDuration(90);
+    Test.assertEqualMessage(ws.getSetWorkSeconds(0), 120, "first work duration");
+    Test.assertEqualMessage(ws.getSetRestSeconds(0), 60, "first rest duration");
+    Test.assertEqualMessage(ws.getSetWorkSeconds(1), 90, "second work duration");
+    Test.assertEqualMessage(ws.getSetRestSeconds(1), 0, "unfinished rest defaults to zero");
+    Test.assertEqualMessage(ws.getTotalWorkSeconds(), 210, "work durations sum");
+    Test.assertEqualMessage(ws.getTotalRestSeconds(), 60, "rest durations sum");
+    return true;
+}
+
+(:test)
 function testEquipmentSelectionPreparesChosenSessionProfile(logger as Test.Logger) as Boolean {
     var session = new WorkoutSession();
     session.selectEquipment(Equipment.TYPE_CLUBS, 2);
