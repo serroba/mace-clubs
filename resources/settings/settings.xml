@@ -24,11 +24,17 @@
     <setting propertyKey="@Properties.customSets" title="@Strings.SettingCustomSets">
         <settingConfig type="numeric" min="1" max="50"/>
     </setting>
-    <setting propertyKey="@Properties.customWorkSecs" title="@Strings.SettingCustomWork">
-        <settingConfig type="numeric" min="10" max="3600"/>
+    <setting propertyKey="@Properties.customWorkMinutes" title="@Strings.SettingCustomWorkMinutes">
+        <settingConfig type="numeric" min="0" max="60"/>
     </setting>
-    <setting propertyKey="@Properties.customRestSecs" title="@Strings.SettingCustomRest">
-        <settingConfig type="numeric" min="0" max="3600"/>
+    <setting propertyKey="@Properties.customWorkSeconds" title="@Strings.SettingCustomWorkSeconds">
+        <settingConfig type="numeric" min="0" max="59"/>
+    </setting>
+    <setting propertyKey="@Properties.customRestMinutes" title="@Strings.SettingCustomRestMinutes">
+        <settingConfig type="numeric" min="0" max="60"/>
+    </setting>
+    <setting propertyKey="@Properties.customRestSeconds" title="@Strings.SettingCustomRestSeconds">
+        <settingConfig type="numeric" min="0" max="59"/>
     </setting>
     <setting propertyKey="@Properties.beatsPerRound" title="@Strings.SettingBeatsPerRound">
         <settingConfig type="numeric" min="1" max="16"/>

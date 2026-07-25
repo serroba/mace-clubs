@@ -3,9 +3,7 @@ import Toybox.Lang;
 import Toybox.WatchUi;
 
 // On-watch settings menu. Sideloaded builds don't get Garmin Connect's
-// settings gear, so the toggle/list settings are editable here directly.
-// Numeric settings (tempo, vibe strength, loop A/B, custom shape) stay
-// phone-only for now; tempo is already UP/DOWN adjustable in a workout.
+// settings gear, so the most useful settings are editable here directly.
 module SettingsMenu {
     function build() as WatchUi.Menu2 {
         var menu = new WatchUi.Menu2({:title => "Settings"});
@@ -13,6 +11,7 @@ module SettingsMenu {
         // labels. Keep the current value in one compact primary label.
         menu.addItem(new WatchUi.MenuItem(cornerLabel(), null, "circleShows", null));
         menu.addItem(new WatchUi.MenuItem(cueLabel(), null, "cueMode", null));
+        menu.addItem(new WatchUi.MenuItem(customWorkoutLabel(), null, "customWorkout", null));
         menu.addItem(new WatchUi.MenuItem(equipmentWeightLabel(Equipment.TYPE_MACE), null, "maceWeight", null));
         menu.addItem(
             new WatchUi.MenuItem(equipmentWeightLabel(Equipment.TYPE_CLUBS), null, "clubWeight", null)
@@ -89,6 +88,14 @@ module SettingsMenu {
     function equipmentWeightLabel(kind as Number) as String {
         var name = kind == Equipment.TYPE_CLUBS ? "Club" : "Mace";
         return Lang.format("$1$: $2$", [name, Equipment.weightLabel(Equipment.defaultWeightGrams(kind))]);
+    }
+
+    function customWorkoutLabel() as String {
+        var custom = Presets.custom();
+        return Lang.format(
+            "Custom: $1$x $2$/$3$",
+            [custom[:sets], Presets.mmss(custom[:work] as Number), Presets.mmss(custom[:rest] as Number)]
+        );
     }
 
     function boolProp(key as String, dflt as Boolean) as Boolean {

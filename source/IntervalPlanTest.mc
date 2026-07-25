@@ -189,10 +189,25 @@ function testCustomPresetIsLastAndWellFormed(logger as Test.Logger) as Boolean {
     var q = Presets.get(Presets.count() - 1);
     var isCustom = q[:custom] as Boolean?;
     Test.assertMessage(isCustom != null, "last preset is the custom one");
-    Test.assertEqualMessage(q[:sets] as Number, 4, "default custom sets");
-    Test.assertEqualMessage(q[:work] as Number, 90, "default custom work seconds");
-    Test.assertEqualMessage(q[:rest] as Number, 60, "default custom rest seconds");
-    Test.assertEqualMessage(q[:label] as String, "4 x 1:30 | 1:00", "label derives from the custom values");
+    Test.assertMessage((q[:sets] as Number) >= 1, "configured custom set count is valid");
+    Test.assertMessage((q[:work] as Number) >= 10, "configured custom work duration is valid");
+    Test.assertMessage((q[:rest] as Number) >= 0, "configured custom rest duration is valid");
+    Test.assertEqualMessage(
+        q[:label] as String,
+        Lang.format(
+            "$1$ x $2$ | $3$",
+            [q[:sets], Presets.mmss(q[:work] as Number), Presets.mmss(q[:rest] as Number)]
+        ),
+        "label derives from the configured custom values"
+    );
+    return true;
+}
+
+(:test)
+function testCustomPresetDefaults(logger as Test.Logger) as Boolean {
+    Test.assertEqualMessage(Presets.DEFAULT_CUSTOM_SETS, 5, "default custom sets");
+    Test.assertEqualMessage(Presets.DEFAULT_CUSTOM_WORK_MINUTES, 2, "default custom work minutes");
+    Test.assertEqualMessage(Presets.DEFAULT_CUSTOM_REST_MINUTES, 2, "default custom rest minutes");
     return true;
 }
 
