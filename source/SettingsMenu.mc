@@ -11,6 +11,8 @@ module SettingsMenu {
         // labels. Keep the current value in one compact primary label.
         menu.addItem(new WatchUi.MenuItem(cornerLabel(), null, "circleShows", null));
         menu.addItem(new WatchUi.MenuItem(wristLabel(), null, "watchWrist", null));
+        menu.addItem(new WatchUi.MenuItem(movementLabel(), null, "movementType", null));
+        menu.addItem(new WatchUi.MenuItem(workingSideLabel(), null, "workingSide", null));
         menu.addItem(new WatchUi.MenuItem(cueLabel(), null, "cueMode", null));
         menu.addItem(new WatchUi.MenuItem(customWorkoutLabel(), null, "customWorkout", null));
         menu.addItem(new WatchUi.MenuItem(equipmentWeightLabel(Equipment.TYPE_MACE), null, "maceWeight", null));
@@ -77,6 +79,22 @@ module SettingsMenu {
 
     function wristLabelFor(value as Number) as String {
         return value == 1 ? "Wrist: right" : "Wrist: left";
+    }
+
+    function movementLabel() as String {
+        return movementLabelFor(Movement.type());
+    }
+
+    function movementLabelFor(value as Number) as String {
+        return Lang.format("Move: $1$", [Movement.typeLabel(value)]);
+    }
+
+    function workingSideLabel() as String {
+        return workingSideLabelFor(Movement.workingSide());
+    }
+
+    function workingSideLabelFor(value as Number) as String {
+        return Lang.format("Side: $1$", [Movement.sideLabel(value)]);
     }
 
     // cueMode: 0 = every loop (default), 1 = every beat, 2 = cycle top.

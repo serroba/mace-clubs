@@ -25,6 +25,8 @@ class WorkoutSession {
     const FIELD_ID_LAP_WEIGHT = 12;
     const FIELD_ID_LAP_WRIST = 13;
     const FIELD_ID_SET_SMOOTHNESS = 14;
+    const FIELD_ID_MOVEMENT_TYPE = 15;
+    const FIELD_ID_WORKING_SIDE = 16;
 
     private var _session as ActivityRecording.Session?;
     private var _setsField as FitContributor.Field?;
@@ -34,6 +36,8 @@ class WorkoutSession {
     private var _lapWeightField as FitContributor.Field?;
     private var _lapWristField as FitContributor.Field?;
     private var _setSmoothnessField as FitContributor.Field?;
+    private var _movementTypeField as FitContributor.Field?;
+    private var _workingSideField as FitContributor.Field?;
     private var _batteryField as FitContributor.Field?;
     private var _rmsField as FitContributor.Field?;
     private var _peakField as FitContributor.Field?;
@@ -51,8 +55,9 @@ class WorkoutSession {
     private var _equipmentCount as Number = 1;
     private var _equipmentWeightGrams as Number = 4000;
     private var _watchWrist as Number = 0;
-    private var _setWorkSeconds as Array<Number> = [];
-    private var _setRestSeconds as Array<Number> = [];
+    private var _movementType as Number = Movement.TYPE_360;
+    private var _workingSide as Number = Movement.SIDE_TWO_HANDED;
+    private var _blocks as Array<WorkBlockSummary> = [];
 
     function initialize() {
         _smoothness = new Smoothness.Tracker();
@@ -74,27 +79,36 @@ class WorkoutSession {
     }
 
     function getSetWorkSeconds(index as Number) as Number {
-        return index >= 0 && index < _setWorkSeconds.size() ? _setWorkSeconds[index] : 0;
+        var block = getBlock(index);
+        return block == null ? 0 : (block as WorkBlockSummary).getWorkSeconds();
     }
 
     function getSetRestSeconds(index as Number) as Number {
-        return index >= 0 && index < _setRestSeconds.size() ? _setRestSeconds[index] : 0;
+        var block = getBlock(index);
+        return block == null ? 0 : (block as WorkBlockSummary).getRestSeconds();
     }
 
     function getTotalWorkSeconds() as Number {
-        return sumDurations(_setWorkSeconds);
+        var total = 0;
+        for (var i = 0; i < _blocks.size(); i++) {
+            total += _blocks[i].getWorkSeconds();
+        }
+        return total;
     }
 
     function getTotalRestSeconds() as Number {
-        return sumDurations(_setRestSeconds);
-    }
-
-    private function sumDurations(values as Array<Number>) as Number {
         var total = 0;
-        for (var i = 0; i < values.size(); i++) {
-            total += values[i];
+        for (var i = 0; i < _blocks.size(); i++) {
+            total += _blocks[i].getRestSeconds();
         }
         return total;
+    }
+
+    function getBlock(index as Number) as WorkBlockSummary? {
+        if (index < 0 || index >= _blocks.size()) {
+            return null;
+        }
+        return _blocks[index];
     }
 
     function selectEquipment(kind as Number, quantity as Number) as Void {
@@ -173,6 +187,18 @@ class WorkoutSession {
                 FIELD_ID_SET_SMOOTHNESS,
                 FitContributor.DATA_TYPE_SINT16,
                 {:mesgType => FitContributor.MESG_TYPE_LAP, :units => "score"}
+            );
+            _movementTypeField = session.createField(
+                "movement_type",
+                FIELD_ID_MOVEMENT_TYPE,
+                FitContributor.DATA_TYPE_UINT8,
+                {:mesgType => FitContributor.MESG_TYPE_LAP, :units => "movement"}
+            );
+            _workingSideField = session.createField(
+                "working_side",
+                FIELD_ID_WORKING_SIDE,
+                FitContributor.DATA_TYPE_UINT8,
+                {:mesgType => FitContributor.MESG_TYPE_LAP, :units => "side"}
             );
             _batteryField = session.createField(
                 "battery_used",
@@ -334,8 +360,19 @@ class WorkoutSession {
             }
         }
         _sets++;
-        _setWorkSeconds.add(clampDuration(durationSeconds));
-        _setRestSeconds.add(0);
+        var smoothness = _sets <= getSetSmoothnessCount() ? getSetSmoothnessScore(_sets - 1) : -1;
+        var block = new WorkBlockSummary(
+            _sets,
+            clampDuration(durationSeconds),
+            _movementType,
+            _workingSide,
+            _equipmentType,
+            _equipmentCount,
+            _equipmentWeightGrams,
+            _watchWrist,
+            smoothness
+        );
+        _blocks.add(block);
         var field = _setsField;
         if (field != null) {
             field.setData(_sets);
@@ -347,8 +384,7 @@ class WorkoutSession {
         var session = _session;
         if (setNumberField != null && session != null && session.isRecording()) {
             setNumberField.setData(_sets);
-            var smoothness = _sets <= getSetSmoothnessCount() ? getSetSmoothnessScore(_sets - 1) : -1;
-            setLapMetadata(1, durationSeconds, smoothness);
+            writeLapMetadata(1, block);
             session.addLap();
         }
         if (Attention has :vibrate) {
@@ -369,14 +405,15 @@ class WorkoutSession {
     }
 
     function endRestLapWithDuration(durationSeconds as Number) as Void {
-        if (_sets > 0) {
-            _setRestSeconds[_sets - 1] = clampDuration(durationSeconds);
+        if (_sets == 0) {
+            return;
         }
+        _blocks[_sets - 1].setRestSeconds(clampDuration(durationSeconds));
         var setNumberField = _setNumberField;
         var session = _session;
         if (setNumberField != null && session != null && session.isRecording()) {
             setNumberField.setData(0);
-            setLapMetadata(0, durationSeconds, -1);
+            writeLapMetadata(0, _blocks[_sets - 1]);
             session.addLap();
         }
     }
@@ -388,26 +425,35 @@ class WorkoutSession {
         return durationSeconds > 65535 ? 65535 : durationSeconds;
     }
 
-    private function setLapMetadata(phase as Number, durationSeconds as Number, smoothness as Number) as Void {
+    // FIT is an adapter over the app's block model. It does not define it.
+    private function writeLapMetadata(phase as Number, block as WorkBlockSummary) as Void {
         var phaseField = _phaseField;
         var durationField = _phaseDurationField;
         var weightField = _lapWeightField;
         var wristField = _lapWristField;
         var smoothnessField = _setSmoothnessField;
+        var movementField = _movementTypeField;
+        var workingSideField = _workingSideField;
         if (phaseField != null) {
             phaseField.setData(phase);
         }
         if (durationField != null) {
-            durationField.setData(clampDuration(durationSeconds));
+            durationField.setData(phase == 1 ? block.getWorkSeconds() : block.getRestSeconds());
         }
         if (weightField != null) {
-            weightField.setData(_equipmentWeightGrams);
+            weightField.setData(block.getEquipmentWeightGrams());
         }
         if (wristField != null) {
-            wristField.setData(_watchWrist);
+            wristField.setData(block.getWatchWrist());
         }
         if (smoothnessField != null) {
-            smoothnessField.setData(smoothness);
+            smoothnessField.setData(phase == 1 ? block.getSmoothness() : -1);
+        }
+        if (movementField != null) {
+            movementField.setData(block.getMovementType());
+        }
+        if (workingSideField != null) {
+            workingSideField.setData(block.getWorkingSide());
         }
     }
 
@@ -485,6 +531,8 @@ class WorkoutSession {
         _equipmentType = Equipment.type();
         _equipmentCount = Equipment.count();
         _equipmentWeightGrams = Equipment.defaultWeightGrams(_equipmentType);
+        _movementType = Movement.type();
+        _workingSide = Movement.workingSide();
         try {
             var wrist = Application.Properties.getValue("watchWrist");
             if (wrist instanceof Number) {
@@ -497,7 +545,16 @@ class WorkoutSession {
     }
 
     private function loadComparableHistory() as Void {
-        _smoothnessHistoryKey = Equipment.historyKeyFor(_equipmentType, _equipmentCount, _equipmentWeightGrams);
+        // Movement and working side affect the accelerometer signature, so
+        // smoothness trends only compare like-for-like blocks.
+        _smoothnessHistoryKey = Lang.format(
+            "$1$_m$2$_s$3$",
+            [
+                Equipment.historyKeyFor(_equipmentType, _equipmentCount, _equipmentWeightGrams),
+                _movementType,
+                _workingSide
+            ]
+        );
         _smoothnessHistory = [];
         loadSmoothnessHistory();
     }
@@ -571,13 +628,14 @@ class WorkoutSession {
         _lapWeightField = null;
         _lapWristField = null;
         _setSmoothnessField = null;
+        _movementTypeField = null;
+        _workingSideField = null;
         _batteryField = null;
         _rmsField = null;
         _peakField = null;
         _zcField = null;
         _sets = 0;
-        _setWorkSeconds = [];
-        _setRestSeconds = [];
+        _blocks = [];
         _started = false;
         _startBattery = null;
         _smoothnessEnabled = false;

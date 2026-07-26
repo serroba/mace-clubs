@@ -14,6 +14,8 @@
     <property id="beatsPerRound2" type="number">0</property>
     <property id="circleShows" type="number">0</property>
     <property id="watchWrist" type="number">0</property>
+    <property id="movementType" type="number">0</property>
+    <property id="workingSide" type="number">3</property>
     <property id="accentEnabled" type="boolean">true</property>
     <property id="cueMode" type="number">0</property>
     <property id="motionCapture" type="boolean">false</property>

@@ -42,7 +42,9 @@ running. BACK remains a true whole-session pause/resume control.
 Garmin may label recorded set and rest boundaries as laps or splits. Work laps
 carry their one-based `set_number`; rest laps carry zero. Each boundary also
 records its work/rest phase, duration, implement weight, watch wrist, and
-set smoothness where available. The paused and completed screens provide an
+set smoothness where available. Movement (360, 10-to-2, mill, shield cast, or
+flow/other) and working side are configured separately from watch wrist and
+saved with every work block. The paused and completed screens provide an
 on-watch set summary; use UP/DOWN to inspect individual work/rest durations.
 Connect IQ does not
 expose Garmin's native strength-set message type, so the Strength summary can
