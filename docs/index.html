@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Mace &amp; Clubs — Train in rhythm</title>
-<meta name="description" content="A Garmin Connect IQ workout app for steel mace and Indian club training. Keep tempo, follow intervals, and record every session.">
+<meta name="description" content="A Garmin Connect IQ workout app for steel mace and Indian club training. Keep tempo, follow work and rest, and review every movement block.">
 <style>
   :root {
     --paper: #f0eadc;
@@ -131,6 +131,9 @@
   .rhythm h2 { margin: 0; font-size: clamp(3.2rem, 6vw, 6rem); line-height: .9; letter-spacing: -.055em; }
   .rhythm-copy { padding-top: 8px; }
   .rhythm-copy > p { margin: 0 0 34px; max-width: 610px; color: rgba(23, 33, 28, .68); font-size: 1.12rem; }
+  .block-note { margin-top: 28px; padding: 24px; border: 1px solid var(--line); background: var(--cream); }
+  .block-note strong { display: block; margin-bottom: 6px; font-family: var(--display); font-size: 1.35rem; font-weight: 400; }
+  .block-note p { margin: 0; color: rgba(23, 33, 28, .68); font-size: .92rem; }
   .controls { width: 100%; border-collapse: collapse; }
   .controls th, .controls td { padding: 15px 8px; border-bottom: 1px solid var(--line); text-align: left; font-size: .88rem; }
   .controls th { color: rgba(23, 33, 28, .52); text-transform: uppercase; letter-spacing: .08em; font-size: .7rem; }
@@ -202,6 +205,7 @@
     <a class="brand" href="#top">Mace <span>&amp;</span> Clubs</a>
     <div class="nav-links">
       <a href="#features">Features</a>
+      <a href="#how-it-works">How it works</a>
       <a href="#community">Community</a>
       <a href="https://github.com/serroba/mace-clubs">GitHub ↗</a>
     </div>
@@ -213,7 +217,7 @@
     <div>
       <p class="eyebrow">Garmin Connect IQ · Steel mace &amp; Indian clubs</p>
       <h1>Train in <em>rhythm.</em></h1>
-      <p class="lede">A wrist-first training companion that keeps your swings on tempo, calls every work and rest interval, and records the session while you stay in motion.</p>
+      <p class="lede">A wrist-first training companion that keeps your swings on tempo, separates work from recovery, and records each movement block while you stay in motion.</p>
       <div class="actions">
         <a class="button button-primary" href="https://github.com/serroba/mace-clubs/releases">Get the latest build</a>
         <a class="button" href="#how-it-works">See how it works</a>
@@ -237,13 +241,13 @@
     <div class="shell">
       <div class="section-head">
         <h2>Built for the swing.</h2>
-        <p>No crowded dashboards. Just the cues and controls that matter when both hands are on the mace: tempo, intervals, sets, and a clean Garmin activity when you finish.</p>
+        <p>No crowded dashboards. Just the cues and context that matter when both hands are on the mace: tempo, work, recovery, movement, side, and a clean Garmin activity when you finish.</p>
       </div>
       <div class="features">
         <article class="feature"><b>01</b><h3>Feel the tempo</h3><p>A drift-resistant 5–240 BPM metronome with vibration, tone, and configurable accents.</p></article>
-        <article class="feature"><b>02</b><h3>Follow the session</h3><p>Built-in and custom work/rest plans call each transition and count completed sets.</p></article>
-        <article class="feature"><b>03</b><h3>Train eyes-free</h3><p>Physical-button controls and wrist cues keep attention on the movement, not the screen.</p></article>
-        <article class="feature"><b>04</b><h3>Keep the record</h3><p>Save heart rate, training load, battery use, and set count to a named Garmin activity.</p></article>
+        <article class="feature"><b>02</b><h3>Separate work &amp; rest</h3><p>SELECT moves Free training between active work and recorded recovery without pausing heart rate.</p></article>
+        <article class="feature"><b>03</b><h3>Name the movement</h3><p>Record 360s, 10-to-2s, mills, shield casts, or flows with the working side kept distinct from watch wrist.</p></article>
+        <article class="feature"><b>04</b><h3>Review every block</h3><p>Browse work time, rest time, equipment context, and smoothness for each completed set.</p></article>
       </div>
     </div>
   </section>
@@ -252,18 +256,22 @@
     <div class="rhythm">
       <h2>Your rhythm.<br>Your session.</h2>
       <div class="rhythm-copy">
-        <p>Choose free training or an interval preset, set your tempo, and start swinging. The app handles the clock while Garmin handles the record.</p>
+        <p>Choose a movement, working side, free training or an interval preset, then set your tempo and start swinging. Mace &amp; Clubs owns the movement-block record while Garmin records the activity.</p>
         <div class="table-wrap">
           <table class="controls">
             <thead><tr><th>Button</th><th>Before</th><th>Training</th><th>Paused</th></tr></thead>
             <tbody>
-              <tr><td>SELECT</td><td>Start workout</td><td>Mark a set</td><td>Save &amp; exit</td></tr>
+              <tr><td>SELECT</td><td>Start workout</td><td>Work ↔ rest</td><td>Save &amp; exit</td></tr>
               <tr><td>BACK</td><td>Quit</td><td>Pause</td><td>Resume</td></tr>
-              <tr><td>UP / DOWN</td><td>Choose preset</td><td>Tempo ±5 BPM</td><td>—</td></tr>
+              <tr><td>UP / DOWN</td><td>Choose preset</td><td>Tempo ±5 BPM</td><td>Browse sets</td></tr>
               <tr><td>MENU</td><td>Settings</td><td>Discard safely</td><td>Discard safely</td></tr>
             </tbody>
           </table>
         </div>
+        <aside class="block-note">
+          <strong>Built around movement blocks—not generic gym reps.</strong>
+          <p>Every completed block keeps its work and rest duration, implement weight, movement, working side, watch wrist, and smoothness where available. FIT laps carry that meaning into exported activity data.</p>
+        </aside>
       </div>
     </div>
   </section>
@@ -279,6 +287,7 @@
         <a class="resource" href="https://dutchflowacademy.com/" target="_blank" rel="noopener noreferrer"><span class="number">01</span><span><strong>Dutch Flow Academy</strong><small>Courses and workshops for mace, gada, and clubs</small></span><span class="arrow" aria-hidden="true">↗</span></a>
         <a class="resource" href="https://www.mudgarclub.com/" target="_blank" rel="noopener noreferrer"><span class="number">02</span><span><strong>Mudgar Club</strong><small>Traditional Indian strength equipment, made in India</small></span><span class="arrow" aria-hidden="true">↗</span></a>
         <a class="resource" href="https://www.steelmace.com.au/" target="_blank" rel="noopener noreferrer"><span class="number">03</span><span><strong>Steel Mace Australia</strong><small>Australian steel mace education, programs, and equipment</small></span><span class="arrow" aria-hidden="true">↗</span></a>
+        <a class="resource" href="https://github.com/serroba/mace-clubs/releases/tag/v0.7.0"><span class="number">04</span><span><strong>What changed in v0.7.0</strong><small>Free-training work/rest phases and wrist-aware activity context</small></span><span class="arrow" aria-hidden="true">→</span></a>
       </div>
     </div>
   </section>
@@ -287,7 +296,7 @@
     <div class="shell build">
       <div><p class="eyebrow">Open source</p><h2>Build it.<br>Shape it.<br>Swing it.</h2></div>
       <div>
-        <p>Mace &amp; Clubs is MIT-licensed and built in the open. Download a release or compile it with the Garmin Connect IQ SDK for the Instinct 3 Solar 45 mm.</p>
+        <p>Mace &amp; Clubs is MIT-licensed and built in the open. Download v0.7.0 or compile it with the Garmin Connect IQ SDK for the Instinct 3 Solar 45 mm.</p>
         <pre>git clone https://github.com/serroba/mace-clubs.git
 cd mace-clubs
 

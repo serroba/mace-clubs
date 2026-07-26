@@ -70,4 +70,21 @@
             <listEntry value="1">@Strings.WristRight</listEntry>
         </settingConfig>
     </setting>
+    <setting propertyKey="@Properties.movementType" title="@Strings.SettingMovement">
+        <settingConfig type="list">
+            <listEntry value="0">@Strings.Movement360</listEntry>
+            <listEntry value="1">@Strings.Movement10To2</listEntry>
+            <listEntry value="2">@Strings.MovementMill</listEntry>
+            <listEntry value="3">@Strings.MovementShieldCast</listEntry>
+            <listEntry value="4">@Strings.MovementFlowOther</listEntry>
+        </settingConfig>
+    </setting>
+    <setting propertyKey="@Properties.workingSide" title="@Strings.SettingWorkingSide">
+        <settingConfig type="list">
+            <listEntry value="0">@Strings.SideLeft</listEntry>
+            <listEntry value="1">@Strings.SideRight</listEntry>
+            <listEntry value="2">@Strings.SideAlternating</listEntry>
+            <listEntry value="3">@Strings.SideTwoHanded</listEntry>
+        </settingConfig>
+    </setting>
 </settings>

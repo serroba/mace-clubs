@@ -34,4 +34,15 @@
     <string id="SettingWatchWrist">Watch wrist</string>
     <string id="WristLeft">Left</string>
     <string id="WristRight">Right</string>
+    <string id="SettingMovement">Movement</string>
+    <string id="Movement360">360</string>
+    <string id="Movement10To2">10-to-2</string>
+    <string id="MovementMill">Mill</string>
+    <string id="MovementShieldCast">Shield cast</string>
+    <string id="MovementFlowOther">Flow / other</string>
+    <string id="SettingWorkingSide">Working side</string>
+    <string id="SideLeft">Left</string>
+    <string id="SideRight">Right</string>
+    <string id="SideAlternating">Alternating</string>
+    <string id="SideTwoHanded">Two-handed</string>
 </strings>

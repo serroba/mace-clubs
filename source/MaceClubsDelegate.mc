@@ -77,6 +77,10 @@ class MaceClubsDelegate extends WatchUi.BehaviorDelegate {
     }
 
     function onPreviousPage() as Boolean {
+        if (_view.paused) {
+            _view.cycleSummary(-1);
+            return true;
+        }
         var action = Navigation.previousPageAction(_view.isStarting(), _view.workout.isStarted(), _view.paused);
         if (action == Navigation.PREVIOUS_IGNORE) {
             return true;
@@ -102,6 +106,8 @@ class MaceClubsDelegate extends WatchUi.BehaviorDelegate {
     function onNextPage() as Boolean {
         if (_view.isStarting()) {
             return true;
+        } else if (_view.paused) {
+            _view.cycleSummary(1);
         } else if (_view.workout.isStarted()) {
             _view.metronome.adjustBpm(-1);
         } else {
