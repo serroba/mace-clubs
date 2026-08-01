@@ -122,6 +122,20 @@ class WorkoutSession {
         loadComparableHistory();
     }
 
+    // Valid before and during a session: pre-start it re-keys the smoothness
+    // trend, mid-session it only redirects what upcoming work blocks record
+    // (the session-level trend keeps comparing against the starting movement).
+    function selectMovement(movementType as Number) as Void {
+        _movementType = Movement.resolveFor(movementType, _equipmentType);
+        if (!_started) {
+            loadComparableHistory();
+        }
+    }
+
+    function getMovementType() as Number {
+        return _movementType;
+    }
+
     function getEquipmentLabel() as String {
         return Equipment.labelFor(_equipmentType, _equipmentCount, _equipmentWeightGrams);
     }

@@ -135,6 +135,14 @@ class MaceClubsView extends WatchUi.View {
         workout.selectEquipment(kind, quantity);
     }
 
+    function chooseMovement(movementType as Number) as Void {
+        workout.selectMovement(movementType);
+        // Remember the choice as the default for the next session.
+        try {
+            Application.Properties.setValue("movementType", workout.getMovementType());
+        } catch (e) {}
+    }
+
     // Timer callbacks must be public methods: resolving a private method via
     // method(:beginWorkout) compiles but raises Invalid Value at runtime.
     function beginWorkout() as Void {
@@ -365,6 +373,13 @@ class MaceClubsView extends WatchUi.View {
                 h * 74 / 100,
                 Graphics.FONT_TINY,
                 workout.getEquipmentLabel(),
+                Graphics.TEXT_JUSTIFY_CENTER
+            );
+            dc.drawText(
+                cx,
+                h * 85 / 100,
+                Graphics.FONT_TINY,
+                Movement.typeLabel(workout.getMovementType()),
                 Graphics.TEXT_JUSTIFY_CENTER
             );
             return;

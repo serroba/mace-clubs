@@ -56,6 +56,46 @@ function testEquipmentSelectionPreparesChosenSessionProfile(logger as Test.Logge
 }
 
 (:test)
+function testMovementSelectionResolvesAgainstEquipment(logger as Test.Logger) as Boolean {
+    var session = new WorkoutSession();
+    session.selectEquipment(Equipment.TYPE_MACE, 1);
+    session.selectMovement(Movement.TYPE_10_TO_2);
+    Test.assertEqualMessage(session.getMovementType(), Movement.TYPE_10_TO_2, "mace accepts the 10-to-2");
+    session.selectMovement(Movement.TYPE_SHIELD_CAST);
+    Test.assertEqualMessage(
+        session.getMovementType(),
+        Movement.TYPE_360,
+        "a club movement falls back to the mace default"
+    );
+    session.selectEquipment(Equipment.TYPE_CLUBS, 2);
+    Test.assertEqualMessage(
+        session.getMovementType(),
+        Movement.TYPE_MILL,
+        "equipment change re-resolves the movement"
+    );
+    return true;
+}
+
+(:test)
+function testWorkBlocksRecordTheMovementActiveAtCompletion(logger as Test.Logger) as Boolean {
+    var session = new WorkoutSession();
+    session.selectEquipment(Equipment.TYPE_MACE, 1);
+    session.selectMovement(Movement.TYPE_360);
+    session.addSetWithDuration(120);
+    session.selectMovement(Movement.TYPE_10_TO_2);
+    session.addSetWithDuration(90);
+    var first = session.getBlock(0) as WorkBlockSummary;
+    var second = session.getBlock(1) as WorkBlockSummary;
+    Test.assertEqualMessage(first.getMovementType(), Movement.TYPE_360, "first block keeps the 360");
+    Test.assertEqualMessage(
+        second.getMovementType(),
+        Movement.TYPE_10_TO_2,
+        "a switch between sets applies to the next block"
+    );
+    return true;
+}
+
+(:test)
 function testDiscardResetsSessionForAnotherWorkout(logger as Test.Logger) as Boolean {
     var session = new WorkoutSession();
     session.beginSmoothnessSet();
