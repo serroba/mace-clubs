@@ -120,7 +120,12 @@ class MaceClubsView extends WatchUi.View {
             plan = null;
         }
         done = false;
-        workout.forceSwingCounting(preset[:challenge] == true);
+        var challenge = false;
+        var challengeFlag = preset[:challenge];
+        if (challengeFlag instanceof Boolean) {
+            challenge = challengeFlag;
+        }
+        workout.forceSwingCounting(challenge);
         _lastPhase = null;
         _lastSet = 0;
         _warnedSet = 0;
