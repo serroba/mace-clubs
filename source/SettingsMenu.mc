@@ -20,6 +20,9 @@ module SettingsMenu {
             new WatchUi.MenuItem(equipmentWeightLabel(Equipment.TYPE_CLUBS), null, "clubWeight", null)
         );
         menu.addItem(
+            new WatchUi.MenuItem(equipmentWeightLabel(Equipment.TYPE_BULAVA), null, "bulavaWeight", null)
+        );
+        menu.addItem(
             new WatchUi.ToggleMenuItem("Beat beep", null, "toneEnabled", boolProp("toneEnabled", false), null)
         );
         menu.addItem(
@@ -122,8 +125,10 @@ module SettingsMenu {
     }
 
     function equipmentWeightLabel(kind as Number) as String {
-        var name = kind == Equipment.TYPE_CLUBS ? "Club" : "Mace";
-        return Lang.format("$1$: $2$", [name, Equipment.weightLabel(Equipment.defaultWeightGrams(kind))]);
+        return Lang.format(
+            "$1$: $2$",
+            [Equipment.implementName(kind), Equipment.weightLabel(Equipment.defaultWeightGrams(kind))]
+        );
     }
 
     function customWorkoutLabel() as String {

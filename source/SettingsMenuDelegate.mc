@@ -45,8 +45,13 @@ class SettingsMenuDelegate extends WatchUi.Menu2InputDelegate {
                 new CustomWorkoutEditorDelegate(customEditor, _view, item),
                 WatchUi.SLIDE_UP
             );
-        } else if (id.equals("maceWeight") || id.equals("clubWeight")) {
-            var kind = id.equals("clubWeight") ? Equipment.TYPE_CLUBS : Equipment.TYPE_MACE;
+        } else if (id.equals("maceWeight") || id.equals("clubWeight") || id.equals("bulavaWeight")) {
+            var kind = Equipment.TYPE_MACE;
+            if (id.equals("clubWeight")) {
+                kind = Equipment.TYPE_CLUBS;
+            } else if (id.equals("bulavaWeight")) {
+                kind = Equipment.TYPE_BULAVA;
+            }
             var editor = new WeightEditorView(kind);
             WatchUi.pushView(editor, new WeightEditorDelegate(editor, _view, item, kind), WatchUi.SLIDE_UP);
         }

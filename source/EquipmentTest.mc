@@ -19,6 +19,29 @@ function testEquipmentLabels(logger as Test.Logger) as Boolean {
         pounds ? "Club: 3.3 lb" : "Club: 1.5 kg",
         "single club label"
     );
+    Test.assertEqualMessage(
+        Equipment.labelFor(Equipment.TYPE_BULAVA, 1, 6000),
+        pounds ? "Bulava: 13.2 lb" : "Bulava: 6 kg",
+        "bulava label follows watch units"
+    );
+    return true;
+}
+
+(:test)
+function testBulavaIsASingleImplementWithItsOwnWeight(logger as Test.Logger) as Boolean {
+    Test.assertEqualMessage(
+        Equipment.weightKeyFor(Equipment.TYPE_BULAVA),
+        "bulavaWeightGrams",
+        "bulava weight persists under its own key"
+    );
+    Test.assertEqualMessage(
+        Equipment.defaultWeightGrams(Equipment.TYPE_BULAVA),
+        6000,
+        "bulava defaults heavier than mace and clubs"
+    );
+    var session = new WorkoutSession();
+    session.selectEquipment(Equipment.TYPE_BULAVA, 2);
+    Test.assertEqualMessage(session.getEquipmentCount(), 1, "bulava quantity is always one");
     return true;
 }
 
@@ -27,8 +50,10 @@ function testEquipmentHistoryKeysSeparateProfiles(logger as Test.Logger) as Bool
     var mace = Equipment.historyKeyFor(Equipment.TYPE_MACE, 1, 10000);
     var clubs = Equipment.historyKeyFor(Equipment.TYPE_CLUBS, 2, 10000);
     var lighterClubs = Equipment.historyKeyFor(Equipment.TYPE_CLUBS, 2, 8000);
+    var bulava = Equipment.historyKeyFor(Equipment.TYPE_BULAVA, 1, 10000);
     Test.assertMessage(!mace.equals(clubs), "mace scores are not compared with clubs");
     Test.assertMessage(!clubs.equals(lighterClubs), "different weights have separate histories");
+    Test.assertMessage(!bulava.equals(mace), "bulava scores are not compared with the mace");
     return true;
 }
 

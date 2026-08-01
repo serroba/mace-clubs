@@ -28,8 +28,10 @@ class WeightEditorView extends WatchUi.View {
     }
 
     function save() as Void {
-        var key = _kind == Equipment.TYPE_CLUBS ? "clubWeightGrams" : "maceWeightGrams";
-        Application.Properties.setValue(key, Equipment.gramsFromEditorTenths(_tenths, _pounds));
+        Application.Properties.setValue(
+            Equipment.weightKeyFor(_kind),
+            Equipment.gramsFromEditorTenths(_tenths, _pounds)
+        );
     }
 
     function label() as String {
@@ -45,7 +47,7 @@ class WeightEditorView extends WatchUi.View {
             cx,
             h * 18 / 100,
             Graphics.FONT_SMALL,
-            _kind == Equipment.TYPE_CLUBS ? "CLUB WEIGHT" : "MACE WEIGHT",
+            Equipment.implementName(_kind).toUpper() + " WEIGHT",
             Graphics.TEXT_JUSTIFY_CENTER
         );
         dc.drawText(cx, h * 40 / 100, Graphics.FONT_NUMBER_MEDIUM, label(), Graphics.TEXT_JUSTIFY_CENTER);
