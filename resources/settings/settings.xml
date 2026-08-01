@@ -9,6 +9,9 @@
     <setting propertyKey="@Properties.clubWeightGrams" title="@Strings.SettingClubWeight">
         <settingConfig type="numeric" min="0" max="50000"/>
     </setting>
+    <setting propertyKey="@Properties.bulavaWeightGrams" title="@Strings.SettingBulavaWeight">
+        <settingConfig type="numeric" min="0" max="50000"/>
+    </setting>
     <setting propertyKey="@Properties.toneEnabled" title="@Strings.SettingToneEnabled">
         <settingConfig type="boolean"/>
     </setting>

@@ -126,7 +126,7 @@ class WorkoutSession {
             return;
         }
         _equipmentType = kind;
-        _equipmentCount = kind == Equipment.TYPE_MACE ? 1 : quantity;
+        _equipmentCount = kind == Equipment.TYPE_CLUBS ? quantity : 1;
         _equipmentWeightGrams = Equipment.defaultWeightGrams(kind);
         _movementType = Movement.resolveFor(_movementType, kind);
         loadComparableHistory();

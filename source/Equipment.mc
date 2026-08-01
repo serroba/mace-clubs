@@ -8,22 +8,44 @@ import Toybox.System;
 module Equipment {
     const TYPE_MACE = 0;
     const TYPE_CLUBS = 1;
+    const TYPE_BULAVA = 2;
 
     function type() as Number {
         return numberProperty("equipmentType", TYPE_MACE);
     }
 
+    // Only clubs come in pairs; the mace and the bulava are single implements.
     function count() as Number {
-        if (type() == TYPE_MACE) {
+        if (type() != TYPE_CLUBS) {
             return 1;
         }
         return numberProperty("equipmentCount", 2) == 1 ? 1 : 2;
     }
 
+    function weightKeyFor(kind as Number) as String {
+        if (kind == TYPE_CLUBS) {
+            return "clubWeightGrams";
+        }
+        if (kind == TYPE_BULAVA) {
+            return "bulavaWeightGrams";
+        }
+        return "maceWeightGrams";
+    }
+
     function defaultWeightGrams(kind as Number) as Number {
-        var key = kind == TYPE_CLUBS ? "clubWeightGrams" : "maceWeightGrams";
-        var grams = numberProperty(key, 4000);
+        // A bulava is typically heavier than a starter mace or club.
+        var grams = numberProperty(weightKeyFor(kind), kind == TYPE_BULAVA ? 6000 : 4000);
         return grams < 0 ? 0 : grams;
+    }
+
+    function implementName(kind as Number) as String {
+        if (kind == TYPE_CLUBS) {
+            return "Club";
+        }
+        if (kind == TYPE_BULAVA) {
+            return "Bulava";
+        }
+        return "Mace";
     }
 
     function weightLabel(grams as Number) as String {
@@ -65,10 +87,10 @@ module Equipment {
 
     function labelFor(kind as Number, quantity as Number, grams as Number) as String {
         var weight = weightLabel(grams);
-        if (kind == TYPE_CLUBS) {
-            return quantity == 1 ? Lang.format("Club: $1$", [weight]) : Lang.format("Clubs: 2 x $1$", [weight]);
+        if (kind == TYPE_CLUBS && quantity != 1) {
+            return Lang.format("Clubs: 2 x $1$", [weight]);
         }
-        return Lang.format("Mace: $1$", [weight]);
+        return Lang.format("$1$: $2$", [implementName(kind), weight]);
     }
 
     function label() as String {

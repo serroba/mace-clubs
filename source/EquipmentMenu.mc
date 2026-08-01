@@ -25,6 +25,15 @@ module EquipmentMenu {
                 null
             )
         );
+        var bulavaWeight = Equipment.defaultWeightGrams(Equipment.TYPE_BULAVA);
+        menu.addItem(
+            new WatchUi.MenuItem(
+                Equipment.labelFor(Equipment.TYPE_BULAVA, 1, bulavaWeight),
+                null,
+                "bulava",
+                null
+            )
+        );
         return menu;
     }
 }
@@ -43,6 +52,9 @@ class EquipmentMenuDelegate extends WatchUi.Menu2InputDelegate {
         var quantity = 2;
         if (id.equals("mace")) {
             kind = Equipment.TYPE_MACE;
+            quantity = 1;
+        } else if (id.equals("bulava")) {
+            kind = Equipment.TYPE_BULAVA;
             quantity = 1;
         } else if (id.equals("oneClub")) {
             quantity = 1;

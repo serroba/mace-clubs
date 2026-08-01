@@ -10,7 +10,10 @@ module Movement {
     const TYPE_MILL = 2;
     const TYPE_SHIELD_CAST = 3;
     const TYPE_FLOW_OTHER = 4;
-    const TYPE_COUNT = 5;
+    // Appended so existing FIT movement_type values keep their meaning.
+    const TYPE_REVERSE_MILL = 5;
+    const TYPE_BULLWHIP = 6;
+    const TYPE_COUNT = 7;
 
     const SIDE_LEFT = 0;
     const SIDE_RIGHT = 1;
@@ -23,11 +26,15 @@ module Movement {
     }
 
     // The traditional canon differs per implement: the gada's exercises are
-    // the 360 and the 10-to-2, while mills and shield casts come from club
-    // swinging. Flow/other stays available everywhere as the catch-all.
+    // the 360 and the 10-to-2, mills and shield casts come from club
+    // swinging, and the bulava adds the reverse mill and the bullwhip.
+    // Flow/other stays available everywhere as the catch-all.
     function optionsFor(equipmentType as Number) as Array<Number> {
         if (equipmentType == Equipment.TYPE_CLUBS) {
             return [TYPE_MILL, TYPE_SHIELD_CAST, TYPE_FLOW_OTHER] as Array<Number>;
+        }
+        if (equipmentType == Equipment.TYPE_BULAVA) {
+            return [TYPE_MILL, TYPE_REVERSE_MILL, TYPE_BULLWHIP, TYPE_FLOW_OTHER] as Array<Number>;
         }
         return [TYPE_360, TYPE_10_TO_2, TYPE_FLOW_OTHER] as Array<Number>;
     }
@@ -74,6 +81,12 @@ module Movement {
         }
         if (value == TYPE_FLOW_OTHER) {
             return "Flow / other";
+        }
+        if (value == TYPE_REVERSE_MILL) {
+            return "Reverse mill";
+        }
+        if (value == TYPE_BULLWHIP) {
+            return "Bullwhip";
         }
         return "360";
     }
