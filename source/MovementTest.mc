@@ -1,0 +1,77 @@
+import Toybox.Lang;
+import Toybox.Test;
+
+(:test)
+function testMovementOptionsPerEquipment(logger as Test.Logger) as Boolean {
+    var mace = Movement.optionsFor(Equipment.TYPE_MACE);
+    Test.assertEqualMessage(mace.size(), 3, "mace offers three movements");
+    Test.assertEqualMessage(mace[0], Movement.TYPE_360, "mace leads with the 360");
+    Test.assertEqualMessage(mace[1], Movement.TYPE_10_TO_2, "mace includes the 10-to-2");
+    Test.assertEqualMessage(mace[2], Movement.TYPE_FLOW_OTHER, "mace keeps the flow catch-all");
+    var clubs = Movement.optionsFor(Equipment.TYPE_CLUBS);
+    Test.assertEqualMessage(clubs.size(), 3, "clubs offer three movements");
+    Test.assertEqualMessage(clubs[0], Movement.TYPE_MILL, "clubs lead with the mill");
+    Test.assertEqualMessage(clubs[1], Movement.TYPE_SHIELD_CAST, "clubs include the shield cast");
+    Test.assertEqualMessage(clubs[2], Movement.TYPE_FLOW_OTHER, "clubs keep the flow catch-all");
+    return true;
+}
+
+(:test)
+function testMovementResolveKeepsValidChoices(logger as Test.Logger) as Boolean {
+    Test.assertEqualMessage(
+        Movement.resolveFor(Movement.TYPE_10_TO_2, Equipment.TYPE_MACE),
+        Movement.TYPE_10_TO_2,
+        "10-to-2 stays valid for the mace"
+    );
+    Test.assertEqualMessage(
+        Movement.resolveFor(Movement.TYPE_SHIELD_CAST, Equipment.TYPE_CLUBS),
+        Movement.TYPE_SHIELD_CAST,
+        "shield cast stays valid for clubs"
+    );
+    Test.assertEqualMessage(
+        Movement.resolveFor(Movement.TYPE_FLOW_OTHER, Equipment.TYPE_CLUBS),
+        Movement.TYPE_FLOW_OTHER,
+        "flow stays valid everywhere"
+    );
+    return true;
+}
+
+(:test)
+function testMovementResolveFallsBackAcrossEquipment(logger as Test.Logger) as Boolean {
+    Test.assertEqualMessage(
+        Movement.resolveFor(Movement.TYPE_MILL, Equipment.TYPE_MACE),
+        Movement.TYPE_360,
+        "a club movement falls back to the mace default"
+    );
+    Test.assertEqualMessage(
+        Movement.resolveFor(Movement.TYPE_360, Equipment.TYPE_CLUBS),
+        Movement.TYPE_MILL,
+        "a mace movement falls back to the club default"
+    );
+    return true;
+}
+
+(:test)
+function testMovementNextCyclesWithinEquipment(logger as Test.Logger) as Boolean {
+    Test.assertEqualMessage(
+        Movement.nextTypeFor(Movement.TYPE_360, Equipment.TYPE_MACE),
+        Movement.TYPE_10_TO_2,
+        "mace cycles 360 to 10-to-2"
+    );
+    Test.assertEqualMessage(
+        Movement.nextTypeFor(Movement.TYPE_FLOW_OTHER, Equipment.TYPE_MACE),
+        Movement.TYPE_360,
+        "mace wraps flow back to the 360"
+    );
+    Test.assertEqualMessage(
+        Movement.nextTypeFor(Movement.TYPE_MILL, Equipment.TYPE_CLUBS),
+        Movement.TYPE_SHIELD_CAST,
+        "clubs cycle mill to shield cast"
+    );
+    Test.assertEqualMessage(
+        Movement.nextTypeFor(Movement.TYPE_360, Equipment.TYPE_CLUBS),
+        Movement.TYPE_MILL,
+        "an invalid value restarts the club cycle"
+    );
+    return true;
+}

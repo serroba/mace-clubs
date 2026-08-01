@@ -25,7 +25,12 @@ class SettingsMenuDelegate extends WatchUi.Menu2InputDelegate {
             Application.Properties.setValue("watchWrist", SettingsMenu.numProp("watchWrist", 0) == 0 ? 1 : 0);
             item.setLabel(SettingsMenu.wristLabel());
         } else if (id.equals("movementType")) {
-            Application.Properties.setValue("movementType", (Movement.type() + 1) % Movement.TYPE_COUNT);
+            // Cycle only through movements the default equipment supports.
+            var equipment = Equipment.type();
+            Application.Properties.setValue(
+                "movementType",
+                Movement.nextTypeFor(Movement.typeFor(equipment), equipment)
+            );
             item.setLabel(SettingsMenu.movementLabel());
         } else if (id.equals("workingSide")) {
             Application.Properties.setValue("workingSide", (Movement.workingSide() + 1) % Movement.SIDE_COUNT);

@@ -82,7 +82,7 @@ module SettingsMenu {
     }
 
     function movementLabel() as String {
-        return movementLabelFor(Movement.type());
+        return movementLabelFor(Movement.typeFor(Equipment.type()));
     }
 
     function movementLabelFor(value as Number) as String {
