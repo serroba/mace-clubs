@@ -54,6 +54,15 @@ module SettingsMenu {
         );
         menu.addItem(
             new WatchUi.ToggleMenuItem(
+                "Swing counter",
+                null,
+                "swingCounter",
+                boolProp("swingCounter", false),
+                null
+            )
+        );
+        menu.addItem(
+            new WatchUi.ToggleMenuItem(
                 "Motion logging",
                 null,
                 "motionCapture",

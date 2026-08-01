@@ -152,7 +152,29 @@ module Presets {
         {:label => "5 x 2:00 | 1:00", :sets => 5, :work => 120, :rest => 60, :beatsA => 4, :beatsB => 2},
         {:label => "5 x 2:00 | 2:00", :sets => 5, :work => 120, :rest => 120, :beatsA => 4, :beatsB => 0},
         {:label => "3 x 2:00 | 1:00", :sets => 3, :work => 120, :rest => 60, :beatsA => 4, :beatsB => 2},
-        {:label => "10 x 1:00 | 0:30", :sets => 10, :work => 60, :rest => 30, :beatsA => 4, :beatsB => 0}
+        {:label => "10 x 1:00 | 0:30", :sets => 10, :work => 60, :rest => 30, :beatsA => 4, :beatsB => 0},
+        // Timed max-swing challenges, after the akhara tradition of counting
+        // continuous gada swings over a fixed window (and the 5-minute
+        // modern competition format). One work interval, no rest, and the
+        // swing counter is always on.
+        {
+            :label     => "Challenge 5:00",
+            :sets      => 1,
+            :work      => 300,
+            :rest      => 0,
+            :beatsA    => 4,
+            :beatsB    => 0,
+            :challenge => true
+        },
+        {
+            :label     => "Challenge 10:00",
+            :sets      => 1,
+            :work      => 600,
+            :rest      => 0,
+            :beatsA    => 4,
+            :beatsB    => 0,
+            :challenge => true
+        }
     ] as Array<Dictionary>;
 
     function count() as Number {

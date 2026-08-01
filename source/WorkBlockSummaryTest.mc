@@ -26,6 +26,9 @@ function testWorkBlockKeepsDomainContext(logger as Test.Logger) as Boolean {
     Test.assertEqualMessage(block.getEquipmentWeightGrams(), 4000, "weight");
     Test.assertEqualMessage(block.getWatchWrist(), 1, "sensor wrist remains separate");
     Test.assertEqualMessage(block.getSmoothness(), 87, "smoothness");
+    Test.assertEqualMessage(block.getSwings(), -1, "swings default to not-counted");
+    block.setSwings(45);
+    Test.assertEqualMessage(block.getSwings(), 45, "swing count");
     return true;
 }
 

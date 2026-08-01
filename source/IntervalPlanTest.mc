@@ -204,6 +204,37 @@ function testCustomPresetIsLastAndWellFormed(logger as Test.Logger) as Boolean {
 }
 
 (:test)
+function testChallengePresetsAreSingleRestlessIntervals(logger as Test.Logger) as Boolean {
+    var found = 0;
+    for (var i = 0; i < Presets.LIST.size(); i++) {
+        var p = Presets.LIST[i] as Dictionary;
+        if (p[:challenge] != true) {
+            continue;
+        }
+        found++;
+        Test.assertEqualMessage(p[:sets] as Number, 1, "a challenge is one continuous interval");
+        Test.assertEqualMessage(p[:rest] as Number, 0, "a challenge has no rest");
+        Test.assertMessage((p[:work] as Number) >= 300, "a challenge runs at least five minutes");
+    }
+    Test.assertEqualMessage(found, 2, "five and ten minute challenges exist");
+    return true;
+}
+
+(:test)
+function testZeroRestPlanRunsWorkThenFinishes(logger as Test.Logger) as Boolean {
+    // The challenge shape: one work interval, no rest. The plan must hold
+    // WORK for the whole window and flip straight to DONE at the boundary.
+    var plan = new Intervals.Plan(1, 300, 0);
+    var mid = plan.stateAt(299000);
+    Test.assertEqualMessage(mid[:phase] as Number, Intervals.PHASE_WORK, "still working at 4:59");
+    Test.assertEqualMessage(mid[:remaining] as Number, 1, "one second remaining at 4:59");
+    var end = plan.stateAt(300000);
+    Test.assertEqualMessage(end[:phase] as Number, Intervals.PHASE_DONE, "done exactly at 5:00");
+    Test.assertEqualMessage(plan.completedSetsAt(300000), 1, "the single set completes");
+    return true;
+}
+
+(:test)
 function testCustomPresetDefaults(logger as Test.Logger) as Boolean {
     Test.assertEqualMessage(Presets.DEFAULT_CUSTOM_SETS, 5, "default custom sets");
     Test.assertEqualMessage(Presets.DEFAULT_CUSTOM_WORK_MINUTES, 2, "default custom work minutes");

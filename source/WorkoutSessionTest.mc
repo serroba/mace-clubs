@@ -127,6 +127,20 @@ function testSelectWorkingSideRejectsUnknownValues(logger as Test.Logger) as Boo
 }
 
 (:test)
+function testBlocksWithoutSwingCounterCarryNoCount(logger as Test.Logger) as Boolean {
+    var session = new WorkoutSession();
+    session.addSetWithDuration(60);
+    Test.assertMessage(!session.isSwingCounting(), "counter is off outside a live session");
+    Test.assertEqualMessage(session.getTotalSwings(), 0, "no swings detected");
+    Test.assertEqualMessage(
+        (session.getBlock(0) as WorkBlockSummary).getSwings(),
+        -1,
+        "a block without the counter records -1, not a fake zero"
+    );
+    return true;
+}
+
+(:test)
 function testDiscardResetsSessionForAnotherWorkout(logger as Test.Logger) as Boolean {
     var session = new WorkoutSession();
     session.beginSmoothnessSet();

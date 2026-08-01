@@ -27,6 +27,8 @@ class WorkoutSession {
     const FIELD_ID_SET_SMOOTHNESS = 14;
     const FIELD_ID_MOVEMENT_TYPE = 15;
     const FIELD_ID_WORKING_SIDE = 16;
+    const FIELD_ID_TOTAL_SWINGS = 17;
+    const FIELD_ID_LAP_SWINGS = 18;
 
     private var _session as ActivityRecording.Session?;
     private var _setsField as FitContributor.Field?;
@@ -38,6 +40,8 @@ class WorkoutSession {
     private var _setSmoothnessField as FitContributor.Field?;
     private var _movementTypeField as FitContributor.Field?;
     private var _workingSideField as FitContributor.Field?;
+    private var _totalSwingsField as FitContributor.Field?;
+    private var _lapSwingsField as FitContributor.Field?;
     private var _batteryField as FitContributor.Field?;
     private var _rmsField as FitContributor.Field?;
     private var _peakField as FitContributor.Field?;
@@ -58,10 +62,16 @@ class WorkoutSession {
     private var _movementType as Number = Movement.TYPE_360;
     private var _workingSide as Number = Movement.SIDE_TWO_HANDED;
     private var _blocks as Array<WorkBlockSummary> = [];
+    private var _swingCounter as SwingCounter.Counter;
+    private var _swingCounting as Boolean = false;
+    private var _forceSwingCounting as Boolean = false;
+    private var _workOpen as Boolean = false;
+    private var _swingsAtBlockStart as Number = 0;
 
     function initialize() {
         _smoothness = new Smoothness.Tracker();
         _setSmoothness = new SmoothnessSetSummaries();
+        _swingCounter = new SwingCounter.Counter();
         reloadEquipment();
     }
 
@@ -242,6 +252,18 @@ class WorkoutSession {
                 FitContributor.DATA_TYPE_UINT8,
                 {:mesgType => FitContributor.MESG_TYPE_LAP, :units => "side"}
             );
+            _totalSwingsField = session.createField(
+                "total_swings",
+                FIELD_ID_TOTAL_SWINGS,
+                FitContributor.DATA_TYPE_UINT16,
+                {:mesgType => FitContributor.MESG_TYPE_SESSION, :units => "swings"}
+            );
+            _lapSwingsField = session.createField(
+                "swing_count",
+                FIELD_ID_LAP_SWINGS,
+                FitContributor.DATA_TYPE_UINT16,
+                {:mesgType => FitContributor.MESG_TYPE_LAP, :units => "swings"}
+            );
             _batteryField = session.createField(
                 "battery_used",
                 FIELD_ID_BATTERY,
@@ -283,6 +305,7 @@ class WorkoutSession {
         }
         (_session as ActivityRecording.Session).start();
         _started = true;
+        _workOpen = true;
     }
 
     // Phase-1 motion research (opt-in via the motionCapture setting):
@@ -301,7 +324,21 @@ class WorkoutSession {
                 _smoothnessEnabled = smooth;
             }
         } catch (e) {}
-        if (!exportEnabled && !_smoothnessEnabled || !(Sensor has :registerSensorDataListener)) {
+        // Swing counting shares the same accelerometer stream. Challenge
+        // presets force it on (the count is the whole point of the mode);
+        // regular sessions opt in via the swingCounter setting.
+        var swingEnabled = _forceSwingCounting;
+        if (!swingEnabled) {
+            try {
+                var sc = Application.Properties.getValue("swingCounter");
+                if (sc instanceof Boolean) {
+                    swingEnabled = sc;
+                }
+            } catch (e) {}
+        }
+        if (!exportEnabled && !_smoothnessEnabled && !swingEnabled
+            || !(Sensor has :registerSensorDataListener))
+        {
             return;
         }
         // Local smoothness does not create FIT fields. The separate research
@@ -332,6 +369,7 @@ class WorkoutSession {
                 {:period => 1, :accelerometer => {:enabled => true, :sampleRate => 25}}
             );
             _capturing = true;
+            _swingCounting = swingEnabled;
         } catch (e) {
             // no high-rate accel on this device; features stay unwritten
         }
@@ -349,6 +387,13 @@ class WorkoutSession {
         var f = Motion.features(accel.x as Array<Number>, accel.y as Array<Number>, accel.z as Array<Number>);
         if (_smoothnessEnabled && _setSmoothness.isOpen()) {
             _smoothness.add(f);
+        }
+        if (_swingCounting && _workOpen) {
+            _swingCounter.addSamples(
+                accel.x as Array<Number>,
+                accel.y as Array<Number>,
+                accel.z as Array<Number>
+            );
         }
         var rms = _rmsField;
         var peak = _peakField;
@@ -402,6 +447,7 @@ class WorkoutSession {
             }
         }
         _sets++;
+        _workOpen = false;
         var smoothness = _sets <= getSetSmoothnessCount() ? getSetSmoothnessScore(_sets - 1) : -1;
         var block = new WorkBlockSummary(
             _sets,
@@ -414,6 +460,10 @@ class WorkoutSession {
             _watchWrist,
             smoothness
         );
+        if (_swingCounting) {
+            block.setSwings(_swingCounter.getCount() - _swingsAtBlockStart);
+            _swingsAtBlockStart = _swingCounter.getCount();
+        }
         _blocks.add(block);
         var field = _setsField;
         if (field != null) {
@@ -476,6 +526,7 @@ class WorkoutSession {
         var smoothnessField = _setSmoothnessField;
         var movementField = _movementTypeField;
         var workingSideField = _workingSideField;
+        var lapSwingsField = _lapSwingsField;
         if (phaseField != null) {
             phaseField.setData(phase);
         }
@@ -497,9 +548,16 @@ class WorkoutSession {
         if (workingSideField != null) {
             workingSideField.setData(block.getWorkingSide());
         }
+        if (lapSwingsField != null) {
+            var swings = phase == 1 ? block.getSwings() : 0;
+            lapSwingsField.setData(swings < 0 ? 0 : swings);
+        }
     }
 
     function beginSmoothnessSet() as Void {
+        // Every work phase begins here (or in start()), so the swing counter
+        // shares the boundary: swings during rest never count.
+        _workOpen = true;
         if (_smoothnessEnabled) {
             _setSmoothness.begin(_smoothness.getScoreTotal(), _smoothness.getScoredWindows());
         }
@@ -513,6 +571,7 @@ class WorkoutSession {
                 session.stop();
             }
             recordBatteryUsed();
+            recordSwingTotal();
             saveSmoothnessSummary();
             session.save();
             _session = null;
@@ -635,6 +694,29 @@ class WorkoutSession {
         } catch (e) {}
     }
 
+    // Force-enables swing counting for challenge presets, where the rep
+    // count is the point of the mode. Must be set before start().
+    function forceSwingCounting(force as Boolean) as Void {
+        if (!_started) {
+            _forceSwingCounting = force;
+        }
+    }
+
+    function isSwingCounting() as Boolean {
+        return _swingCounting;
+    }
+
+    function getTotalSwings() as Number {
+        return _swingCounter.getCount();
+    }
+
+    private function recordSwingTotal() as Void {
+        var field = _totalSwingsField;
+        if (field != null && _swingCounting) {
+            field.setData(getTotalSwings());
+        }
+    }
+
     // Session-level battery cost: start minus end, floored at zero
     // (solar charge or a charger mid-session would otherwise go negative).
     private function recordBatteryUsed() as Void {
@@ -672,6 +754,8 @@ class WorkoutSession {
         _setSmoothnessField = null;
         _movementTypeField = null;
         _workingSideField = null;
+        _totalSwingsField = null;
+        _lapSwingsField = null;
         _batteryField = null;
         _rmsField = null;
         _peakField = null;
@@ -683,5 +767,10 @@ class WorkoutSession {
         _smoothnessEnabled = false;
         _smoothness = new Smoothness.Tracker();
         _setSmoothness = new SmoothnessSetSummaries();
+        _swingCounter = new SwingCounter.Counter();
+        _swingCounting = false;
+        _forceSwingCounting = false;
+        _workOpen = false;
+        _swingsAtBlockStart = 0;
     }
 }
