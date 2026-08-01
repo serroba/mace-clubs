@@ -13,7 +13,9 @@ class WorkBlockSummary {
     private var _equipmentWeightGrams as Number;
     private var _watchWrist as Number;
     private var _smoothness as Number;
-    private var _swings as Number;
+    // Set after construction like rest seconds: CIQ 3.1 devices cap methods
+    // at nine arguments, and the constructor is already at that limit.
+    private var _swings as Number = -1;
 
     function initialize(
         setNumber as Number,
@@ -24,8 +26,7 @@ class WorkBlockSummary {
         equipmentCount as Number,
         equipmentWeightGrams as Number,
         watchWrist as Number,
-        smoothness as Number,
-        swings as Number
+        smoothness as Number
     ) {
         _setNumber = setNumber;
         _workSeconds = workSeconds;
@@ -36,7 +37,6 @@ class WorkBlockSummary {
         _equipmentWeightGrams = equipmentWeightGrams;
         _watchWrist = watchWrist;
         _smoothness = smoothness;
-        _swings = swings;
     }
 
     function getSetNumber() as Number {
@@ -87,5 +87,9 @@ class WorkBlockSummary {
     // swing counter was not running.
     function getSwings() as Number {
         return _swings;
+    }
+
+    function setSwings(swings as Number) as Void {
+        _swings = swings;
     }
 }

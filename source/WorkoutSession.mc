@@ -449,11 +449,6 @@ class WorkoutSession {
         _sets++;
         _workOpen = false;
         var smoothness = _sets <= getSetSmoothnessCount() ? getSetSmoothnessScore(_sets - 1) : -1;
-        var blockSwings = -1;
-        if (_swingCounting) {
-            blockSwings = _swingCounter.getCount() - _swingsAtBlockStart;
-            _swingsAtBlockStart = _swingCounter.getCount();
-        }
         var block = new WorkBlockSummary(
             _sets,
             clampDuration(durationSeconds),
@@ -463,9 +458,12 @@ class WorkoutSession {
             _equipmentCount,
             _equipmentWeightGrams,
             _watchWrist,
-            smoothness,
-            blockSwings
+            smoothness
         );
+        if (_swingCounting) {
+            block.setSwings(_swingCounter.getCount() - _swingsAtBlockStart);
+            _swingsAtBlockStart = _swingCounter.getCount();
+        }
         _blocks.add(block);
         var field = _setsField;
         if (field != null) {
