@@ -12,6 +12,15 @@
     <setting propertyKey="@Properties.bulavaWeightGrams" title="@Strings.SettingBulavaWeight">
         <settingConfig type="numeric" min="0" max="50000"/>
     </setting>
+    <setting propertyKey="@Properties.comboMillBeats" title="@Strings.SettingComboMillBeats">
+        <settingConfig type="numeric" min="1" max="16"/>
+    </setting>
+    <setting propertyKey="@Properties.comboReverseMillBeats" title="@Strings.SettingComboReverseMillBeats">
+        <settingConfig type="numeric" min="1" max="16"/>
+    </setting>
+    <setting propertyKey="@Properties.comboBullwhipBeats" title="@Strings.SettingComboBullwhipBeats">
+        <settingConfig type="numeric" min="1" max="16"/>
+    </setting>
     <setting propertyKey="@Properties.toneEnabled" title="@Strings.SettingToneEnabled">
         <settingConfig type="boolean"/>
     </setting>

@@ -113,6 +113,21 @@ function testSideSetCountsFollowTheSideAtCompletion(logger as Test.Logger) as Bo
 }
 
 (:test)
+function testComboForcesAlternatingSide(logger as Test.Logger) as Boolean {
+    var session = new WorkoutSession();
+    session.selectEquipment(Equipment.TYPE_BULAVA, 1);
+    session.selectWorkingSide(Movement.SIDE_LEFT);
+    session.selectMovement(Movement.TYPE_COMBO);
+    Test.assertEqualMessage(session.getMovementType(), Movement.TYPE_COMBO, "combo selected");
+    Test.assertEqualMessage(
+        session.getWorkingSide(),
+        Movement.SIDE_ALTERNATING,
+        "one combo cycle works both hands, so the side is alternating"
+    );
+    return true;
+}
+
+(:test)
 function testSelectWorkingSideRejectsUnknownValues(logger as Test.Logger) as Boolean {
     var session = new WorkoutSession();
     session.selectWorkingSide(Movement.SIDE_ALTERNATING);

@@ -235,6 +235,31 @@ function testApplyPatternVaryingWhenBIsPositive(logger as Test.Logger) as Boolea
 }
 
 (:test)
+function testComboSequenceAccentsAndHandSwitch(logger as Test.Logger) as Boolean {
+    var m = new Metronome();
+    m.setPattern([4, 4, 2] as Array<Number>);
+    Test.assertMessage(m.isRoundStart(1), "mill start is a downbeat");
+    Test.assertMessage(m.isRoundStart(5), "reverse mill start is a downbeat");
+    Test.assertMessage(m.isRoundStart(9), "bullwhip start is a downbeat");
+    Test.assertMessage(!m.isRoundStart(4), "mid-segment beats are plain");
+    Test.assertMessage(!m.isRoundStart(10), "the last bullwhip beat is plain");
+    Test.assertMessage(m.isCycleStart(1), "the sequence opens the first cycle");
+    Test.assertMessage(!m.isCycleStart(5), "a segment change is not the hand switch");
+    Test.assertMessage(m.isCycleStart(11), "beat 11 is the hand switch");
+    Test.assertMessage(m.isRoundStart(11), "the hand switch is also a downbeat");
+    return true;
+}
+
+(:test)
+function testBeatCountIsExposedForComboDisplay(logger as Test.Logger) as Boolean {
+    var m = new Metronome();
+    Test.assertEqualMessage(m.getBeatCount(), 0, "no beats before the metronome runs");
+    m.resetBeatCount();
+    Test.assertEqualMessage(m.getBeatCount(), 0, "reset keeps the count at zero");
+    return true;
+}
+
+(:test)
 function testMetronomeStartsAndStops(logger as Test.Logger) as Boolean {
     var m = new Metronome();
     Test.assertMessage(!m.isRunning(), "should not run before start");

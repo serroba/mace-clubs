@@ -55,10 +55,9 @@ class MaceClubsView extends WatchUi.View {
         metronome.loadSettings();
         workout.reloadEquipment();
         // metronome.loadSettings re-applies the phone pattern; a running
-        // workout keeps its own preset pattern, so restore it.
+        // workout keeps its own preset or combo pattern, so restore it.
         if (workout.isStarted()) {
-            var preset = selectedPreset();
-            metronome.applyPattern(preset[:beatsA] as Number, preset[:beatsB] as Number);
+            applyMetronomePattern();
         }
         try {
             var c = Application.Properties.getValue("circleShows");
@@ -131,7 +130,7 @@ class MaceClubsView extends WatchUi.View {
         _warnedSet = 0;
         freePhase = FreeTraining.PHASE_WORK;
         metronome.resetBeatCount();
-        metronome.applyPattern(preset[:beatsA] as Number, preset[:beatsB] as Number);
+        applyMetronomePattern();
         _starting = true;
         _startDeadline = System.getTimer() + START_DELAY_MS;
         _startTimer.start(method(:beginWorkout), START_DELAY_MS, false);
@@ -143,10 +142,25 @@ class MaceClubsView extends WatchUi.View {
 
     function chooseMovement(movementType as Number) as Void {
         workout.selectMovement(movementType);
+        applyMetronomePattern();
         // Remember the choice as the default for the next session.
         try {
             Application.Properties.setValue("movementType", workout.getMovementType());
         } catch (e) {}
+    }
+
+    // The combo drives its own metronome sequence (one cycle per hand,
+    // segment accents on movement changes, double pulse on the hand
+    // switch); everything else uses the preset's loop pattern.
+    private function applyMetronomePattern() as Void {
+        var comboActive = workout.getMovementType() == Movement.TYPE_COMBO;
+        if (comboActive) {
+            metronome.setPattern(Combo.beats());
+        } else {
+            var preset = selectedPreset();
+            metronome.applyPattern(preset[:beatsA] as Number, preset[:beatsB] as Number);
+        }
+        metronome.setCycleTopEmphasis(comboActive);
     }
 
     function chooseWorkingSide(side as Number) as Void {
@@ -635,6 +649,13 @@ class MaceClubsView extends WatchUi.View {
         var phaseText = freeResting ? "REST" : "WORK";
         var mainValue = freeResting ? "REST" : metronome.getBpm().toString();
         var mainLabel = freeResting ? "SELECT: work" : "bpm";
+        // Working a combo, the glanceable value is the current hand and
+        // movement (e.g. "L REV MILL"), not the tempo.
+        var comboWorking = !freeResting && workout.getMovementType() == Movement.TYPE_COMBO;
+        if (comboWorking) {
+            mainValue = Combo.statusLabel(metronome.getBeatCount(), Combo.beats());
+            mainLabel = Lang.format("$1$ bpm", [metronome.getBpm()]);
+        }
         if (_subwindow) {
             drawSubwindowMetric(dc, circleValue);
             // Like the interval screen, the header sits left of the
@@ -670,7 +691,14 @@ class MaceClubsView extends WatchUi.View {
             Lang.format("$1$  $2$", [phaseText, formatSecs(timerMs / 1000)]),
             Graphics.TEXT_JUSTIFY_CENTER
         );
-        dc.drawText(cx, h * 32 / 100, Graphics.FONT_NUMBER_HOT, mainValue, Graphics.TEXT_JUSTIFY_CENTER);
+        dc.drawText(
+            cx,
+            h * 32 / 100,
+            // Number fonts are digit-sized; combo text needs a text face.
+            comboWorking ? Graphics.FONT_LARGE : Graphics.FONT_NUMBER_HOT,
+            mainValue,
+            Graphics.TEXT_JUSTIFY_CENTER
+        );
         dc.drawText(cx, h * 56 / 100, Graphics.FONT_TINY, mainLabel, Graphics.TEXT_JUSTIFY_CENTER);
         dc.drawText(
             cx - 50,

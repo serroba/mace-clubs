@@ -137,6 +137,10 @@ class WorkoutSession {
     // (the session-level trend keeps comparing against the starting movement).
     function selectMovement(movementType as Number) as Void {
         _movementType = Movement.resolveFor(movementType, _equipmentType);
+        if (_movementType == Movement.TYPE_COMBO) {
+            // One combo cycle works both hands equally.
+            _workingSide = Movement.SIDE_ALTERNATING;
+        }
         if (!_started) {
             loadComparableHistory();
         }

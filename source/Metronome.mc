@@ -37,6 +37,9 @@ class Metronome {
     private var _cycleBeats as Number = 4;
     private var _accentEnabled as Boolean = true;
     private var _cueMode as Number = CUE_LOOP_STARTS;
+    // Combo sequences mark the cycle top (the hand switch) with a distinct
+    // double pulse. Off by default so plain A-B patterns keep their feel.
+    private var _cycleTopEmphasis as Boolean = false;
 
     function initialize() {
         _timer = new Timer.Timer();
@@ -130,6 +133,15 @@ class Metronome {
 
     function resetBeatCount() as Void {
         _beatCount = 0;
+    }
+
+    // 1-based after the first beat; 0 before any beat has played.
+    function getBeatCount() as Number {
+        return _beatCount;
+    }
+
+    function setCycleTopEmphasis(enabled as Boolean) as Void {
+        _cycleTopEmphasis = enabled;
     }
 
     // The downbeat: the first beat of each movement round. Meaningless
@@ -253,7 +265,7 @@ class Metronome {
         }
         _beatCount++;
         if (shouldCue(_beatCount)) {
-            playCue(_accentEnabled && isRoundStart(_beatCount));
+            playCue(_accentEnabled && isRoundStart(_beatCount), _cycleTopEmphasis && isCycleStart(_beatCount));
         }
         _nextBeat += _intervalMs;
         var delay = (_nextBeat - System.getTimer()).toNumber();
@@ -265,20 +277,34 @@ class Metronome {
 
     // The accent (downbeat) marks the first beat of each round with a
     // stronger, longer pulse and a step up in tone, so a side switch is
-    // felt without reading the screen.
-    private function playCue(accent as Boolean) as Void {
+    // felt without reading the screen. With cycle-top emphasis on, the
+    // first beat of the full pattern (a combo's hand switch) becomes a
+    // double pulse, distinguishable from single-segment accents.
+    private function playCue(accent as Boolean, cycleTop as Boolean) as Void {
         if (_toneEnabled && Attention has :playTone) {
             // tone volume is not controllable from CIQ (it follows the
             // system sound setting); TONE_KEY is the softest cue available
-            if (accent) {
+            if (accent || cycleTop) {
                 Attention.playTone(_softTone ? Attention.TONE_LOUD_BEEP : Attention.TONE_ALERT_HI);
             } else {
                 Attention.playTone(_softTone ? Attention.TONE_KEY : Attention.TONE_LOUD_BEEP);
             }
         }
         if (_vibeEnabled && Attention has :vibrate) {
-            var strength = accent ? clampNum(_vibeStrength + 40, MIN_VIBE, MAX_VIBE) : _vibeStrength;
-            Attention.vibrate([new Attention.VibeProfile(strength, accent ? 250 : 100)]);
+            var strength = accent || cycleTop
+                ? clampNum(_vibeStrength + 40, MIN_VIBE, MAX_VIBE)
+                : _vibeStrength;
+            if (cycleTop) {
+                Attention.vibrate(
+                    [
+                        new Attention.VibeProfile(strength, 180),
+                        new Attention.VibeProfile(0, 80),
+                        new Attention.VibeProfile(strength, 180)
+                    ]
+                );
+            } else {
+                Attention.vibrate([new Attention.VibeProfile(strength, accent ? 250 : 100)]);
+            }
         }
     }
 }

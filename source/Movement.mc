@@ -13,7 +13,8 @@ module Movement {
     // Appended so existing FIT movement_type values keep their meaning.
     const TYPE_REVERSE_MILL = 5;
     const TYPE_BULLWHIP = 6;
-    const TYPE_COUNT = 7;
+    const TYPE_COMBO = 7;
+    const TYPE_COUNT = 8;
 
     const SIDE_LEFT = 0;
     const SIDE_RIGHT = 1;
@@ -34,7 +35,8 @@ module Movement {
             return [TYPE_MILL, TYPE_SHIELD_CAST, TYPE_FLOW_OTHER] as Array<Number>;
         }
         if (equipmentType == Equipment.TYPE_BULAVA) {
-            return [TYPE_MILL, TYPE_REVERSE_MILL, TYPE_BULLWHIP, TYPE_FLOW_OTHER] as Array<Number>;
+            // The combination set leads: it is the traditional bulava session.
+            return [TYPE_COMBO, TYPE_MILL, TYPE_REVERSE_MILL, TYPE_BULLWHIP, TYPE_FLOW_OTHER] as Array<Number>;
         }
         return [TYPE_360, TYPE_10_TO_2, TYPE_FLOW_OTHER] as Array<Number>;
     }
@@ -87,6 +89,9 @@ module Movement {
         }
         if (value == TYPE_BULLWHIP) {
             return "Bullwhip";
+        }
+        if (value == TYPE_COMBO) {
+            return "Combo";
         }
         return "360";
     }
