@@ -52,6 +52,9 @@
             <listEntry value="2">@Strings.CueCycleTop</listEntry>
         </settingConfig>
     </setting>
+    <setting propertyKey="@Properties.swingCounter" title="@Strings.SettingSwingCounter">
+        <settingConfig type="boolean"/>
+    </setting>
     <setting propertyKey="@Properties.motionCapture" title="@Strings.SettingMotionCapture">
         <settingConfig type="boolean"/>
     </setting>

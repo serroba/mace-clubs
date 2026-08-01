@@ -13,6 +13,7 @@ class WorkBlockSummary {
     private var _equipmentWeightGrams as Number;
     private var _watchWrist as Number;
     private var _smoothness as Number;
+    private var _swings as Number;
 
     function initialize(
         setNumber as Number,
@@ -23,7 +24,8 @@ class WorkBlockSummary {
         equipmentCount as Number,
         equipmentWeightGrams as Number,
         watchWrist as Number,
-        smoothness as Number
+        smoothness as Number,
+        swings as Number
     ) {
         _setNumber = setNumber;
         _workSeconds = workSeconds;
@@ -34,6 +36,7 @@ class WorkBlockSummary {
         _equipmentWeightGrams = equipmentWeightGrams;
         _watchWrist = watchWrist;
         _smoothness = smoothness;
+        _swings = swings;
     }
 
     function getSetNumber() as Number {
@@ -78,5 +81,11 @@ class WorkBlockSummary {
 
     function getSmoothness() as Number {
         return _smoothness;
+    }
+
+    // Detected swing cycles during this block's work phase; -1 when the
+    // swing counter was not running.
+    function getSwings() as Number {
+        return _swings;
     }
 }

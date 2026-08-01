@@ -16,6 +16,9 @@ target is the **Instinct 3 Solar**; the manifest supports 120 Garmin wearables
 - Five-second start delay and advance warning before each new work interval
 - Optional on-watch smoothness score with a 12-session local trend; no account,
   network request, or smoothness data upload
+- Optional accelerometer swing counter, plus 5:00 and 10:00 Challenge presets
+  (after the traditional timed max-swing gada competitions) where counting is
+  always on and detected swings replace metronome rounds on screen
 - Watch-wrist and equipment metadata written into each FIT session
 - Set total written to the FIT session, with work sets and timed rests recorded
   as separate lap boundaries for analysis in Garmin Connect and exported FIT files
@@ -32,6 +35,9 @@ target is the **Instinct 3 Solar**; the manifest supports 120 Garmin wearables
 
 Interval presets (e.g. 5 × 2:00 work / 1:00 rest) call work and rest with tone and
 vibration cues, run the metronome only during work, and count sets automatically.
+Challenge presets are one continuous work interval with no rest; swing counting
+is forced on, total swings are written to the session (`total_swings`) and each
+work lap (`swing_count`), and swings during rest or pause never count.
 The Custom preset defaults to 5 × 2:00 work / 2:00 rest. Configure it directly
 on the watch from MENU → Settings → Custom workout, or from the Garmin Connect
 phone app. The on-watch editor walks through sets, work duration, and rest

@@ -24,6 +24,7 @@
     <string id="SettingAccentEnabled">Accent first beat of each round</string>
     <string id="SettingCueMode">Metronome cues on</string>
     <string id="SettingMotionCapture">Motion capture (research, uses more battery)</string>
+    <string id="SettingSwingCounter">Swing counter (uses more battery; always on for challenges)</string>
     <string id="SettingSmoothnessEnabled">Local smoothness score (stays on watch)</string>
     <string id="CueRoundStarts">Every loop (A and B)</string>
     <string id="CueEveryBeat">Every beat</string>

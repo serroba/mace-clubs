@@ -120,6 +120,7 @@ class MaceClubsView extends WatchUi.View {
             plan = null;
         }
         done = false;
+        workout.forceSwingCounting(preset[:challenge] == true);
         _lastPhase = null;
         _lastSet = 0;
         _warnedSet = 0;
@@ -292,6 +293,29 @@ class MaceClubsView extends WatchUi.View {
         WatchUi.requestUpdate();
     }
 
+    // One compact line joining whatever per-set detail exists: detected
+    // swings and the set's smoothness score.
+    private function summaryDetail(index as Number) as String {
+        var swings = summarySwings(index);
+        var smooth = summarySmoothness(index);
+        if (swings == "") {
+            return smooth;
+        }
+        if (smooth == "") {
+            return swings;
+        }
+        return Lang.format("$1$  $2$", [swings, smooth]);
+    }
+
+    private function summarySwings(index as Number) as String {
+        var block = workout.getBlock(index);
+        if (block == null) {
+            return "";
+        }
+        var swings = (block as WorkBlockSummary).getSwings();
+        return swings < 0 ? "" : Lang.format("$1$ sw", [swings]);
+    }
+
     private function summarySide(index as Number) as String {
         var block = workout.getBlock(index);
         return block == null ? "" : Movement.sideShortLabel((block as WorkBlockSummary).getWorkingSide());
@@ -439,15 +463,9 @@ class MaceClubsView extends WatchUi.View {
                     ),
                     Graphics.TEXT_JUSTIFY_CENTER
                 );
-                var setSmoothness = summarySmoothness(index);
-                if (setSmoothness != "") {
-                    dc.drawText(
-                        cx,
-                        h * 57 / 100,
-                        Graphics.FONT_TINY,
-                        setSmoothness,
-                        Graphics.TEXT_JUSTIFY_CENTER
-                    );
+                var detail = summaryDetail(index);
+                if (detail != "") {
+                    dc.drawText(cx, h * 57 / 100, Graphics.FONT_TINY, detail, Graphics.TEXT_JUSTIFY_CENTER);
                 }
             }
             dc.drawText(cx, h * 66 / 100, Graphics.FONT_SMALL, "SELECT: save", Graphics.TEXT_JUSTIFY_CENTER);
@@ -517,10 +535,14 @@ class MaceClubsView extends WatchUi.View {
         if (info != null && info.currentHeartRate != null) {
             hr = (info.currentHeartRate as Number).toString();
         }
-        var rounds = metronome.getRounds().toString();
+        // With the swing counter running, detected swings replace metronome
+        // rounds everywhere rounds would show: the count is the real reps.
+        var counting = workout.isSwingCounting();
+        var rounds = counting ? workout.getTotalSwings().toString() : metronome.getRounds().toString();
+        var roundsLabel = counting ? "swng" : "rnds";
         var circleValue = _circleRounds ? rounds : hr;
         var otherValue = _circleRounds ? hr : rounds;
-        var otherLabel = _circleRounds ? "hr" : "rnds";
+        var otherLabel = _circleRounds ? "hr" : roundsLabel;
 
         var p = plan;
         if (p != null) {
@@ -597,7 +619,7 @@ class MaceClubsView extends WatchUi.View {
                 );
                 dc.drawText(cx - 50, h * 87 / 100, Graphics.FONT_TINY, "bpm", Graphics.TEXT_JUSTIFY_CENTER);
                 dc.drawText(cx, h * 72 / 100, Graphics.FONT_MEDIUM, rounds, Graphics.TEXT_JUSTIFY_CENTER);
-                dc.drawText(cx, h * 87 / 100, Graphics.FONT_TINY, "rnds", Graphics.TEXT_JUSTIFY_CENTER);
+                dc.drawText(cx, h * 87 / 100, Graphics.FONT_TINY, roundsLabel, Graphics.TEXT_JUSTIFY_CENTER);
                 dc.drawText(cx + 50, h * 72 / 100, Graphics.FONT_MEDIUM, hr, Graphics.TEXT_JUSTIFY_CENTER);
                 dc.drawText(cx + 50, h * 87 / 100, Graphics.FONT_TINY, "hr", Graphics.TEXT_JUSTIFY_CENTER);
             }
@@ -651,7 +673,7 @@ class MaceClubsView extends WatchUi.View {
         );
         dc.drawText(cx - 50, h * 84 / 100, Graphics.FONT_TINY, "sets", Graphics.TEXT_JUSTIFY_CENTER);
         dc.drawText(cx, h * 68 / 100, Graphics.FONT_MEDIUM, rounds, Graphics.TEXT_JUSTIFY_CENTER);
-        dc.drawText(cx, h * 84 / 100, Graphics.FONT_TINY, "rnds", Graphics.TEXT_JUSTIFY_CENTER);
+        dc.drawText(cx, h * 84 / 100, Graphics.FONT_TINY, roundsLabel, Graphics.TEXT_JUSTIFY_CENTER);
         dc.drawText(cx + 50, h * 68 / 100, Graphics.FONT_MEDIUM, hr, Graphics.TEXT_JUSTIFY_CENTER);
         dc.drawText(cx + 50, h * 84 / 100, Graphics.FONT_TINY, "hr", Graphics.TEXT_JUSTIFY_CENTER);
     }
