@@ -69,7 +69,17 @@ class MaceClubsDelegate extends WatchUi.BehaviorDelegate {
             return true;
         }
         if (_view.workout.isStarted()) {
-            showHomeConfirmation();
+            if (_view.isFreeResting() && !_view.paused) {
+                // Rest is the natural moment to change movement for the next
+                // set; discard stays reachable inside the same menu.
+                WatchUi.pushView(
+                    RestOptionsMenu.build(_view.workout),
+                    new RestOptionsDelegate(_view),
+                    WatchUi.SLIDE_UP
+                );
+            } else {
+                showHomeConfirmation();
+            }
         } else {
             WatchUi.pushView(SettingsMenu.build(), new SettingsMenuDelegate(_view), WatchUi.SLIDE_UP);
         }

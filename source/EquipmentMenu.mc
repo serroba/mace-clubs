@@ -39,14 +39,21 @@ class EquipmentMenuDelegate extends WatchUi.Menu2InputDelegate {
 
     function onSelect(item as WatchUi.MenuItem) as Void {
         var id = item.getId() as String;
+        var kind = Equipment.TYPE_CLUBS;
+        var quantity = 2;
         if (id.equals("mace")) {
-            _view.chooseEquipment(Equipment.TYPE_MACE, 1);
+            kind = Equipment.TYPE_MACE;
+            quantity = 1;
         } else if (id.equals("oneClub")) {
-            _view.chooseEquipment(Equipment.TYPE_CLUBS, 1);
-        } else {
-            _view.chooseEquipment(Equipment.TYPE_CLUBS, 2);
+            quantity = 1;
         }
-        WatchUi.popView(WatchUi.SLIDE_DOWN);
-        _view.startWorkout();
+        _view.chooseEquipment(kind, quantity);
+        // Movement follows equipment: replace this menu with the movement
+        // picker, which starts the workout once a movement is chosen.
+        WatchUi.switchToView(
+            MovementMenu.build(kind),
+            new MovementMenuDelegate(_view, true),
+            WatchUi.SLIDE_LEFT
+        );
     }
 }
