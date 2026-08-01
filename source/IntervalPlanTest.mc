@@ -221,6 +221,15 @@ function testChallengePresetsAreSingleRestlessIntervals(logger as Test.Logger) a
 }
 
 (:test)
+function testPlanExposesItsConfiguredShape(logger as Test.Logger) as Boolean {
+    var plan = new Intervals.Plan(5, 120, 60);
+    Test.assertEqualMessage(plan.getSets(), 5, "set count");
+    Test.assertEqualMessage(plan.getWorkSeconds(), 120, "work seconds");
+    Test.assertEqualMessage(plan.getRestSeconds(), 60, "rest seconds");
+    return true;
+}
+
+(:test)
 function testZeroRestPlanRunsWorkThenFinishes(logger as Test.Logger) as Boolean {
     // The challenge shape: one work interval, no rest. The plan must hold
     // WORK for the whole window and flip straight to DONE at the boundary.
