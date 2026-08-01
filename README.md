@@ -55,7 +55,7 @@ every work block. During a free-training rest, MENU offers switching the
 movement or working side for the next set, so left/right ladders only need one
 press per rest. Working side is also configurable in Settings, separately from
 watch wrist. Single-side work sets are tallied per hand and the paused and
-completed summaries show a `hands L3 / R2` balance line, following the
+completed summaries show an `L3/R2` balance tag, following the
 traditional convention of giving each hand the same number of sets. The paused and completed screens provide an
 on-watch set summary; use UP/DOWN to inspect individual work/rest durations.
 Connect IQ does not

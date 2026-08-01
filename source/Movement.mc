@@ -93,12 +93,13 @@ module Movement {
     }
 
     // Traditional gada training gives each hand the same number of sets;
-    // the balance line makes an uneven session visible before it ends.
+    // the balance tag makes an uneven session visible before it ends.
+    // Compact on purpose: it shares a 176px summary line with the set count.
     function balanceLabel(leftSets as Number, rightSets as Number) as String {
         if (leftSets == 0 && rightSets == 0) {
             return "";
         }
-        return Lang.format("hands L$1$ / R$2$", [leftSets, rightSets]);
+        return Lang.format("L$1$/R$2$", [leftSets, rightSets]);
     }
 
     function sideLabel(value as Number) as String {

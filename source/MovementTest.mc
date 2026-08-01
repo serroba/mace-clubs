@@ -62,9 +62,9 @@ function testSideShortLabelsAreCompact(logger as Test.Logger) as Boolean {
 
 (:test)
 function testBalanceLabelShowsOnlyForSingleSideSets(logger as Test.Logger) as Boolean {
-    Test.assertEqualMessage(Movement.balanceLabel(0, 0), "", "no single-side sets, no balance line");
-    Test.assertEqualMessage(Movement.balanceLabel(3, 2), "hands L3 / R2", "uneven session is visible");
-    Test.assertEqualMessage(Movement.balanceLabel(0, 1), "hands L0 / R1", "a single right set still shows");
+    Test.assertEqualMessage(Movement.balanceLabel(0, 0), "", "no single-side sets, no balance tag");
+    Test.assertEqualMessage(Movement.balanceLabel(3, 2), "L3/R2", "uneven session is visible");
+    Test.assertEqualMessage(Movement.balanceLabel(0, 1), "L0/R1", "a single right set still shows");
     return true;
 }
 
