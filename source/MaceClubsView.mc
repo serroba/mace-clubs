@@ -435,18 +435,16 @@ class MaceClubsView extends WatchUi.View {
                 Graphics.TEXT_JUSTIFY_CENTER
             );
             var count = workout.getSets();
-            dc.drawText(
-                cx,
-                h * 33 / 100,
-                Graphics.FONT_TINY,
-                Lang.format("$1$ sets  $2$ work", [count, formatSecs(workout.getTotalWorkSeconds())]),
-                Graphics.TEXT_JUSTIFY_CENTER
-            );
+            // Three summary lines on the original 35/45/54 rhythm: FONT_TINY
+            // is 23px on the 176px Instinct, so tighter stacks overlap. The
+            // side balance replaces the total-work tally when single-side
+            // sets exist rather than adding a fourth line.
             var sideCounts = workout.getSideSetCounts();
             var balance = Movement.balanceLabel(sideCounts[0], sideCounts[1]);
-            if (balance != "") {
-                dc.drawText(cx, h * 41 / 100, Graphics.FONT_TINY, balance, Graphics.TEXT_JUSTIFY_CENTER);
-            }
+            var headline = balance == ""
+                ? Lang.format("$1$ sets  $2$ work", [count, formatSecs(workout.getTotalWorkSeconds())])
+                : Lang.format("$1$ sets  $2$", [count, balance]);
+            dc.drawText(cx, h * 35 / 100, Graphics.FONT_TINY, headline, Graphics.TEXT_JUSTIFY_CENTER);
             if (count > 0) {
                 var index = _summarySet;
                 if (index < 0 || index >= count) {
@@ -454,26 +452,26 @@ class MaceClubsView extends WatchUi.View {
                 }
                 dc.drawText(
                     cx,
-                    h * 49 / 100,
+                    h * 45 / 100,
                     Graphics.FONT_TINY,
                     Lang.format(
-                        "set $1$/$2$  $3$ / $4$  $5$",
+                        "$1$ $2$/$3$  $4$ / $5$",
                         [
+                            summarySide(index),
                             index + 1,
                             count,
                             formatSecs(workout.getSetWorkSeconds(index)),
-                            formatSecs(workout.getSetRestSeconds(index)),
-                            summarySide(index)
+                            formatSecs(workout.getSetRestSeconds(index))
                         ]
                     ),
                     Graphics.TEXT_JUSTIFY_CENTER
                 );
                 var detail = summaryDetail(index);
                 if (detail != "") {
-                    dc.drawText(cx, h * 57 / 100, Graphics.FONT_TINY, detail, Graphics.TEXT_JUSTIFY_CENTER);
+                    dc.drawText(cx, h * 54 / 100, Graphics.FONT_TINY, detail, Graphics.TEXT_JUSTIFY_CENTER);
                 }
             }
-            dc.drawText(cx, h * 66 / 100, Graphics.FONT_SMALL, "SELECT: save", Graphics.TEXT_JUSTIFY_CENTER);
+            dc.drawText(cx, h * 64 / 100, Graphics.FONT_SMALL, "SELECT: save", Graphics.TEXT_JUSTIFY_CENTER);
             if (!done) {
                 dc.drawText(cx, h * 77 / 100, Graphics.FONT_TINY, "BACK: resume", Graphics.TEXT_JUSTIFY_CENTER);
             }
@@ -639,15 +637,20 @@ class MaceClubsView extends WatchUi.View {
         var mainLabel = freeResting ? "SELECT: work" : "bpm";
         if (_subwindow) {
             drawSubwindowMetric(dc, circleValue);
+            // Like the interval screen, the header sits left of the
+            // subwindow cut-out; centered it loses its middle characters
+            // to the circle. The main value starts below the cut-out
+            // (y > 62 on the 45mm) and its label clears the medium font's
+            // 27px height - the old 48%/58% stack drew them overlapping.
             dc.drawText(
-                cx,
-                h * 22 / 100,
-                Graphics.FONT_MEDIUM,
+                w * 10 / 100,
+                h * 8 / 100,
+                Graphics.FONT_TINY,
                 Lang.format("$1$  $2$", [phaseText, formatSecs(timerMs / 1000)]),
-                Graphics.TEXT_JUSTIFY_CENTER
+                Graphics.TEXT_JUSTIFY_LEFT
             );
-            dc.drawText(cx, h * 48 / 100, Graphics.FONT_MEDIUM, mainValue, Graphics.TEXT_JUSTIFY_CENTER);
-            dc.drawText(cx, h * 58 / 100, Graphics.FONT_TINY, mainLabel, Graphics.TEXT_JUSTIFY_CENTER);
+            dc.drawText(cx, h * 36 / 100, Graphics.FONT_MEDIUM, mainValue, Graphics.TEXT_JUSTIFY_CENTER);
+            dc.drawText(cx, h * 52 / 100, Graphics.FONT_TINY, mainLabel, Graphics.TEXT_JUSTIFY_CENTER);
             dc.drawText(
                 cx - 30,
                 h * 70 / 100,
