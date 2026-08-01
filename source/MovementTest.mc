@@ -52,6 +52,23 @@ function testMovementResolveFallsBackAcrossEquipment(logger as Test.Logger) as B
 }
 
 (:test)
+function testSideShortLabelsAreCompact(logger as Test.Logger) as Boolean {
+    Test.assertEqualMessage(Movement.sideShortLabel(Movement.SIDE_LEFT), "L", "left tag");
+    Test.assertEqualMessage(Movement.sideShortLabel(Movement.SIDE_RIGHT), "R", "right tag");
+    Test.assertEqualMessage(Movement.sideShortLabel(Movement.SIDE_ALTERNATING), "Alt", "alternating tag");
+    Test.assertEqualMessage(Movement.sideShortLabel(Movement.SIDE_TWO_HANDED), "2H", "two-handed tag");
+    return true;
+}
+
+(:test)
+function testBalanceLabelShowsOnlyForSingleSideSets(logger as Test.Logger) as Boolean {
+    Test.assertEqualMessage(Movement.balanceLabel(0, 0), "", "no single-side sets, no balance line");
+    Test.assertEqualMessage(Movement.balanceLabel(3, 2), "hands L3 / R2", "uneven session is visible");
+    Test.assertEqualMessage(Movement.balanceLabel(0, 1), "hands L0 / R1", "a single right set still shows");
+    return true;
+}
+
+(:test)
 function testMovementNextCyclesWithinEquipment(logger as Test.Logger) as Boolean {
     Test.assertEqualMessage(
         Movement.nextTypeFor(Movement.TYPE_360, Equipment.TYPE_MACE),

@@ -28,7 +28,7 @@ target is the **Instinct 3 Solar**; the manifest supports 120 Garmin wearables
 | SELECT | Start workout | Free training: switch work/rest | Save & exit |
 | BACK | Quit | Pause | Resume (unless finished) |
 | UP / DOWN | Choose workout preset | Tempo ±5 bpm | UP: discard and return home |
-| MENU | Settings | Free rest: movement/discard menu; otherwise discard and return home | Discard and return home |
+| MENU | Settings | Free rest: movement/side/discard menu; otherwise discard and return home | Discard and return home |
 
 Interval presets (e.g. 5 × 2:00 work / 1:00 rest) call work and rest with tone and
 vibration cues, run the metronome only during work, and count sets automatically.
@@ -46,8 +46,11 @@ set smoothness where available. Starting a workout asks for equipment and then
 movement; the movement list follows the implement (mace: 360, 10-to-2,
 flow/other; clubs: mill, shield cast, flow/other) and the choice is saved with
 every work block. During a free-training rest, MENU offers switching the
-movement for the next set. Working side is configured in Settings, separately
-from watch wrist. The paused and completed screens provide an
+movement or working side for the next set, so left/right ladders only need one
+press per rest. Working side is also configurable in Settings, separately from
+watch wrist. Single-side work sets are tallied per hand and the paused and
+completed summaries show a `hands L3 / R2` balance line, following the
+traditional convention of giving each hand the same number of sets. The paused and completed screens provide an
 on-watch set summary; use UP/DOWN to inspect individual work/rest durations.
 Connect IQ does not
 expose Garmin's native strength-set message type, so the Strength summary can

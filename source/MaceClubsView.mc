@@ -143,6 +143,13 @@ class MaceClubsView extends WatchUi.View {
         } catch (e) {}
     }
 
+    function chooseWorkingSide(side as Number) as Void {
+        workout.selectWorkingSide(side);
+        try {
+            Application.Properties.setValue("workingSide", workout.getWorkingSide());
+        } catch (e) {}
+    }
+
     // Timer callbacks must be public methods: resolving a private method via
     // method(:beginWorkout) compiles but raises Invalid Value at runtime.
     function beginWorkout() as Void {
@@ -285,6 +292,11 @@ class MaceClubsView extends WatchUi.View {
         WatchUi.requestUpdate();
     }
 
+    private function summarySide(index as Number) as String {
+        var block = workout.getBlock(index);
+        return block == null ? "" : Movement.sideShortLabel((block as WorkBlockSummary).getWorkingSide());
+    }
+
     private function summarySmoothness(index as Number) as String {
         if (index >= workout.getSetSmoothnessCount()) {
             return "";
@@ -396,11 +408,16 @@ class MaceClubsView extends WatchUi.View {
             var count = workout.getSets();
             dc.drawText(
                 cx,
-                h * 35 / 100,
+                h * 33 / 100,
                 Graphics.FONT_TINY,
                 Lang.format("$1$ sets  $2$ work", [count, formatSecs(workout.getTotalWorkSeconds())]),
                 Graphics.TEXT_JUSTIFY_CENTER
             );
+            var sideCounts = workout.getSideSetCounts();
+            var balance = Movement.balanceLabel(sideCounts[0], sideCounts[1]);
+            if (balance != "") {
+                dc.drawText(cx, h * 41 / 100, Graphics.FONT_TINY, balance, Graphics.TEXT_JUSTIFY_CENTER);
+            }
             if (count > 0) {
                 var index = _summarySet;
                 if (index < 0 || index >= count) {
@@ -408,15 +425,16 @@ class MaceClubsView extends WatchUi.View {
                 }
                 dc.drawText(
                     cx,
-                    h * 45 / 100,
+                    h * 49 / 100,
                     Graphics.FONT_TINY,
                     Lang.format(
-                        "set $1$/$2$  $3$ / $4$",
+                        "set $1$/$2$  $3$ / $4$  $5$",
                         [
                             index + 1,
                             count,
                             formatSecs(workout.getSetWorkSeconds(index)),
-                            formatSecs(workout.getSetRestSeconds(index))
+                            formatSecs(workout.getSetRestSeconds(index)),
+                            summarySide(index)
                         ]
                     ),
                     Graphics.TEXT_JUSTIFY_CENTER
@@ -425,14 +443,14 @@ class MaceClubsView extends WatchUi.View {
                 if (setSmoothness != "") {
                     dc.drawText(
                         cx,
-                        h * 54 / 100,
+                        h * 57 / 100,
                         Graphics.FONT_TINY,
                         setSmoothness,
                         Graphics.TEXT_JUSTIFY_CENTER
                     );
                 }
             }
-            dc.drawText(cx, h * 64 / 100, Graphics.FONT_SMALL, "SELECT: save", Graphics.TEXT_JUSTIFY_CENTER);
+            dc.drawText(cx, h * 66 / 100, Graphics.FONT_SMALL, "SELECT: save", Graphics.TEXT_JUSTIFY_CENTER);
             if (!done) {
                 dc.drawText(cx, h * 77 / 100, Graphics.FONT_TINY, "BACK: resume", Graphics.TEXT_JUSTIFY_CENTER);
             }

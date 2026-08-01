@@ -136,6 +136,33 @@ class WorkoutSession {
         return _movementType;
     }
 
+    function selectWorkingSide(side as Number) as Void {
+        _workingSide = side >= 0 && side < Movement.SIDE_COUNT ? side : Movement.SIDE_TWO_HANDED;
+        if (!_started) {
+            loadComparableHistory();
+        }
+    }
+
+    function getWorkingSide() as Number {
+        return _workingSide;
+    }
+
+    // Completed single-side work sets per hand: [left, right]. Alternating
+    // and two-handed blocks are balanced by construction and stay out.
+    function getSideSetCounts() as Array<Number> {
+        var left = 0;
+        var right = 0;
+        for (var i = 0; i < _blocks.size(); i++) {
+            var side = _blocks[i].getWorkingSide();
+            if (side == Movement.SIDE_LEFT) {
+                left++;
+            } else if (side == Movement.SIDE_RIGHT) {
+                right++;
+            }
+        }
+        return [left, right] as Array<Number>;
+    }
+
     function getEquipmentLabel() as String {
         return Equipment.labelFor(_equipmentType, _equipmentCount, _equipmentWeightGrams);
     }
