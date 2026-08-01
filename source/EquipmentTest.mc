@@ -58,6 +58,24 @@ function testEquipmentHistoryKeysSeparateProfiles(logger as Test.Logger) as Bool
 }
 
 (:test)
+function testEquipmentConvenienceWrappersMatchTheirExplicitForms(logger as Test.Logger) as Boolean {
+    var kind = Equipment.type();
+    var count = Equipment.count();
+    var grams = Equipment.defaultWeightGrams(kind);
+    Test.assertEqualMessage(
+        Equipment.label(),
+        Equipment.labelFor(kind, count, grams),
+        "label() is labelFor over the configured profile"
+    );
+    Test.assertEqualMessage(
+        Equipment.historyKey(),
+        Equipment.historyKeyFor(kind, count, grams),
+        "historyKey() is historyKeyFor over the configured profile"
+    );
+    return true;
+}
+
+(:test)
 function testEquipmentWeightConversionUsesCanonicalGrams(logger as Test.Logger) as Boolean {
     Test.assertEqualMessage(Equipment.gramsFromEditorTenths(40, false), 4000, "4.0 kg stores as 4000 g");
     Test.assertEqualMessage(Equipment.editorTenths(4000, false), 40, "4000 g displays as 4.0 kg");

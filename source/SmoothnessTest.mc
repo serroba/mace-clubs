@@ -39,6 +39,30 @@ function testSmoothnessPenalizesDifferentEffortAndTiming(logger as Test.Logger) 
 }
 
 (:test)
+function testTrackerScoreTotalAccumulatesScoredWindows(logger as Test.Logger) as Boolean {
+    var tracker = new Smoothness.Tracker();
+    Test.assertEqualMessage(tracker.getScoreTotal(), 0, "no total before any motion");
+    for (var i = 0; i < 5; i++) {
+        tracker.add(smoothFeatures(500, 900, 4));
+    }
+    Test.assertEqualMessage(tracker.getScoreTotal(), 100, "one perfect scored window totals 100");
+    tracker.add(smoothFeatures(500, 900, 4));
+    Test.assertEqualMessage(tracker.getScoreTotal(), 200, "each further perfect window adds 100");
+    return true;
+}
+
+(:test)
+function testSetSummaryTracksOpenState(logger as Test.Logger) as Boolean {
+    var summaries = new SmoothnessSetSummaries();
+    Test.assertMessage(!summaries.isOpen(), "nothing is open before the first work phase");
+    summaries.begin(0, 0);
+    Test.assertMessage(summaries.isOpen(), "begin opens a set window");
+    summaries.complete(100, 1);
+    Test.assertMessage(!summaries.isOpen(), "complete closes the set window");
+    return true;
+}
+
+(:test)
 function testSmoothnessHistoryKeepsLatestTwelveSessions(logger as Test.Logger) as Boolean {
     var history = [] as Array<Number>;
     for (var i = 0; i < 14; i++) {

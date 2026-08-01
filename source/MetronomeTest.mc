@@ -251,6 +251,22 @@ function testComboSequenceAccentsAndHandSwitch(logger as Test.Logger) as Boolean
 }
 
 (:test)
+function testCycleTopEmphasisLeavesTheCueScheduleUnchanged(logger as Test.Logger) as Boolean {
+    // Emphasis changes how the hand-switch cue feels, never which beats cue.
+    var m = new Metronome();
+    m.setPattern([4, 4, 2] as Array<Number>);
+    var before = new Array<Boolean>[12];
+    for (var beat = 1; beat <= 12; beat++) {
+        before[beat - 1] = m.shouldCue(beat);
+    }
+    m.setCycleTopEmphasis(true);
+    for (var beat = 1; beat <= 12; beat++) {
+        Test.assertEqualMessage(m.shouldCue(beat), before[beat - 1], "cue schedule is unaffected");
+    }
+    return true;
+}
+
+(:test)
 function testBeatCountIsExposedForComboDisplay(logger as Test.Logger) as Boolean {
     var m = new Metronome();
     Test.assertEqualMessage(m.getBeatCount(), 0, "no beats before the metronome runs");

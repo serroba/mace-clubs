@@ -142,6 +142,47 @@ function testSelectWorkingSideRejectsUnknownValues(logger as Test.Logger) as Boo
 }
 
 (:test)
+function testEquipmentLabelFollowsSelection(logger as Test.Logger) as Boolean {
+    var session = new WorkoutSession();
+    session.selectEquipment(Equipment.TYPE_BULAVA, 1);
+    Test.assertEqualMessage(
+        session.getEquipmentLabel(),
+        Equipment.labelFor(Equipment.TYPE_BULAVA, 1, Equipment.defaultWeightGrams(Equipment.TYPE_BULAVA)),
+        "the session label mirrors the selected profile"
+    );
+    return true;
+}
+
+(:test)
+function testSmoothnessQueriesAreSafeWithoutData(logger as Test.Logger) as Boolean {
+    var session = new WorkoutSession();
+    // A bulava/bullwhip profile re-keys the comparable history to a profile
+    // that cannot have stored sessions, keeping this test deterministic.
+    session.selectEquipment(Equipment.TYPE_BULAVA, 1);
+    session.selectMovement(Movement.TYPE_BULLWHIP);
+    Test.assertEqualMessage(session.getSmoothnessScore(), -1, "no live score without motion");
+    Test.assertEqualMessage(session.getSmoothnessWindows(), 0, "no scored windows without motion");
+    Test.assertEqualMessage(session.getSetSmoothnessScore(0), -1, "missing set summary reads -1");
+    Test.assertEqualMessage(session.getSetSmoothnessWindows(0), 0, "missing set summary has no windows");
+    Test.assertEqualMessage(session.getLastSmoothnessScore(), -1, "no previous session on a fresh profile");
+    Test.assertEqualMessage(session.getSmoothnessDelta(), 0, "no delta without history");
+    Test.assertMessage(!session.hasSmoothnessDelta(), "no trend claim without history");
+    return true;
+}
+
+(:test)
+function testForceSwingCountingWaitsForALiveSession(logger as Test.Logger) as Boolean {
+    var session = new WorkoutSession();
+    session.forceSwingCounting(true);
+    Test.assertMessage(
+        !session.isSwingCounting(),
+        "forcing only marks intent; counting starts with the live sensor stream"
+    );
+    Test.assertEqualMessage(session.getTotalSwings(), 0, "no swings counted before start");
+    return true;
+}
+
+(:test)
 function testBlocksWithoutSwingCounterCarryNoCount(logger as Test.Logger) as Boolean {
     var session = new WorkoutSession();
     session.addSetWithDuration(60);
