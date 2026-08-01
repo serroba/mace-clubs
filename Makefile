@@ -3,8 +3,9 @@ DEVELOPER_KEY ?= developer_key.der
 BIN_DIR ?= bin
 MONKEYC ?= monkeyc
 MONKEYDO ?= monkeydo
+MONKEY_C_COVERAGE ?= monkey-c-coverage
 
-.PHONY: check doctor xml format format-check lint build test-build simulator-test clean
+.PHONY: check doctor xml format format-check lint build test-build simulator-test coverage clean
 
 check: doctor xml format-check lint build test-build
 
@@ -43,6 +44,19 @@ test-build: $(DEVELOPER_KEY) | $(BIN_DIR)
 
 simulator-test: test-build
 	"$(MONKEYDO)" $(BIN_DIR)/mace-clubs-test.prg $(DEVICE) -t
+
+# Function coverage of the unit tests, via monkey-c-coverage
+# (https://github.com/bombsimon/monkey-c-rs): instrument sources into
+# build/coverage, run the suite in a running simulator, join the log.
+coverage: $(DEVELOPER_KEY) | $(BIN_DIR)
+	@command -v "$(MONKEY_C_COVERAGE)" >/dev/null || { echo "monkey-c-coverage is not on PATH"; exit 1; }
+	rm -rf build/coverage
+	mkdir -p build/coverage
+	"$(MONKEY_C_COVERAGE)" instrument --out build/coverage/source source/*.mc
+	printf 'project.manifest = ../../manifest.xml\nbase.sourcePath = source\nbase.resourcePath = ../../resources\n' > build/coverage/coverage.jungle
+	"$(MONKEYC)" -f build/coverage/coverage.jungle -d $(DEVICE) -o $(BIN_DIR)/coverage-test.prg -y $(DEVELOPER_KEY) --unit-test
+	"$(MONKEYDO)" $(BIN_DIR)/coverage-test.prg $(DEVICE) -t | tee build/coverage/run.log
+	"$(MONKEY_C_COVERAGE)" report --manifest build/coverage/source/coverage-manifest.tsv --log build/coverage/run.log --exclude-suffix Test.mc
 
 clean:
 	$(RM) $(BIN_DIR)/mace-clubs.prg $(BIN_DIR)/mace-clubs-test.prg

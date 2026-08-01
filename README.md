@@ -114,7 +114,15 @@ below, then run:
 ```sh
 make check              # XML, formatting, lint, app build, and test build
 make simulator-test     # also execute the tests in a running simulator
+make coverage           # function coverage of the unit tests (see below)
 ```
+
+`make coverage` reports which functions the unit tests actually execute. It
+requires `monkey-c-coverage` on `PATH` (from the same monkey-c-rs project as
+the formatter and linter; until it is upstream, install with
+`cargo install --path <monkey-c-rs>/monkey-c-coverage`) and a running
+simulator. View and delegate code intentionally reports near zero — that
+layer is verified in the simulator, not by unit tests.
 
 The Makefile generates an ignored local developer key when `developer_key.der` is
 absent. Override `DEVICE`, `DEVELOPER_KEY`, `MONKEYC`, or `MONKEYDO` when needed.

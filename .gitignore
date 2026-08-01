@@ -7,3 +7,6 @@ gen/
 developer_key*
 .DS_Store
 dist/
+tools/.venv/
+*.fit
+build/
