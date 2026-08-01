@@ -118,6 +118,7 @@ class WorkoutSession {
         _equipmentType = kind;
         _equipmentCount = kind == Equipment.TYPE_MACE ? 1 : quantity;
         _equipmentWeightGrams = Equipment.defaultWeightGrams(kind);
+        _movementType = Movement.resolveFor(_movementType, kind);
         loadComparableHistory();
     }
 
@@ -531,7 +532,7 @@ class WorkoutSession {
         _equipmentType = Equipment.type();
         _equipmentCount = Equipment.count();
         _equipmentWeightGrams = Equipment.defaultWeightGrams(_equipmentType);
-        _movementType = Movement.type();
+        _movementType = Movement.typeFor(_equipmentType);
         _workingSide = Movement.workingSide();
         try {
             var wrist = Application.Properties.getValue("watchWrist");
