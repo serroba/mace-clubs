@@ -7,6 +7,9 @@
     <string id="SettingMaceWeight">Default mace weight (grams)</string>
     <string id="SettingClubWeight">Default weight of each club (grams)</string>
     <string id="SettingBulavaWeight">Default bulava weight (grams)</string>
+    <string id="SettingComboMillBeats">Bulava combo: mill beats</string>
+    <string id="SettingComboReverseMillBeats">Bulava combo: reverse mill beats</string>
+    <string id="SettingComboBullwhipBeats">Bulava combo: bullwhip beats</string>
     <string id="EquipmentMace">Mace</string>
     <string id="EquipmentClubs">Clubs</string>
     <string id="EquipmentOne">One</string>

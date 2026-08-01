@@ -14,11 +14,12 @@ function testMovementOptionsPerEquipment(logger as Test.Logger) as Boolean {
     Test.assertEqualMessage(clubs[1], Movement.TYPE_SHIELD_CAST, "clubs include the shield cast");
     Test.assertEqualMessage(clubs[2], Movement.TYPE_FLOW_OTHER, "clubs keep the flow catch-all");
     var bulava = Movement.optionsFor(Equipment.TYPE_BULAVA);
-    Test.assertEqualMessage(bulava.size(), 4, "bulava offers four movements");
-    Test.assertEqualMessage(bulava[0], Movement.TYPE_MILL, "bulava leads with the mill");
-    Test.assertEqualMessage(bulava[1], Movement.TYPE_REVERSE_MILL, "bulava includes the reverse mill");
-    Test.assertEqualMessage(bulava[2], Movement.TYPE_BULLWHIP, "bulava includes the bullwhip");
-    Test.assertEqualMessage(bulava[3], Movement.TYPE_FLOW_OTHER, "bulava keeps the flow catch-all");
+    Test.assertEqualMessage(bulava.size(), 5, "bulava offers five movements");
+    Test.assertEqualMessage(bulava[0], Movement.TYPE_COMBO, "bulava leads with the traditional combo");
+    Test.assertEqualMessage(bulava[1], Movement.TYPE_MILL, "bulava includes the mill");
+    Test.assertEqualMessage(bulava[2], Movement.TYPE_REVERSE_MILL, "bulava includes the reverse mill");
+    Test.assertEqualMessage(bulava[3], Movement.TYPE_BULLWHIP, "bulava includes the bullwhip");
+    Test.assertEqualMessage(bulava[4], Movement.TYPE_FLOW_OTHER, "bulava keeps the flow catch-all");
     return true;
 }
 
@@ -30,9 +31,10 @@ function testBulavaMovementLabelsAndFallback(logger as Test.Logger) as Boolean {
         "reverse mill label"
     );
     Test.assertEqualMessage(Movement.typeLabel(Movement.TYPE_BULLWHIP), "Bullwhip", "bullwhip label");
+    Test.assertEqualMessage(Movement.typeLabel(Movement.TYPE_COMBO), "Combo", "combo label");
     Test.assertEqualMessage(
         Movement.resolveFor(Movement.TYPE_360, Equipment.TYPE_BULAVA),
-        Movement.TYPE_MILL,
+        Movement.TYPE_COMBO,
         "a mace movement falls back to the bulava default"
     );
     Test.assertEqualMessage(

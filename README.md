@@ -50,8 +50,14 @@ carry their one-based `set_number`; rest laps carry zero. Each boundary also
 records its work/rest phase, duration, implement weight, watch wrist, and
 set smoothness where available. Starting a workout asks for equipment and then
 movement; the movement list follows the implement (mace: 360, 10-to-2,
-flow/other; clubs: mill, shield cast, flow/other) and the choice is saved with
-every work block. During a free-training rest, MENU offers switching the
+flow/other; clubs: mill, shield cast, flow/other; bulava: combo, mill,
+reverse mill, bullwhip, flow/other) and the choice is saved with every work
+block. The bulava **Combo** is the traditional combination set — mill,
+reverse mill, bullwhip on one hand, then the other. The metronome calls the
+sequence: an accent on each movement change, a double pulse on the hand
+switch, and the screen shows the current hand and movement (e.g. `L REV
+MILL`). Beats per movement are phone-configurable (default 4-4-2), and combo
+sets always record an alternating working side. During a free-training rest, MENU offers switching the
 movement or working side for the next set, so left/right ladders only need one
 press per rest. Working side is also configurable in Settings, separately from
 watch wrist. Single-side work sets are tallied per hand and the paused and

@@ -26,4 +26,7 @@
     <property id="maceWeightGrams" type="number">4000</property>
     <property id="clubWeightGrams" type="number">4000</property>
     <property id="bulavaWeightGrams" type="number">6000</property>
+    <property id="comboMillBeats" type="number">4</property>
+    <property id="comboReverseMillBeats" type="number">4</property>
+    <property id="comboBullwhipBeats" type="number">2</property>
 </properties>
