@@ -7,12 +7,17 @@ module RestOptionsMenu {
     function build(workout as WorkoutSession) as WatchUi.Menu2 {
         var menu = new WatchUi.Menu2({:title => "Rest options"});
         menu.addItem(new WatchUi.MenuItem(movementLabel(workout.getMovementType()), null, "movement", null));
+        menu.addItem(new WatchUi.MenuItem(sideLabel(workout.getWorkingSide()), null, "side", null));
         menu.addItem(new WatchUi.MenuItem("Discard & go home", null, "discard", null));
         return menu;
     }
 
     function movementLabel(movementType as Number) as String {
         return Lang.format("Move: $1$", [Movement.typeLabel(movementType)]);
+    }
+
+    function sideLabel(side as Number) as String {
+        return Lang.format("Side: $1$", [Movement.sideLabel(side)]);
     }
 }
 
@@ -26,7 +31,12 @@ class RestOptionsDelegate extends WatchUi.Menu2InputDelegate {
 
     function onSelect(item as WatchUi.MenuItem) as Void {
         var id = item.getId() as String;
-        if (id.equals("movement")) {
+        if (id.equals("side")) {
+            // Cycle in place, like the settings menu, so a left-set /
+            // right-set ladder only needs one press per rest.
+            _view.chooseWorkingSide((_view.workout.getWorkingSide() + 1) % Movement.SIDE_COUNT);
+            item.setLabel(RestOptionsMenu.sideLabel(_view.workout.getWorkingSide()));
+        } else if (id.equals("movement")) {
             WatchUi.switchToView(
                 MovementMenu.build(_view.workout.getEquipmentType()),
                 new MovementMenuDelegate(_view, false),

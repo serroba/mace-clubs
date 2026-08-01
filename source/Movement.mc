@@ -78,6 +78,29 @@ module Movement {
         return "360";
     }
 
+    // Compact side tag for the per-set summary lines.
+    function sideShortLabel(value as Number) as String {
+        if (value == SIDE_LEFT) {
+            return "L";
+        }
+        if (value == SIDE_RIGHT) {
+            return "R";
+        }
+        if (value == SIDE_ALTERNATING) {
+            return "Alt";
+        }
+        return "2H";
+    }
+
+    // Traditional gada training gives each hand the same number of sets;
+    // the balance line makes an uneven session visible before it ends.
+    function balanceLabel(leftSets as Number, rightSets as Number) as String {
+        if (leftSets == 0 && rightSets == 0) {
+            return "";
+        }
+        return Lang.format("hands L$1$ / R$2$", [leftSets, rightSets]);
+    }
+
     function sideLabel(value as Number) as String {
         if (value == SIDE_LEFT) {
             return "Left";

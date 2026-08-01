@@ -96,6 +96,37 @@ function testWorkBlocksRecordTheMovementActiveAtCompletion(logger as Test.Logger
 }
 
 (:test)
+function testSideSetCountsFollowTheSideAtCompletion(logger as Test.Logger) as Boolean {
+    var session = new WorkoutSession();
+    session.selectWorkingSide(Movement.SIDE_LEFT);
+    session.addSetWithDuration(60);
+    session.selectWorkingSide(Movement.SIDE_RIGHT);
+    session.addSetWithDuration(60);
+    session.selectWorkingSide(Movement.SIDE_LEFT);
+    session.addSetWithDuration(60);
+    session.selectWorkingSide(Movement.SIDE_TWO_HANDED);
+    session.addSetWithDuration(60);
+    var counts = session.getSideSetCounts();
+    Test.assertEqualMessage(counts[0], 2, "two left-hand sets");
+    Test.assertEqualMessage(counts[1], 1, "one right-hand set");
+    return true;
+}
+
+(:test)
+function testSelectWorkingSideRejectsUnknownValues(logger as Test.Logger) as Boolean {
+    var session = new WorkoutSession();
+    session.selectWorkingSide(Movement.SIDE_ALTERNATING);
+    Test.assertEqualMessage(session.getWorkingSide(), Movement.SIDE_ALTERNATING, "valid side is kept");
+    session.selectWorkingSide(99);
+    Test.assertEqualMessage(
+        session.getWorkingSide(),
+        Movement.SIDE_TWO_HANDED,
+        "out-of-range side falls back to two-handed"
+    );
+    return true;
+}
+
+(:test)
 function testDiscardResetsSessionForAnotherWorkout(logger as Test.Logger) as Boolean {
     var session = new WorkoutSession();
     session.beginSmoothnessSet();
