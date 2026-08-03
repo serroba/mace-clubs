@@ -16,6 +16,14 @@ jobs:
     steps:
       - uses: actions/checkout@v6
 
+      # The About row is the only place the watch reports its version, so a
+      # tag whose artifact would misreport itself must fail the release.
+      - name: Verify tag matches AppVersion.LABEL
+        run: |
+          tag="${GITHUB_REF_NAME#v}"
+          grep -q "const LABEL = \"$tag\"" source/AppVersion.mc || {
+            echo "::error::AppVersion.LABEL does not match tag $GITHUB_REF_NAME - bump source/AppVersion.mc"; exit 1; }
+
       - name: Restore signing key
         env:
           CIQ_DEVELOPER_KEY: ${{ secrets.CIQ_DEVELOPER_KEY }}
