@@ -101,6 +101,10 @@ jobs:
       code-quality: write
     container:
       image: ghcr.io/matco/connectiq-tester:latest
+    defaults:
+      run:
+        # The container's /bin/sh is dash; pipefail and tester.sh need bash.
+        shell: bash
     steps:
       - uses: actions/checkout@v6
 
@@ -115,7 +119,8 @@ jobs:
             --branch feat/coverage-cobertura monkey-c-coverage
 
       - name: Instrument sources
-        run: "$HOME/.cargo/bin/monkey-c-coverage" instrument source
+        run: |
+          "$HOME/.cargo/bin/monkey-c-coverage" instrument source
 
       # tester.sh (from the container image) compiles ./monkey.jungle with
       # --unit-test at strict type checking and runs the suite in a headless
