@@ -44,6 +44,12 @@ def field(message, name, default=None):
 
 
 def print_session(fit):
+    # The store numbers each upload; sideloads report the developer's own
+    # build. Either way it identifies which app build recorded the file.
+    for dev_id in fit.get_messages("developer_data_id"):
+        version = field(dev_id, "application_version")
+        if version is not None:
+            print(f"app build (application_version): {version}")
     for session in fit.get_messages("session"):
         print("== Session ==")
         for name in (
