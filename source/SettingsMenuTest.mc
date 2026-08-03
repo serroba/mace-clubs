@@ -24,6 +24,17 @@ function testSettingsMenuWristLabels(logger as Test.Logger) as Boolean {
 }
 
 (:test)
+function testAboutRowReportsTheAppVersion(logger as Test.Logger) as Boolean {
+    Test.assertEqualMessage(
+        SettingsMenu.aboutLabel(),
+        Lang.format("Mace & Clubs v$1$", [AppVersion.LABEL]),
+        "the about row shows the single version constant"
+    );
+    Test.assertMessage(AppVersion.LABEL.length() >= 5, "version label looks like semver");
+    return true;
+}
+
+(:test)
 function testSettingsMenuPropertyFallbacks(logger as Test.Logger) as Boolean {
     Test.assertMessage(SettingsMenu.boolProp("noSuchKeyForTests", true), "missing key keeps true default");
     Test.assertMessage(!SettingsMenu.boolProp("noSuchKeyForTests", false), "missing key keeps false default");

@@ -73,7 +73,12 @@ module SettingsMenu {
                 null
             )
         );
+        menu.addItem(new WatchUi.MenuItem(aboutLabel(), null, "about", null));
         return menu;
+    }
+
+    function aboutLabel() as String {
+        return Lang.format("Mace & Clubs v$1$", [AppVersion.LABEL]);
     }
 
     // circleShows: 0 = rounds (default), 1 = heart rate.
