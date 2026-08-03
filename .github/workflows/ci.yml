@@ -101,6 +101,10 @@ jobs:
       code-quality: write
     container:
       image: ghcr.io/matco/connectiq-tester:latest
+    defaults:
+      run:
+        # The container's /bin/sh is dash; pipefail and tester.sh need bash.
+        shell: bash
     steps:
       - uses: actions/checkout@v6
 
