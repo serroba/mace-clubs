@@ -7,6 +7,7 @@ import Toybox.FitContributor;
 import Toybox.Lang;
 import Toybox.Sensor;
 import Toybox.System;
+import Toybox.Time;
 
 // Wraps the FIT recording session and custom developer fields.
 class WorkoutSession {
@@ -577,6 +578,7 @@ class WorkoutSession {
             recordBatteryUsed();
             recordSwingTotal();
             saveSmoothnessSummary();
+            appendHistoryLog();
             session.save();
             _session = null;
         }
@@ -695,6 +697,38 @@ class WorkoutSession {
                 stored.add(_smoothnessHistory[i]);
             }
             Storage.setValue(_smoothnessHistoryKey, stored);
+        } catch (e) {}
+    }
+
+    // Records one browsable history entry (date, implement, session and per-set
+    // scores) for the on-watch History view. Kept separate from the trend list
+    // above, which stays a like-for-like comparison keyed by implement.
+    private function appendHistoryLog() as Void {
+        var score = getSmoothnessScore();
+        if (!_smoothnessEnabled || score < 0) {
+            return;
+        }
+        var count = getSetSmoothnessCount();
+        var sets = [] as Array<Number>;
+        for (var i = 0; i < count; i++) {
+            sets.add(getSetSmoothnessScore(i));
+        }
+        var rec = SmoothnessLog.record(
+            Time.now().value(),
+            _equipmentType,
+            _equipmentCount,
+            _equipmentWeightGrams,
+            _movementType,
+            _workingSide,
+            score,
+            sets
+        );
+        try {
+            var stored = Storage.getValue(SmoothnessLog.STORAGE_KEY);
+            var log = stored instanceof Array
+                ? stored as Array<Storage.ValueType>
+                : [] as Array<Storage.ValueType>;
+            Storage.setValue(SmoothnessLog.STORAGE_KEY, SmoothnessLog.append(log, rec));
         } catch (e) {}
     }
 
