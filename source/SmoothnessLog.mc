@@ -111,7 +111,7 @@ module SmoothnessLog {
         return field(rec, IDX_SETS + index);
     }
 
-    private function field(rec as Array<Storage.ValueType>, index as Number) as Number {
+    function field(rec as Array<Storage.ValueType>, index as Number) as Number {
         if (index < 0 || index >= rec.size()) {
             return 0;
         }
