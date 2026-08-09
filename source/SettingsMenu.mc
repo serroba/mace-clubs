@@ -9,6 +9,7 @@ module SettingsMenu {
         var menu = new WatchUi.Menu2({:title => "Settings"});
         // Instinct's circular safe area is too short for Menu2's secondary
         // labels. Keep the current value in one compact primary label.
+        menu.addItem(new WatchUi.MenuItem("History", null, "history", null));
         menu.addItem(new WatchUi.MenuItem(cornerLabel(), null, "circleShows", null));
         menu.addItem(new WatchUi.MenuItem(wristLabel(), null, "watchWrist", null));
         menu.addItem(new WatchUi.MenuItem(movementLabel(), null, "movementType", null));
