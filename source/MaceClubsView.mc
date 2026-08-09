@@ -539,6 +539,14 @@ class MaceClubsView extends WatchUi.View {
                 "MENU opens settings",
                 Graphics.TEXT_JUSTIFY_CENTER
             );
+            // Last comparable session's smoothness (with trend), so the score
+            // is glanceable before starting. Blank until there's history for
+            // the selected implement/movement/side; sits clear of the lines
+            // above on both the interval and free-training idle layouts.
+            var lastSmooth = smoothnessText(false);
+            if (!lastSmooth.equals("")) {
+                dc.drawText(cx, h * 88 / 100, Graphics.FONT_TINY, lastSmooth, Graphics.TEXT_JUSTIFY_CENTER);
+            }
             return;
         }
 
