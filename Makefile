@@ -46,17 +46,14 @@ simulator-test: test-build
 	"$(MONKEYDO)" $(BIN_DIR)/mace-clubs-test.prg $(DEVICE) -t
 
 # Function coverage of the unit tests, via monkey-c-coverage
-# (https://github.com/bombsimon/monkey-c-rs): instrument sources into
-# build/coverage, run the suite in a running simulator, join the log.
+# (https://github.com/bombsimon/monkey-c-rs). The test subcommand runs the
+# whole pipeline: instrument into bin/coverage, compile, run in the
+# simulator (starting it if needed), and print the report. `source` is
+# passed explicitly so stale instrumented copies under build/ or tmp/ are
+# never swept into the build.
 coverage: $(DEVELOPER_KEY) | $(BIN_DIR)
 	@command -v "$(MONKEY_C_COVERAGE)" >/dev/null || { echo "monkey-c-coverage is not on PATH"; exit 1; }
-	rm -rf build/coverage
-	mkdir -p build/coverage
-	"$(MONKEY_C_COVERAGE)" instrument --out build/coverage/source source/*.mc
-	printf 'project.manifest = ../../manifest.xml\nbase.sourcePath = source\nbase.resourcePath = ../../resources\n' > build/coverage/coverage.jungle
-	"$(MONKEYC)" -f build/coverage/coverage.jungle -d $(DEVICE) -o $(BIN_DIR)/coverage-test.prg -y $(DEVELOPER_KEY) --unit-test
-	"$(MONKEYDO)" $(BIN_DIR)/coverage-test.prg $(DEVICE) -t | tee build/coverage/run.log
-	"$(MONKEY_C_COVERAGE)" report --manifest build/coverage/source/coverage-manifest.tsv --log build/coverage/run.log --exclude-suffix Test.mc
+	"$(MONKEY_C_COVERAGE)" test -d $(DEVICE) -y $(DEVELOPER_KEY) --start-simulator source
 
 clean:
 	$(RM) $(BIN_DIR)/mace-clubs.prg $(BIN_DIR)/mace-clubs-test.prg
