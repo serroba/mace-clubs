@@ -4,7 +4,6 @@ import Toybox.Test;
 // Builds one axis of a synthetic 25Hz second: baseline samples with a
 // spike of the given magnitude at the given index. The other axes stay 0
 // so the sample magnitude equals the axis value.
-(:test)
 function swingTestSecond(spikeAt as Number, spikeMg as Number, baselineMg as Number) as Array<Number> {
     var samples = new Array<Number>[SwingCounter.SAMPLE_RATE_HZ];
     for (var i = 0; i < samples.size(); i++) {
@@ -13,7 +12,6 @@ function swingTestSecond(spikeAt as Number, spikeMg as Number, baselineMg as Num
     return samples;
 }
 
-(:test)
 function swingTestZeros() as Array<Number> {
     var samples = new Array<Number>[SwingCounter.SAMPLE_RATE_HZ];
     for (var i = 0; i < samples.size(); i++) {

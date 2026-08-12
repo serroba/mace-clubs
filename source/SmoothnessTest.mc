@@ -1,7 +1,6 @@
 import Toybox.Lang;
 import Toybox.Test;
 
-(:test)
 function smoothFeatures(rms as Number, peak as Number, crossings as Number) as Dictionary {
     return {:dynamicRms => rms, :dynamicPeak => peak, :zc => crossings};
 }
