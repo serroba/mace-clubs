@@ -18,6 +18,8 @@ class SettingsMenuDelegate extends WatchUi.Menu2InputDelegate {
         if (item instanceof WatchUi.ToggleMenuItem) {
             // Toggle items flip their own state; persist the new value.
             Application.Properties.setValue(id, (item as WatchUi.ToggleMenuItem).isEnabled());
+        } else if (id.equals("history")) {
+            WatchUi.pushView(HistoryMenu.build(), new HistoryMenuDelegate(), WatchUi.SLIDE_UP);
         } else if (id.equals("circleShows")) {
             Application.Properties.setValue("circleShows", SettingsMenu.numProp("circleShows", 0) == 0 ? 1 : 0);
             item.setLabel(SettingsMenu.cornerLabel());
