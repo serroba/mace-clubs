@@ -223,15 +223,17 @@ jobs:
         run: |
           "$HOME/.cargo/bin/rafiki" coverage report coverage-run.log --cobertura coverage.xml
 
-      # fail-on-error stays off until Code Quality is enabled in the repo
-      # settings; the report step above already fails on a broken pipeline.
+      # Code Quality is enabled in the repo settings, so a failed upload is
+      # a real problem worth going red over — fail-on-error: false would
+      # silently drop coverage from the dashboard, which is how an earlier
+      # misconfiguration went unnoticed.
       - name: Upload to GitHub code coverage
         uses: actions/upload-code-coverage@v1
         with:
           file: coverage.xml
           language: "Monkey C"
           label: code-coverage/monkey-c
-          fail-on-error: false
+          fail-on-error: true
 
   synthetic-fit:
     name: Synthetic FIT and visual contract
