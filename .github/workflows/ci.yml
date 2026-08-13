@@ -108,19 +108,24 @@ jobs:
     steps:
       - uses: actions/checkout@v6
 
-      # The instrumenter comes from the monkey-c-rs fork until the coverage
-      # crate (bombsimon/monkey-c-rs#1) and its Cobertura output land
-      # upstream; then this becomes the upstream repo at a pinned rev.
-      - name: Install monkey-c-coverage
+      # Coverage merged upstream (bombsimon/monkey-c-rs#1) and lives in the
+      # unified rafiki binary since bombsimon/monkey-c-rs#8. The install
+      # still points at the monkey-c-rs fork because the Cobertura writer is
+      # a pending follow-up: upstream main plus that one commit. Once it
+      # lands this becomes the upstream repo at a pinned rev.
+      - name: Install rafiki
         run: |
           apt-get update -qq && apt-get install -y -qq --no-install-recommends curl gcc libc6-dev
           curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y --profile minimal
           "$HOME/.cargo/bin/cargo" install --quiet --git https://github.com/serroba/monkey-c-rs \
-            --branch feat/coverage-cobertura monkey-c-coverage
+            --branch feat/rafiki-coverage-cobertura rafiki
 
+      # `source` is passed explicitly so stale instrumented copies under
+      # build/ or tmp/ are never swept into the build. Test code is excluded
+      # through its (:test) annotations.
       - name: Instrument sources
         run: |
-          "$HOME/.cargo/bin/monkey-c-coverage" instrument source
+          "$HOME/.cargo/bin/rafiki" coverage instrument source
 
       # tester.sh (from the container image) compiles ./monkey.jungle with
       # --unit-test at strict type checking and runs the suite in a headless
@@ -135,11 +140,7 @@ jobs:
 
       - name: Report coverage
         run: |
-          "$HOME/.cargo/bin/monkey-c-coverage" report \
-            --manifest bin/coverage/coverage-manifest.tsv \
-            --log coverage-run.log \
-            --exclude-suffix Test.mc \
-            --cobertura coverage.xml
+          "$HOME/.cargo/bin/rafiki" coverage report coverage-run.log --cobertura coverage.xml
 
       # fail-on-error stays off until Code Quality is enabled in the repo
       # settings; the report step above already fails on a broken pipeline.
