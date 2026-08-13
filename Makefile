@@ -3,7 +3,7 @@ DEVELOPER_KEY ?= developer_key.der
 BIN_DIR ?= bin
 MONKEYC ?= monkeyc
 MONKEYDO ?= monkeydo
-MONKEY_C_COVERAGE ?= monkey-c-coverage
+RAFIKI ?= rafiki
 
 .PHONY: check doctor xml format format-check lint build test-build simulator-test coverage clean
 
@@ -45,15 +45,15 @@ test-build: $(DEVELOPER_KEY) | $(BIN_DIR)
 simulator-test: test-build
 	"$(MONKEYDO)" $(BIN_DIR)/mace-clubs-test.prg $(DEVICE) -t
 
-# Function coverage of the unit tests, via monkey-c-coverage
+# Function coverage of the unit tests, via rafiki
 # (https://github.com/bombsimon/monkey-c-rs). The test subcommand runs the
 # whole pipeline: instrument into bin/coverage, compile, run in the
 # simulator (starting it if needed), and print the report. `source` is
 # passed explicitly so stale instrumented copies under build/ or tmp/ are
 # never swept into the build.
 coverage: $(DEVELOPER_KEY) | $(BIN_DIR)
-	@command -v "$(MONKEY_C_COVERAGE)" >/dev/null || { echo "monkey-c-coverage is not on PATH"; exit 1; }
-	"$(MONKEY_C_COVERAGE)" test -d $(DEVICE) -y $(DEVELOPER_KEY) --start-simulator source
+	@command -v "$(RAFIKI)" >/dev/null || { echo "rafiki is not on PATH"; exit 1; }
+	"$(RAFIKI)" coverage test -d $(DEVICE) -y $(DEVELOPER_KEY) --start-simulator source
 
 clean:
 	$(RM) $(BIN_DIR)/mace-clubs.prg $(BIN_DIR)/mace-clubs-test.prg
