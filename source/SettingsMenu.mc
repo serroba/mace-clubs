@@ -67,6 +67,15 @@ module SettingsMenu {
         );
         menu.addItem(
             new WatchUi.ToggleMenuItem(
+                "Load exposure",
+                null,
+                "loadExposureEnabled",
+                boolProp("loadExposureEnabled", false),
+                null
+            )
+        );
+        menu.addItem(
+            new WatchUi.ToggleMenuItem(
                 "Motion logging",
                 null,
                 "motionCapture",
