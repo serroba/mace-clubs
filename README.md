@@ -19,6 +19,9 @@ target is the **Instinct 3 Solar**; the manifest supports 120 Garmin wearables
 - Optional accelerometer swing counter, plus 5:00 and 10:00 Challenge presets
   (after the traditional timed max-swing gada competitions) where counting is
   always on and detected swings replace metronome rounds on screen
+- Optional per-set exercise load exposure from wrist motion, recording dynamic
+  acceleration exposure, peak, active seconds, and weight-volume when swing
+  counting is also enabled; values are descriptive proxies, not tendon force
 - Watch-wrist and equipment metadata written into each FIT session
 - Set total written to the FIT session, with work sets and timed rests recorded
   as separate lap boundaries for analysis in Garmin Connect and exported FIT files
@@ -152,6 +155,8 @@ git tag v0.1.0 && git push origin v0.1.0
 
 The smoothness model, privacy boundary, equations, assumptions, and validation
 plan are documented in [docs/smoothness-physics.md](docs/smoothness-physics.md).
+The exercise-aware load fields and their interpretation are documented in
+[docs/load-exposure.md](docs/load-exposure.md).
 
 - Small, focused PRs — one feature or concern per PR, stacked when they depend on each other.
 - TDD where the code is testable: unit tests (`(:test)` functions) accompany or precede the

@@ -16,6 +16,9 @@ class WorkBlockSummary {
     // Set after construction like rest seconds: CIQ 3.1 devices cap methods
     // at nine arguments, and the constructor is already at that limit.
     private var _swings as Number = -1;
+    private var _motionExposure as Number = -1;
+    private var _motionPeak as Number = -1;
+    private var _activeSeconds as Number = -1;
 
     function initialize(
         setNumber as Number,
@@ -91,5 +94,27 @@ class WorkBlockSummary {
 
     function setSwings(swings as Number) as Void {
         _swings = swings;
+    }
+
+    function setLoadExposure(exposure as Number, peak as Number, activeSeconds as Number) as Void {
+        _motionExposure = exposure;
+        _motionPeak = peak;
+        _activeSeconds = activeSeconds;
+    }
+
+    function getMotionExposure() as Number {
+        return _motionExposure;
+    }
+
+    function getMotionPeak() as Number {
+        return _motionPeak;
+    }
+
+    function getActiveSeconds() as Number {
+        return _activeSeconds;
+    }
+
+    function getWeightVolume() as Number {
+        return LoadExposure.weightVolumeKgSwings(_equipmentWeightGrams, _equipmentCount, _swings);
     }
 }

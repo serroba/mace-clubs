@@ -317,6 +317,30 @@ class MaceClubsView extends WatchUi.View {
     private function summaryDetail(index as Number) as String {
         var swings = summarySwings(index);
         var smooth = summarySmoothness(index);
+        var load = summaryLoad(index);
+        if (load != "") {
+            // Compact tokens keep all enabled measures visible on 176 px
+            // devices: e.g. "48sw S87 L12.4k".
+            var block = workout.getBlock(index);
+            var swingCount = block == null ? -1 : (block as WorkBlockSummary).getSwings();
+            var compactSwings = swingCount < 0 ? "" : Lang.format("$1$sw", [swingCount]);
+            var smoothScore = index >= workout.getSetSmoothnessCount()
+                ? -1
+                : workout.getSetSmoothnessScore(index);
+            var compactSmooth = smooth == ""
+                ? ""
+                : (smoothScore < 0 ? "S--" : Lang.format("S$1$", [smoothScore]));
+            if (compactSwings != "" && compactSmooth != "") {
+                return Lang.format("$1$ $2$ $3$", [compactSwings, compactSmooth, load]);
+            }
+            if (compactSwings != "") {
+                return Lang.format("$1$ $2$", [compactSwings, load]);
+            }
+            if (compactSmooth != "") {
+                return Lang.format("$1$ $2$", [compactSmooth, load]);
+            }
+            return load;
+        }
         if (swings == "") {
             return smooth;
         }
@@ -324,6 +348,11 @@ class MaceClubsView extends WatchUi.View {
             return swings;
         }
         return Lang.format("$1$  $2$", [swings, smooth]);
+    }
+
+    private function summaryLoad(index as Number) as String {
+        var block = workout.getBlock(index);
+        return block == null ? "" : LoadExposure.compactLabel((block as WorkBlockSummary).getMotionExposure());
     }
 
     private function summarySwings(index as Number) as String {

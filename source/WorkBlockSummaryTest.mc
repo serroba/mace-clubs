@@ -27,8 +27,17 @@ function testWorkBlockKeepsDomainContext(logger as Test.Logger) as Boolean {
     Test.assertEqualMessage(block.getWatchWrist(), 1, "sensor wrist remains separate");
     Test.assertEqualMessage(block.getSmoothness(), 87, "smoothness");
     Test.assertEqualMessage(block.getSwings(), -1, "swings default to not-counted");
+    Test.assertEqualMessage(block.getMotionExposure(), -1, "load exposure defaults to not-measured");
+    Test.assertEqualMessage(block.getMotionPeak(), -1, "motion peak defaults to not-measured");
+    Test.assertEqualMessage(block.getActiveSeconds(), -1, "active time defaults to not-measured");
+    Test.assertEqualMessage(block.getWeightVolume(), 0, "unknown swings have no weight-volume");
     block.setSwings(45);
     Test.assertEqualMessage(block.getSwings(), 45, "swing count");
+    block.setLoadExposure(1234, 2500, 42);
+    Test.assertEqualMessage(block.getMotionExposure(), 1234, "motion exposure");
+    Test.assertEqualMessage(block.getMotionPeak(), 2500, "motion peak");
+    Test.assertEqualMessage(block.getActiveSeconds(), 42, "active seconds");
+    Test.assertEqualMessage(block.getWeightVolume(), 180, "weight-volume in kg-swings");
     return true;
 }
 

@@ -30,6 +30,10 @@ class WorkoutSession {
     const FIELD_ID_WORKING_SIDE = 16;
     const FIELD_ID_TOTAL_SWINGS = 17;
     const FIELD_ID_LAP_SWINGS = 18;
+    const FIELD_ID_MOTION_EXPOSURE = 19;
+    const FIELD_ID_MOTION_PEAK = 20;
+    const FIELD_ID_ACTIVE_SECONDS = 21;
+    const FIELD_ID_WEIGHT_VOLUME = 22;
 
     private var _session as ActivityRecording.Session?;
     private var _setsField as FitContributor.Field?;
@@ -43,6 +47,10 @@ class WorkoutSession {
     private var _workingSideField as FitContributor.Field?;
     private var _totalSwingsField as FitContributor.Field?;
     private var _lapSwingsField as FitContributor.Field?;
+    private var _motionExposureField as FitContributor.Field?;
+    private var _motionPeakField as FitContributor.Field?;
+    private var _activeSecondsField as FitContributor.Field?;
+    private var _weightVolumeField as FitContributor.Field?;
     private var _batteryField as FitContributor.Field?;
     private var _rmsField as FitContributor.Field?;
     private var _peakField as FitContributor.Field?;
@@ -52,7 +60,9 @@ class WorkoutSession {
     private var _startBattery as Float?;
     private var _capturing as Boolean = false;
     private var _smoothnessEnabled as Boolean = false;
+    private var _loadExposureEnabled as Boolean = false;
     private var _smoothness as Smoothness.Tracker;
+    private var _loadExposure as LoadExposure.Tracker;
     private var _setSmoothness as SmoothnessSetSummaries;
     private var _smoothnessHistory as Array<Number> = [];
     private var _smoothnessHistoryKey as String = "";
@@ -71,6 +81,7 @@ class WorkoutSession {
 
     function initialize() {
         _smoothness = new Smoothness.Tracker();
+        _loadExposure = new LoadExposure.Tracker();
         _setSmoothness = new SmoothnessSetSummaries();
         _swingCounter = new SwingCounter.Counter();
         reloadEquipment();
@@ -328,6 +339,10 @@ class WorkoutSession {
             if (smooth instanceof Boolean) {
                 _smoothnessEnabled = smooth;
             }
+            var load = Application.Properties.getValue("loadExposureEnabled");
+            if (load instanceof Boolean) {
+                _loadExposureEnabled = load;
+            }
         } catch (e) {}
         // Swing counting shares the same accelerometer stream. Challenge
         // presets force it on (the count is the whole point of the mode);
@@ -341,10 +356,38 @@ class WorkoutSession {
                 }
             } catch (e) {}
         }
-        if (!exportEnabled && !_smoothnessEnabled && !swingEnabled
-            || !(Sensor has :registerSensorDataListener))
-        {
+        if (!exportEnabled && !_smoothnessEnabled && !swingEnabled && !_loadExposureEnabled) {
             return;
+        }
+        if (!(Sensor has :registerSensorDataListener)) {
+            _loadExposureEnabled = false;
+            return;
+        }
+        if (_loadExposureEnabled) {
+            _motionExposureField = session.createField(
+                "motion_exposure",
+                FIELD_ID_MOTION_EXPOSURE,
+                FitContributor.DATA_TYPE_UINT32,
+                {:mesgType => FitContributor.MESG_TYPE_LAP, :units => "mg-s"}
+            );
+            _motionPeakField = session.createField(
+                "motion_peak",
+                FIELD_ID_MOTION_PEAK,
+                FitContributor.DATA_TYPE_UINT16,
+                {:mesgType => FitContributor.MESG_TYPE_LAP, :units => "mg"}
+            );
+            _activeSecondsField = session.createField(
+                "active_seconds",
+                FIELD_ID_ACTIVE_SECONDS,
+                FitContributor.DATA_TYPE_UINT16,
+                {:mesgType => FitContributor.MESG_TYPE_LAP, :units => "s"}
+            );
+            _weightVolumeField = session.createField(
+                "weight_volume",
+                FIELD_ID_WEIGHT_VOLUME,
+                FitContributor.DATA_TYPE_UINT32,
+                {:mesgType => FitContributor.MESG_TYPE_LAP, :units => "kg-swings"}
+            );
         }
         // Local smoothness does not create FIT fields. The separate research
         // setting remains the explicit opt-in path for exporting summaries.
@@ -377,6 +420,11 @@ class WorkoutSession {
             _swingCounting = swingEnabled;
         } catch (e) {
             // no high-rate accel on this device; features stay unwritten
+            _loadExposureEnabled = false;
+            _motionExposureField = null;
+            _motionPeakField = null;
+            _activeSecondsField = null;
+            _weightVolumeField = null;
         }
     }
 
@@ -392,6 +440,9 @@ class WorkoutSession {
         var f = Motion.features(accel.x as Array<Number>, accel.y as Array<Number>, accel.z as Array<Number>);
         if (_smoothnessEnabled && _setSmoothness.isOpen()) {
             _smoothness.add(f);
+        }
+        if (_loadExposureEnabled && _workOpen) {
+            _loadExposure.add(f);
         }
         if (_swingCounting && _workOpen) {
             _swingCounter.addSamples(
@@ -469,6 +520,14 @@ class WorkoutSession {
             block.setSwings(_swingCounter.getCount() - _swingsAtBlockStart);
             _swingsAtBlockStart = _swingCounter.getCount();
         }
+        if (_loadExposureEnabled) {
+            block.setLoadExposure(
+                _loadExposure.getExposure(),
+                _loadExposure.getPeak(),
+                _loadExposure.getActiveSeconds()
+            );
+            _loadExposure.reset();
+        }
         _blocks.add(block);
         var field = _setsField;
         if (field != null) {
@@ -532,6 +591,10 @@ class WorkoutSession {
         var movementField = _movementTypeField;
         var workingSideField = _workingSideField;
         var lapSwingsField = _lapSwingsField;
+        var exposureField = _motionExposureField;
+        var motionPeakField = _motionPeakField;
+        var activeSecondsField = _activeSecondsField;
+        var weightVolumeField = _weightVolumeField;
         if (phaseField != null) {
             phaseField.setData(phase);
         }
@@ -556,6 +619,21 @@ class WorkoutSession {
         if (lapSwingsField != null) {
             var swings = phase == 1 ? block.getSwings() : 0;
             lapSwingsField.setData(swings < 0 ? 0 : swings);
+        }
+        if (exposureField != null) {
+            var exposure = phase == 1 ? block.getMotionExposure() : 0;
+            exposureField.setData(exposure < 0 ? 0 : exposure);
+        }
+        if (motionPeakField != null) {
+            var peak = phase == 1 ? block.getMotionPeak() : 0;
+            motionPeakField.setData(peak < 0 ? 0 : peak);
+        }
+        if (activeSecondsField != null) {
+            var active = phase == 1 ? block.getActiveSeconds() : 0;
+            activeSecondsField.setData(active < 0 ? 0 : active);
+        }
+        if (weightVolumeField != null) {
+            weightVolumeField.setData(phase == 1 ? block.getWeightVolume() : 0);
         }
     }
 
@@ -794,6 +872,10 @@ class WorkoutSession {
         _workingSideField = null;
         _totalSwingsField = null;
         _lapSwingsField = null;
+        _motionExposureField = null;
+        _motionPeakField = null;
+        _activeSecondsField = null;
+        _weightVolumeField = null;
         _batteryField = null;
         _rmsField = null;
         _peakField = null;
@@ -803,7 +885,9 @@ class WorkoutSession {
         _started = false;
         _startBattery = null;
         _smoothnessEnabled = false;
+        _loadExposureEnabled = false;
         _smoothness = new Smoothness.Tracker();
+        _loadExposure = new LoadExposure.Tracker();
         _setSmoothness = new SmoothnessSetSummaries();
         _swingCounter = new SwingCounter.Counter();
         _swingCounting = false;
