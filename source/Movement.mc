@@ -107,7 +107,7 @@ module Movement {
         if (value == SIDE_ALTERNATING) {
             return "Alt";
         }
-        return "2H";
+        return "Both";
     }
 
     // Traditional gada training gives each hand the same number of sets;

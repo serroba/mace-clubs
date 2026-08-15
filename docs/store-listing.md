@@ -1,6 +1,6 @@
 # Connect IQ Store listing — DRAFT (review before submitting)
 
-Upload file: `mace-clubs.iq` from the v0.10.0 GitHub release.
+Upload file: `mace-clubs.iq` from the v0.10.1 GitHub release.
 
 Note: the store renders these fields as plain text — no markdown emphasis.
 
@@ -58,8 +58,14 @@ Also included:
 - Optional motion-capture logging records accelerometer data each second
   for offline swing analysis
 
-## What's new — v0.10.0
-Your training history now lives on the watch.
+## What's new — v0.10.1
+The paused and completed workout summary is clearer on Instinct watches. The
+heading now stays clear of the circular subwindow, work and rest durations are
+labelled, two-handed sets say Both instead of 2H, and unavailable smoothness
+uses the readable smooth -- label. Action hints are smaller so the workout
+numbers remain the focus.
+
+Also included in v0.10.0: your training history now lives on the watch.
 
 Open History from Settings to browse your last 20 sessions, newest first,
 each with the date and its average smoothness score. Open one and UP/DOWN
