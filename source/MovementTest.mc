@@ -85,7 +85,7 @@ function testSideShortLabelsAreCompact(logger as Test.Logger) as Boolean {
     Test.assertEqualMessage(Movement.sideShortLabel(Movement.SIDE_LEFT), "L", "left tag");
     Test.assertEqualMessage(Movement.sideShortLabel(Movement.SIDE_RIGHT), "R", "right tag");
     Test.assertEqualMessage(Movement.sideShortLabel(Movement.SIDE_ALTERNATING), "Alt", "alternating tag");
-    Test.assertEqualMessage(Movement.sideShortLabel(Movement.SIDE_TWO_HANDED), "2H", "two-handed tag");
+    Test.assertEqualMessage(Movement.sideShortLabel(Movement.SIDE_TWO_HANDED), "Both", "two-handed tag");
     return true;
 }
 

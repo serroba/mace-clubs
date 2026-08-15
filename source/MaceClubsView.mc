@@ -329,7 +329,7 @@ class MaceClubsView extends WatchUi.View {
                 : workout.getSetSmoothnessScore(index);
             var compactSmooth = smooth == ""
                 ? ""
-                : (smoothScore < 0 ? "S--" : Lang.format("S$1$", [smoothScore]));
+                : (smoothScore < 0 ? "smooth --" : Lang.format("S$1$", [smoothScore]));
             if (compactSwings != "" && compactSmooth != "") {
                 return Lang.format("$1$ $2$ $3$", [compactSwings, compactSmooth, load]);
             }
@@ -352,7 +352,13 @@ class MaceClubsView extends WatchUi.View {
 
     private function summaryLoad(index as Number) as String {
         var block = workout.getBlock(index);
-        return block == null ? "" : LoadExposure.compactLabel((block as WorkBlockSummary).getMotionExposure());
+        if (block == null) {
+            return "";
+        }
+        var exposure = (block as WorkBlockSummary).getMotionExposure();
+        // A zero means the sensor saw no active window, not a meaningful
+        // exposure measurement. Keep the readable smoothness label instead.
+        return exposure <= 0 ? "" : LoadExposure.compactLabel(exposure);
     }
 
     private function summarySwings(index as Number) as String {
@@ -470,23 +476,23 @@ class MaceClubsView extends WatchUi.View {
         }
 
         if (paused) {
+            // The Instinct's circular subwindow occupies the upper-right of
+            // the display. Shift the state heading into the clear left area.
+            var pausedHeadingX = _subwindow ? w * 32 / 100 : cx;
             dc.drawText(
-                cx,
+                pausedHeadingX,
                 h * 22 / 100,
                 Graphics.FONT_MEDIUM,
                 done ? "DONE!" : "PAUSED",
                 Graphics.TEXT_JUSTIFY_CENTER
             );
             var count = workout.getSets();
-            // Three summary lines on the original 35/45/54 rhythm: FONT_TINY
-            // is 23px on the 176px Instinct, so tighter stacks overlap. The
-            // side balance replaces the total-work tally when single-side
-            // sets exist rather than adding a fourth line.
             var sideCounts = workout.getSideSetCounts();
             var balance = Movement.balanceLabel(sideCounts[0], sideCounts[1]);
+            var setsLabel = count == 1 ? "1 set" : Lang.format("$1$ sets", [count]);
             var headline = balance == ""
-                ? Lang.format("$1$ sets  $2$ work", [count, formatSecs(workout.getTotalWorkSeconds())])
-                : Lang.format("$1$ sets  $2$", [count, balance]);
+                ? Lang.format("$1$  $2$ work", [setsLabel, formatSecs(workout.getTotalWorkSeconds())])
+                : Lang.format("$1$  $2$", [setsLabel, balance]);
             dc.drawText(cx, h * 35 / 100, Graphics.FONT_TINY, headline, Graphics.TEXT_JUSTIFY_CENTER);
             if (count > 0) {
                 var index = _summarySet;
@@ -498,7 +504,7 @@ class MaceClubsView extends WatchUi.View {
                     h * 45 / 100,
                     Graphics.FONT_TINY,
                     Lang.format(
-                        "$1$ $2$/$3$  $4$ / $5$",
+                        "$1$ $2$/$3$ W$4$ R$5$",
                         [
                             summarySide(index),
                             index + 1,
@@ -511,18 +517,18 @@ class MaceClubsView extends WatchUi.View {
                 );
                 var detail = summaryDetail(index);
                 if (detail != "") {
-                    dc.drawText(cx, h * 54 / 100, Graphics.FONT_TINY, detail, Graphics.TEXT_JUSTIFY_CENTER);
+                    dc.drawText(cx, h * 56 / 100, Graphics.FONT_TINY, detail, Graphics.TEXT_JUSTIFY_CENTER);
                 }
             }
-            dc.drawText(cx, h * 64 / 100, Graphics.FONT_SMALL, "SELECT: save", Graphics.TEXT_JUSTIFY_CENTER);
+            dc.drawText(cx, h * 69 / 100, Graphics.FONT_XTINY, "SELECT save", Graphics.TEXT_JUSTIFY_CENTER);
             if (!done) {
-                dc.drawText(cx, h * 77 / 100, Graphics.FONT_TINY, "BACK: resume", Graphics.TEXT_JUSTIFY_CENTER);
+                dc.drawText(cx, h * 79 / 100, Graphics.FONT_XTINY, "BACK resume", Graphics.TEXT_JUSTIFY_CENTER);
             }
             dc.drawText(
                 cx,
-                h * (done ? 79 : 88) / 100,
-                Graphics.FONT_TINY,
-                count > 1 ? "UP/DOWN: sets" : "MENU: discard",
+                h * (done ? 79 : 89) / 100,
+                Graphics.FONT_XTINY,
+                count > 1 ? "UP/DOWN sets" : "MENU discard",
                 Graphics.TEXT_JUSTIFY_CENTER
             );
             return;
