@@ -16,6 +16,8 @@ target is the **Instinct 3 Solar**; the manifest supports 120 Garmin wearables
 - Five-second start delay and advance warning before each new work interval
 - Optional on-watch smoothness score with a 12-session local trend; no account,
   network request, or smoothness data upload
+- On-watch history of the last 20 sessions, browsable from Settings with the
+  per-set scores and the implement each session was recorded with
 - Optional accelerometer swing counter, plus 5:00 and 10:00 Challenge presets
   (after the traditional timed max-swing gada competitions) where counting is
   always on and detected swings replace metronome rounds on screen

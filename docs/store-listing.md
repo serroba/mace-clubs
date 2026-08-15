@@ -1,6 +1,6 @@
 # Connect IQ Store listing — DRAFT (review before submitting)
 
-Upload file: `mace-clubs.iq` from the v0.9.0 GitHub release.
+Upload file: `mace-clubs.iq` from the v0.10.0 GitHub release.
 
 Note: the store renders these fields as plain text — no markdown emphasis.
 
@@ -51,38 +51,36 @@ Also included:
   implement weight, durations, and set count
 - Optional on-watch smoothness score with a private 12-session trend;
   nothing is uploaded
+- Browse your last 20 sessions on the watch, with per-set smoothness scores
+  and the implement each was recorded with
+- Optional per-set load exposure from wrist motion: exposure, peak, active
+  seconds, and weight-volume, saved with the activity
 - Optional motion-capture logging records accelerometer data each second
   for offline swing analysis
 
-## What's new — v0.9.0
-Mace and Clubs now trains the way the traditions do.
+## What's new — v0.10.0
+Your training history now lives on the watch.
 
-Pick your implement, then your movement. The mace offers the 360 and the
-10-to-2, clubs the mill and shield cast, and the new bulava (single heavy
-club) the mill, reverse mill, bullwhip, and the traditional Combo. Your
-movement is saved with every set.
+Open History from Settings to browse your last 20 sessions, newest first,
+each with the date and its average smoothness score. Open one and UP/DOWN
+scrolls through the per-set scores, labelled with the implement, quantity,
+and weight they were recorded with, so a 6 kg bulava session is never
+compared against a 10 kg mace one. It all stays on the watch.
 
-The Combo calls its sequence on your wrist: an accented pulse on each
-movement change and a double pulse when it is time to switch hands, with
-the current hand and movement on screen. Beats per movement are
-configurable (default 4-4-2).
+The idle screen now shows the last comparable session's smoothness and its
+trend before you start, so you know what you are chasing. It appears once
+there is history for the implement, movement, and side you have selected.
 
-During any rest, hold MENU to switch movement or working side for the next
-set. Single-side sets are tallied per hand and the workout summary shows an
-L/R balance, following the tradition of giving each hand the same number
-of sets.
-
-New Challenge presets: 5:00 or 10:00 of continuous swinging, scored by a
-new accelerometer swing counter. Detected swings replace metronome rounds
-on screen and are saved with the activity per set and in total. The counter
-can also be enabled for regular sessions from Settings.
-
-Also: each implement keeps its own default weight (including the new
-bulava), and the training screens were reworked to stay clear of the
-Instinct subwindow.
+New optional load exposure: with it enabled, each work set records the
+dynamic acceleration exposure of your wrist, its peak, how many seconds
+were actually active, and weight-volume (implement kilograms times detected
+swings). The set browser shows a compact L token and the full values are
+saved with the activity for offline analysis. These are descriptive
+measurements from a wrist sensor, not tendon force, technique quality, or
+injury risk. It uses extra battery and is off by default.
 
 Hero image: `docs/store-assets/hero-v0.4.0.png` (1440×720 PNG, under 2 MB) —
-consider refreshing for v0.9.0.
+consider refreshing for v0.10.0.
 
 ## Category
 Health & Fitness
@@ -103,3 +101,4 @@ Capture from the simulator or watch:
 4. Combo work screen — `L REV MILL` with bpm below
 5. Challenge screen — swing count in place of rounds
 6. Paused summary — sets, L/R balance, per-set line
+7. History list — saved sessions with dates and scores
