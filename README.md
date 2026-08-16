@@ -148,7 +148,12 @@ simulator. View and delegate code intentionally reports near zero — that
 layer is verified in the simulator, not by unit tests.
 
 The Makefile generates an ignored local developer key when `developer_key.der` is
-absent. Override `DEVICE`, `DEVELOPER_KEY`, `MONKEYC`, or `MONKEYDO` when needed.
+absent. It discovers a working Java runtime, finds `monkeyc` and `monkeydo` from
+`PATH` or Garmin SDK Manager's `current-sdk.cfg`, and finds the Rust formatter,
+linter, and `rafiki` in either `PATH` or `~/.cargo/bin`. This keeps `make check`
+working in non-interactive shells that have not loaded your shell profile.
+Override `DEVICE`, `DEVELOPER_KEY`, `JAVA`, `MONKEYC`, `MONKEYDO`, `FORMATTER`,
+`LINTER`, or `RAFIKI` when needed.
 
 ### Formatting and linting
 
