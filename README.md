@@ -40,11 +40,14 @@ self-contained report locally from either the downloaded ZIP or a raw FIT file:
 python3 -m venv tools/.venv
 tools/.venv/bin/pip install -r tools/requirements.txt
 tools/.venv/bin/python tools/report_fit.py ~/Downloads/activity.zip
+tools/.venv/bin/python tools/validate_workout.py ~/Downloads/activity.zip
 ```
 
 The resulting HTML stays on your computer and combines motion intensity, heart
 rate, work/rest phases, and per-set smoothness. Motion exposure is a wrist-motion
-measurement, not an estimate of tendon force.
+measurement, not an estimate of tendon force. The validator reports structural
+errors, missing series, metadata gaps, and a transparent data-quality score; use
+`--json` for automation. Its findings describe recording quality, not injury risk.
 - Tempo, tone, and vibration configurable from the Garmin Connect phone app
 
 ## Controls
