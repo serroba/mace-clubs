@@ -24,6 +24,8 @@ target is the **Instinct 3 Solar**; the manifest supports 120 Garmin wearables
 - Optional per-set exercise load exposure from wrist motion, recording dynamic
   acceleration exposure, peak, active seconds, and weight-volume when swing
   counting is also enabled; values are descriptive proxies, not tendon force
+- Optional one-second wrist-motion intensity and peak charts in Garmin Connect;
+  enable Motion charts in Settings (additional battery use)
 - Watch-wrist and equipment metadata written into each FIT session
 - Set total written to the FIT session, with work sets and timed rests recorded
   as separate lap boundaries for analysis in Garmin Connect and exported FIT files

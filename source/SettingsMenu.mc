@@ -76,7 +76,7 @@ module SettingsMenu {
         );
         menu.addItem(
             new WatchUi.ToggleMenuItem(
-                "Motion logging",
+                "Motion charts",
                 null,
                 "motionCapture",
                 boolProp("motionCapture", false),
