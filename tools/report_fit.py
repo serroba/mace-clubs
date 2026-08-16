@@ -23,8 +23,10 @@ from fitparse import FitFile
 
 try:
     from validate_workout import validate
+    from analyze_workout import analyze
 except ModuleNotFoundError:  # Imported as tools.report_fit by the test suite.
     from tools.validate_workout import validate
+    from tools.analyze_workout import analyze
 
 
 MOVEMENTS = {
@@ -167,7 +169,11 @@ def collect(fit: FitFile) -> dict:
 
 
 def render(report: dict, title: str) -> str:
-    report = {**report, "quality": report.get("quality") or validate(report)}
+    report = {
+        **report,
+        "quality": report.get("quality") or validate(report),
+        "analysis": report.get("analysis") or analyze(report),
+    }
     payload = json.dumps(report, separators=(",", ":"), allow_nan=False)
     safe_title = html.escape(title)
     return f"""<!doctype html>
@@ -198,7 +204,10 @@ def render(report: dict, title: str) -> str:
   .finding {{ display:flex; gap:8px; padding:7px 0; border-top:1px solid var(--grid); }} .finding b {{ flex:0 0 58px; text-transform:uppercase; font-size:11px; letter-spacing:.04em; }} .finding span,.finding a {{ min-width:0; overflow-wrap:anywhere; }}
   .finding-warning b {{ color:var(--warn); }} .finding-error b {{ color:var(--error); }} .finding-info b {{ color:var(--muted); }} .finding a {{ color:inherit; }}
   .provenance {{ color:var(--muted); font-size:12px; margin:10px 0 0; overflow-wrap:anywhere; }} :target {{ outline:3px solid var(--warn); outline-offset:3px; }}
-  @media (max-width:700px) {{ main {{ padding:20px 12px 40px; }} .metrics {{ grid-template-columns:repeat(2,minmax(0,1fr)); }} .quality {{ grid-template-columns:1fr; }} }}
+  .signals {{ display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:12px; }} .signal {{ border:1px solid var(--grid); background:var(--surface); padding:14px; min-width:0; }}
+  .signal-head {{ display:flex; justify-content:space-between; gap:8px; align-items:baseline; }} .signal-head h3 {{ margin:0; font-size:15px; }} .confidence {{ color:var(--muted); font-size:11px; text-transform:uppercase; letter-spacing:.04em; }}
+  .signal-value {{ display:block; font-size:25px; margin:6px 0 2px; }} .signal p {{ color:var(--muted); font-size:12px; margin:0; }} .signal-unavailable .signal-value {{ color:var(--muted); }}
+  @media (max-width:700px) {{ main {{ padding:20px 12px 40px; }} .metrics {{ grid-template-columns:repeat(2,minmax(0,1fr)); }} .quality {{ grid-template-columns:1fr; }} .signals {{ grid-template-columns:1fr; }} }}
 </style>
 </head>
 <body><main>
@@ -210,12 +219,13 @@ def render(report: dict, title: str) -> str:
     <svg id="timeline" role="img" aria-label="Motion and heart rate timeline"></svg>
   </section>
   <section><h2>Set consistency</h2><p class="note">Smoothness is a repeatability score from wrist motion; very short sets are flagged and excluded from trend interpretation.</p><svg id="sets" role="img" aria-label="Smoothness and duration by set"></svg></section>
+  <section><h2>Within-session signals</h2><p class="note" id="signal-disclaimer"></p><div class="signals" id="signals"></div></section>
   <p class="insight" id="insight"></p>
   <div class="tooltip" id="tooltip" role="tooltip"></div>
 </main>
 <script>
 const report={payload};
-const root=document.documentElement, summary=report.summary, records=report.records, laps=report.laps, quality=report.quality;
+const root=document.documentElement, summary=report.summary, records=report.records, laps=report.laps, quality=report.quality, analysis=report.analysis;
 const work=laps.filter(d=>d.phase==='work'&&d.set>0), valid=work.filter(d=>d.elapsed>=10);
 const fmt=s=>{{s=Math.round(s);return `${{Math.floor(s/60)}}:${{String(s%60).padStart(2,'0')}}`;}};
 document.getElementById('subtitle').textContent=[summary.date,summary.equipment,summary.movement,summary.side,`${{summary.sets}} recorded sets`].filter(Boolean).join(' · ');
@@ -227,6 +237,9 @@ const availability=document.getElementById('availability');
 for(const [label,key] of [['Motion series','motion'],['Heart rate','heart_rate']]){{const chip=document.createElement('span');chip.className='chip';chip.textContent=`${{label}} ${{Math.round(quality.coverage[key]*100)}}%`;availability.append(chip);}}
 const findings=document.getElementById('findings'),items=quality.findings.length?quality.findings:[{{severity:'info',message:'No integrity or data-quality issues found.',target:null}}];
 for(const item of items){{const row=document.createElement('div');row.className=`finding finding-${{item.severity}}`;const level=document.createElement('b');level.textContent=item.severity;const message=item.target?document.createElement('a'):document.createElement('span');message.textContent=item.message;if(item.target)message.href=`#${{item.target}}`;row.append(level,message);findings.append(row);}}
+document.getElementById('signal-disclaimer').textContent=analysis.disclaimer;
+const signalRoot=document.getElementById('signals');
+for(const signal of analysis.signals){{const card=document.createElement('article');card.className=`signal signal-${{signal.status}}`;const shown=signal.status==='available'?`${{signal.value}}${{signal.unit}}`:'Not enough data';card.innerHTML='<div class="signal-head"><h3></h3><span class="confidence"></span></div><strong class="signal-value"></strong><p></p>';card.querySelector('h3').textContent=signal.label;card.querySelector('.confidence').textContent=`${{signal.confidence}} confidence · ${{signal.samples}} samples`;card.querySelector('.signal-value').textContent=shown;card.querySelector('p').textContent=signal.message;signalRoot.append(card);}}
 const ns='http://www.w3.org/2000/svg', css=n=>getComputedStyle(root).getPropertyValue(n).trim();
 const S=(tag,attrs={{}})=>{{const e=document.createElementNS(ns,tag);for(const [k,v] of Object.entries(attrs))e.setAttribute(k,v);return e;}};
 const extent=(a,key)=>{{const v=a.map(key).filter(Number.isFinite);return [Math.min(...v),Math.max(...v)];}};
