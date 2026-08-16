@@ -140,6 +140,13 @@ make simulator-test     # also execute the tests in a running simulator
 make coverage           # function coverage of the unit tests (see below)
 ```
 
+`make check` validates `resources/fitfields.xml` against the official
+`resources.xsd` bundled with the selected Connect IQ SDK. It then applies the
+declarative Schematron rules in `tools/schemas/fitfields.sch` for field-id,
+display-target, ordering, localization, and chart presentation constraints.
+The normal Monkey C builds remain the native check that localized resources
+resolve and the declared FIT fields integrate with Garmin's compiler.
+
 The Monkey C suite also runs a deterministic 50-second workout containing
 stillness, smooth swings, rest, irregular swings, and a deliberate acceleration
 spike. Those curves are generated on-watch and traverse the same production
