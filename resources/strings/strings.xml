@@ -27,7 +27,7 @@
     <string id="SettingBeatsPerRound2">Beats in loop B (0 = single loop)</string>
     <string id="SettingAccentEnabled">Accent first beat of each round</string>
     <string id="SettingCueMode">Metronome cues on</string>
-    <string id="SettingMotionCapture">Motion capture (research, uses more battery)</string>
+    <string id="SettingMotionCapture">Garmin Connect motion charts (uses more battery)</string>
     <string id="SettingSwingCounter">Swing counter (uses more battery; always on for challenges)</string>
     <string id="SettingSmoothnessEnabled">Local smoothness score (stays on watch)</string>
     <string id="SettingLoadExposureEnabled">Exercise load exposure (uses more battery)</string>
@@ -65,7 +65,10 @@
     <string id="FitSmoothness">Smoothness</string>
     <string id="FitSwingCount">Detected swings</string>
     <string id="FitMotionExposure">Motion exposure</string>
+    <string id="FitMotionIntensity">Acceleration RMS</string>
+    <string id="FitMotionIntensityChart">Wrist acceleration RMS</string>
     <string id="FitMotionPeak">Motion peak</string>
+    <string id="FitMotionPeakChart">Peak wrist acceleration</string>
     <string id="FitActiveSeconds">Active time</string>
     <string id="FitWeightVolume">Weight volume</string>
     <string id="FitSetsUnit">sets</string>
