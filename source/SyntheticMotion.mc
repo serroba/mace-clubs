@@ -4,6 +4,7 @@ import Toybox.Math;
 // Deterministic, on-watch motion source used by the headless Monkey C suite.
 // It deliberately lives beside the production motion pipeline: Python does
 // not generate these samples or the expected workout behaviour.
+(:test)
 module SyntheticMotion {
     const SAMPLE_RATE = 25;
     const STYLE_STILL = 0;
