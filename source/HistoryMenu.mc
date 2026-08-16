@@ -18,9 +18,11 @@ module HistoryMenu {
         }
         for (var i = log.size() - 1; i >= 0; i--) {
             var rec = log[i] as Array<Storage.ValueType>;
+            var score = SmoothnessLog.scoreOf(rec);
+            var scoreLabel = score < 0 ? "--" : score.toString();
             menu.addItem(
                 new WatchUi.MenuItem(
-                    Lang.format("$1$  $2$", [stamp(SmoothnessLog.epochOf(rec)), SmoothnessLog.scoreOf(rec)]),
+                    Lang.format("$1$  $2$", [stamp(SmoothnessLog.epochOf(rec)), scoreLabel]),
                     null,
                     i,
                     null

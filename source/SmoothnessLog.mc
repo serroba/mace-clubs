@@ -32,6 +32,17 @@ module SmoothnessLog {
     const IDX_SCORE = 6;
     const IDX_NSETS = 7;
     const IDX_SETS = 8;
+    const DETAIL_MAGIC = 20260816;
+    const DETAIL_HEADER = 4;
+    const DETAIL_STRIDE = 8;
+    const DETAIL_WORK = 0;
+    const DETAIL_REST = 1;
+    const DETAIL_MOVE = 2;
+    const DETAIL_SIDE = 3;
+    const DETAIL_SWINGS = 4;
+    const DETAIL_EXPOSURE = 5;
+    const DETAIL_PEAK = 6;
+    const DETAIL_ACTIVE = 7;
 
     function record(
         epoch as Number,
@@ -50,6 +61,45 @@ module SmoothnessLog {
         var rec = [epoch, eqType, eqCount, weightG, moveType, side, sessionScore, n] as Array<Storage.ValueType>;
         for (var i = 0; i < n; i++) {
             rec.add(setScores[i]);
+        }
+        return rec;
+    }
+
+    // New records append a versioned detail section after the legacy score
+    // array. Old records remain readable because their original indexes and
+    // declared score count never move.
+    function detailedRecord(
+        epoch as Number,
+        eqType as Number,
+        eqCount as Number,
+        weightG as Number,
+        moveType as Number,
+        side as Number,
+        sessionScore as Number,
+        setScores as Array<Number>,
+        totalWork as Number,
+        totalRest as Number,
+        blocks as Array<WorkBlockSummary>
+    ) as Array<Storage.ValueType> {
+        var rec = record(epoch, eqType, eqCount, weightG, moveType, side, sessionScore, setScores);
+        var n = blocks.size();
+        if (n > MAX_SETS) {
+            n = MAX_SETS;
+        }
+        rec.add(DETAIL_MAGIC);
+        rec.add(totalWork);
+        rec.add(totalRest);
+        rec.add(n);
+        for (var i = 0; i < n; i++) {
+            var block = blocks[i];
+            rec.add(block.getWorkSeconds());
+            rec.add(block.getRestSeconds());
+            rec.add(block.getMovementType());
+            rec.add(block.getWorkingSide());
+            rec.add(block.getSwings());
+            rec.add(block.getMotionExposure());
+            rec.add(block.getMotionPeak());
+            rec.add(block.getActiveSeconds());
         }
         return rec;
     }
@@ -109,6 +159,72 @@ module SmoothnessLog {
             return -1;
         }
         return field(rec, IDX_SETS + index);
+    }
+
+    function hasDetails(rec as Array<Storage.ValueType>) as Boolean {
+        var start = detailStart(rec);
+        return rec.size() >= start + DETAIL_HEADER && field(rec, start) == DETAIL_MAGIC;
+    }
+
+    function totalWorkOf(rec as Array<Storage.ValueType>) as Number {
+        return hasDetails(rec) ? field(rec, detailStart(rec) + 1) : 0;
+    }
+
+    function totalRestOf(rec as Array<Storage.ValueType>) as Number {
+        return hasDetails(rec) ? field(rec, detailStart(rec) + 2) : 0;
+    }
+
+    function blockCountOf(rec as Array<Storage.ValueType>) as Number {
+        if (!hasDetails(rec)) {
+            return 0;
+        }
+        var start = detailStart(rec);
+        var declared = field(rec, start + 3);
+        var available = (rec.size() - start - DETAIL_HEADER) / DETAIL_STRIDE;
+        return declared < available ? declared : available;
+    }
+
+    function blockWorkOf(rec as Array<Storage.ValueType>, index as Number) as Number {
+        return blockField(rec, index, DETAIL_WORK, 0);
+    }
+
+    function blockRestOf(rec as Array<Storage.ValueType>, index as Number) as Number {
+        return blockField(rec, index, DETAIL_REST, 0);
+    }
+
+    function blockMoveOf(rec as Array<Storage.ValueType>, index as Number) as Number {
+        return blockField(rec, index, DETAIL_MOVE, moveOf(rec));
+    }
+
+    function blockSideOf(rec as Array<Storage.ValueType>, index as Number) as Number {
+        return blockField(rec, index, DETAIL_SIDE, sideOf(rec));
+    }
+
+    function blockSwingsOf(rec as Array<Storage.ValueType>, index as Number) as Number {
+        return blockField(rec, index, DETAIL_SWINGS, -1);
+    }
+
+    function blockExposureOf(rec as Array<Storage.ValueType>, index as Number) as Number {
+        return blockField(rec, index, DETAIL_EXPOSURE, -1);
+    }
+
+    function blockPeakOf(rec as Array<Storage.ValueType>, index as Number) as Number {
+        return blockField(rec, index, DETAIL_PEAK, -1);
+    }
+
+    function blockActiveOf(rec as Array<Storage.ValueType>, index as Number) as Number {
+        return blockField(rec, index, DETAIL_ACTIVE, -1);
+    }
+
+    function detailStart(rec as Array<Storage.ValueType>) as Number {
+        return IDX_SETS + setCountOf(rec);
+    }
+
+    function blockField(rec as Array<Storage.ValueType>, index as Number, offset as Number, fallback as Number) as Number {
+        if (index < 0 || index >= blockCountOf(rec)) {
+            return fallback;
+        }
+        return field(rec, detailStart(rec) + DETAIL_HEADER + index * DETAIL_STRIDE + offset);
     }
 
     function field(rec as Array<Storage.ValueType>, index as Number) as Number {
