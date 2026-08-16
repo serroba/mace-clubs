@@ -58,11 +58,10 @@ jobs:
       - name: Lint
         run: ~/.mc-tools/bin/monkey-c-linter source
 
-  build-all:
-    name: Build every manifest device
+  garmin-resources:
+    name: Validate Garmin resource contract
     runs-on: ubuntu-latest
     container:
-      # same image the test job's action uses: monkeyc on PATH, device files preinstalled
       image: ghcr.io/matco/connectiq-tester:latest
     steps:
       - uses: actions/checkout@v6
@@ -71,14 +70,46 @@ jobs:
         run: |
           apt-get update -qq && apt-get install -y -qq --no-install-recommends libxml2-utils
           bash tools/validate_fit_xml.sh
-      - name: Compile for each product in the manifest
+
+  build-shards:
+    # These are disposable compatibility builds. Release tags perform one clean
+    # Garmin export to create the store-ready multi-device .iq package.
+    name: Build manifest devices (shard ${{ matrix.label }}/8)
+    needs: garmin-resources
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { shard: 0, label: 1 }
+          - { shard: 1, label: 2 }
+          - { shard: 2, label: 3 }
+          - { shard: 3, label: 4 }
+          - { shard: 4, label: 5 }
+          - { shard: 5, label: 6 }
+          - { shard: 6, label: 7 }
+          - { shard: 7, label: 8 }
+    container:
+      # Same image the test job's action uses: monkeyc and device files included.
+      image: ghcr.io/matco/connectiq-tester:latest
+    env:
+      SHARD: ${{ matrix.shard }}
+      SHARD_COUNT: 8
+    steps:
+      - uses: actions/checkout@v6
+      - name: Compile this device shard
         shell: bash
         run: |
           openssl genrsa -out /tmp/key.pem 4096 2>/dev/null
           openssl pkcs8 -topk8 -inform PEM -outform DER -in /tmp/key.pem -out /tmp/key.der -nocrypt
           mkdir -p /tmp/sweep
-          fails=0; total=0
+          fails=0; total=0; index=0
           while IFS= read -r d; do
+            if (( index % SHARD_COUNT != SHARD )); then
+              index=$((index+1))
+              continue
+            fi
+            index=$((index+1))
             total=$((total+1))
             if ! monkeyc -f monkey.jungle -d "$d" -o "/tmp/sweep/$d.prg" -y /tmp/key.der -l 3 > "/tmp/sweep/$d.log" 2>&1; then
               fails=$((fails+1))
@@ -86,8 +117,21 @@ jobs:
               cat "/tmp/sweep/$d.log"
             fi
           done < <(grep -o 'product id="[^"]*"' manifest.xml | cut -d'"' -f2)
-          echo "$((total-fails))/$total devices build clean"
+          echo "Shard $((SHARD+1))/$SHARD_COUNT: $((total-fails))/$total devices build clean"
           test "$fails" -eq 0
+
+  build-all:
+    name: Build every manifest device
+    needs: build-shards
+    if: always()
+    runs-on: ubuntu-latest
+    env:
+      SHARDS_RESULT: ${{ needs.build-shards.result }}
+    steps:
+      - name: Confirm all device shards passed
+        run: |
+          echo "Device shard result: $SHARDS_RESULT"
+          test "$SHARDS_RESULT" = success
 
   test:
     name: Unit tests (${{ matrix.device }})
