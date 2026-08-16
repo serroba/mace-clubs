@@ -11,9 +11,15 @@ RAFIKI ?= $(shell $(TOOL_RESOLVER) rafiki)
 JAVA_PATH := $(if $(findstring /,$(JAVA)),$(dir $(JAVA)):,)
 export PATH := $(JAVA_PATH)$(PATH)
 
-.PHONY: check doctor tool-resolver-test xml fit-schema format format-check lint build test-build simulator-test coverage clean
+.PHONY: check pre-commit install-hooks doctor tool-resolver-test xml fit-schema format format-check lint build test-build simulator-test coverage clean
 
 check: doctor tool-resolver-test xml fit-schema format-check lint build test-build
+
+pre-commit:
+	bash tools/pre_commit.sh
+
+install-hooks:
+	bash tools/install_hooks.sh
 
 doctor:
 	@"$(JAVA)" -version >/dev/null 2>&1 || { echo "a working Java runtime was not found (or set JAVA=/path/to/java)"; exit 1; }
