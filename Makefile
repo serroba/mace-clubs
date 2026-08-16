@@ -1,20 +1,29 @@
 DEVICE ?= instinct3solar45mm
 DEVELOPER_KEY ?= developer_key.der
 BIN_DIR ?= bin
-MONKEYC ?= monkeyc
-MONKEYDO ?= monkeydo
-RAFIKI ?= rafiki
+TOOL_RESOLVER := python3 tools/resolve_tool.py
+JAVA ?= $(shell $(TOOL_RESOLVER) java)
+MONKEYC ?= $(shell $(TOOL_RESOLVER) monkeyc)
+MONKEYDO ?= $(shell $(TOOL_RESOLVER) monkeydo)
+FORMATTER ?= $(shell $(TOOL_RESOLVER) monkey-c-formatter)
+LINTER ?= $(shell $(TOOL_RESOLVER) monkey-c-linter)
+RAFIKI ?= $(shell $(TOOL_RESOLVER) rafiki)
+JAVA_PATH := $(if $(findstring /,$(JAVA)),$(dir $(JAVA)):,)
+export PATH := $(JAVA_PATH)$(PATH)
 
-.PHONY: check doctor xml fit-schema format format-check lint build test-build simulator-test coverage clean
+.PHONY: check doctor tool-resolver-test xml fit-schema format format-check lint build test-build simulator-test coverage clean
 
-check: doctor xml fit-schema format-check lint build test-build
+check: doctor tool-resolver-test xml fit-schema format-check lint build test-build
 
 doctor:
-	@command -v java >/dev/null || { echo "java is not on PATH"; exit 1; }
+	@"$(JAVA)" -version >/dev/null 2>&1 || { echo "a working Java runtime was not found (or set JAVA=/path/to/java)"; exit 1; }
 	@command -v "$(MONKEYC)" >/dev/null || { echo "monkeyc is not on PATH (or set MONKEYC=/path/to/monkeyc)"; exit 1; }
-	@command -v monkey-c-formatter >/dev/null || { echo "monkey-c-formatter is not on PATH"; exit 1; }
-	@command -v monkey-c-linter >/dev/null || { echo "monkey-c-linter is not on PATH"; exit 1; }
+	@command -v "$(FORMATTER)" >/dev/null || { echo "monkey-c-formatter was not found (install it with cargo or set FORMATTER=/path/to/monkey-c-formatter)"; exit 1; }
+	@command -v "$(LINTER)" >/dev/null || { echo "monkey-c-linter was not found (install it with cargo or set LINTER=/path/to/monkey-c-linter)"; exit 1; }
 	@command -v xmllint >/dev/null || { echo "xmllint is not on PATH"; exit 1; }
+
+tool-resolver-test:
+	python3 -m unittest tools/test_resolve_tool.py
 
 xml:
 	@find . -name '*.xml' -not -path './.git/*' -print0 | xargs -0 -n1 xmllint --noout
@@ -24,13 +33,13 @@ fit-schema:
 	python3 -m unittest tools/test_validate_fit_schema.py
 
 format:
-	monkey-c-formatter source
+	"$(FORMATTER)" source
 
 format-check:
-	monkey-c-formatter --check source
+	"$(FORMATTER)" --check source
 
 lint:
-	monkey-c-linter source
+	"$(LINTER)" source
 
 $(DEVELOPER_KEY):
 	openssl genrsa -out $(DEVELOPER_KEY).pem 4096
