@@ -861,6 +861,26 @@ class WorkoutSession {
         return _swingCounter.getCount();
     }
 
+    function getCurrentSetSwings() as Number {
+        if (!_swingCounting || !_workOpen) {
+            return 0;
+        }
+        var count = _swingCounter.getCount() - _swingsAtBlockStart;
+        return count < 0 ? 0 : count;
+    }
+
+    // A missed or false-positive detection can be corrected before SELECT
+    // commits the current set. The same corrected counter feeds FIT output.
+    function adjustCurrentSetSwings(delta as Number) as Void {
+        if (!_swingCounting || !_workOpen || delta == 0) {
+            return;
+        }
+        if (delta < 0 && getCurrentSetSwings() == 0) {
+            return;
+        }
+        _swingCounter.adjust(delta > 0 ? 1 : -1);
+    }
+
     private function recordSwingTotal() as Void {
         var field = _totalSwingsField;
         if (field != null && _swingCounting) {

@@ -88,3 +88,13 @@ function testSwingCounterResets(logger as Test.Logger) as Boolean {
     Test.assertEqualMessage(counter.getCount(), 1, "counting resumes after reset");
     return true;
 }
+
+(:test)
+function testSwingCounterManualCorrectionNeverGoesNegative(logger as Test.Logger) as Boolean {
+    var counter = new SwingCounter.Counter();
+    counter.adjust(-1);
+    Test.assertEqualMessage(counter.getCount(), 0, "correction floors at zero");
+    counter.adjust(1);
+    Test.assertEqualMessage(counter.getCount(), 1, "positive correction adds one");
+    return true;
+}

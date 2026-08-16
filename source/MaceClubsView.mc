@@ -35,6 +35,10 @@ class MaceClubsView extends WatchUi.View {
     private var _circleRounds as Boolean = true;
     private var _freePhaseStartMs as Number = 0;
     private var _summarySet as Number = 0;
+    private var _trainingMode as Number = TrainingMode.INTERVAL;
+    private var _repTarget as Number = TrainingMode.DEFAULT_TARGET;
+    private var _lastRepCount as Number = 0;
+    private var _targetAlerted as Boolean = false;
 
     function initialize() {
         View.initialize();
@@ -65,6 +69,8 @@ class MaceClubsView extends WatchUi.View {
                 _circleRounds = c == 0;
             }
         } catch (e) {}
+        _trainingMode = TrainingMode.normalize(SettingsMenu.numProp("trainingMode", TrainingMode.INTERVAL));
+        _repTarget = SettingsMenu.numProp("repTarget", TrainingMode.DEFAULT_TARGET);
     }
 
     function onShow() as Void {
@@ -77,7 +83,31 @@ class MaceClubsView extends WatchUi.View {
 
     function onRefresh() as Void {
         checkPlan();
+        checkRepTarget();
         WatchUi.requestUpdate();
+    }
+
+    private function checkRepTarget() as Void {
+        if (!isRepMode() || paused || isFreeResting() || !workout.isStarted()) {
+            return;
+        }
+        var current = workout.getCurrentSetSwings();
+        if (!_targetAlerted && TrainingMode.crossedTarget(_lastRepCount, current, _repTarget)) {
+            _targetAlerted = true;
+            playTransitionCue(false);
+        }
+        _lastRepCount = current;
+    }
+
+    function isRepMode() as Boolean {
+        return _trainingMode == TrainingMode.REPS;
+    }
+
+    function adjustRepCount(delta as Number) as Void {
+        if (isRepMode() && !isFreeResting()) {
+            workout.adjustCurrentSetSwings(delta);
+            _lastRepCount = workout.getCurrentSetSwings();
+        }
     }
 
     function selectedPreset() as Dictionary {
@@ -113,7 +143,7 @@ class MaceClubsView extends WatchUi.View {
         }
         var preset = selectedPreset();
         var sets = preset[:sets] as Number;
-        if (sets > 0) {
+        if (!isRepMode() && sets > 0) {
             plan = new Intervals.Plan(sets, preset[:work] as Number, preset[:rest] as Number);
         } else {
             plan = null;
@@ -124,11 +154,13 @@ class MaceClubsView extends WatchUi.View {
         if (challengeFlag instanceof Boolean) {
             challenge = challengeFlag;
         }
-        workout.forceSwingCounting(challenge);
+        workout.forceSwingCounting(challenge || isRepMode());
         _lastPhase = null;
         _lastSet = 0;
         _warnedSet = 0;
         freePhase = FreeTraining.PHASE_WORK;
+        _lastRepCount = 0;
+        _targetAlerted = false;
         metronome.resetBeatCount();
         applyMetronomePattern();
         _starting = true;
@@ -179,7 +211,9 @@ class MaceClubsView extends WatchUi.View {
         _starting = false;
         workout.start();
         _freePhaseStartMs = 0;
-        metronome.start();
+        if (!isRepMode()) {
+            metronome.start();
+        }
         playTransitionCue(false);
         WatchUi.requestUpdate();
     }
@@ -205,11 +239,15 @@ class MaceClubsView extends WatchUi.View {
             workout.endRestLapWithDuration(duration);
             workout.beginSmoothnessSet();
             metronome.resetBeatCount();
-            metronome.start();
+            if (!isRepMode()) {
+                metronome.start();
+            }
         }
         _freePhaseStartMs = elapsedMs;
         _summarySet = workout.getSets() - 1;
         freePhase = FreeTraining.nextPhase(freePhase);
+        _lastRepCount = 0;
+        _targetAlerted = false;
         playTransitionCue(false);
         WatchUi.requestUpdate();
     }
@@ -544,7 +582,9 @@ class MaceClubsView extends WatchUi.View {
                 iconY = 2;
             }
             dc.drawBitmap(_subwindow ? cx - 45 : cx - 31, iconY, _icon);
-            if (!isFreeTraining) {
+            if (isRepMode()) {
+                dc.drawText(cx, h * 35 / 100, Graphics.FONT_SMALL, "REP MODE", Graphics.TEXT_JUSTIFY_CENTER);
+            } else if (!isFreeTraining) {
                 dc.drawText(
                     cx,
                     h * 35 / 100,
@@ -557,7 +597,9 @@ class MaceClubsView extends WatchUi.View {
                 cx,
                 h * (isFreeTraining ? 40 : 49) / 100,
                 isFreeTraining ? Graphics.FONT_SMALL : Graphics.FONT_TINY,
-                Lang.format("$1$ bpm | $2$", [metronome.getBpm(), patternLabel(preset)]),
+                isRepMode()
+                    ? Lang.format("target $1$ swings", [TrainingMode.targetLabel(_repTarget)])
+                    : Lang.format("$1$ bpm | $2$", [metronome.getBpm(), patternLabel(preset)]),
                 Graphics.TEXT_JUSTIFY_CENTER
             );
             dc.drawText(
@@ -692,9 +734,15 @@ class MaceClubsView extends WatchUi.View {
         var phaseText = freeResting ? "REST" : "WORK";
         var mainValue = freeResting ? "REST" : metronome.getBpm().toString();
         var mainLabel = freeResting ? "SELECT: work" : "bpm";
+        if (isRepMode()) {
+            mainValue = freeResting ? "REST" : workout.getCurrentSetSwings().toString();
+            mainLabel = freeResting
+                ? "SELECT: next set"
+                : (_repTarget > 0 ? Lang.format("swings / $1$", [_repTarget]) : "swings");
+        }
         // Working a combo, the glanceable value is the current hand and
         // movement (e.g. "L REV MILL"), not the tempo.
-        var comboWorking = !freeResting && workout.getMovementType() == Movement.TYPE_COMBO;
+        var comboWorking = !isRepMode() && !freeResting && workout.getMovementType() == Movement.TYPE_COMBO;
         if (comboWorking) {
             mainValue = Combo.statusLabel(metronome.getBeatCount(), Combo.beats());
             mainLabel = Lang.format("$1$ bpm", [metronome.getBpm()]);

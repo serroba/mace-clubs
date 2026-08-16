@@ -9,6 +9,14 @@ function testSettingsMenuCornerLabels(logger as Test.Logger) as Boolean {
 }
 
 (:test)
+function testSettingsMenuTrainingModeLabels(logger as Test.Logger) as Boolean {
+    Test.assertEqualMessage(TrainingMode.label(0), "intervals", "interval mode label");
+    Test.assertEqualMessage(TrainingMode.label(1), "reps", "rep mode label");
+    Test.assertEqualMessage(TrainingMode.targetLabel(50), "50", "target count label");
+    return true;
+}
+
+(:test)
 function testSettingsMenuCueLabels(logger as Test.Logger) as Boolean {
     Test.assertEqualMessage(SettingsMenu.cueLabelFor(0), "Cues: every loop", "loop cue label is compact");
     Test.assertEqualMessage(SettingsMenu.cueLabelFor(1), "Cues: every beat", "beat cue label is compact");

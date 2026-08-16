@@ -21,6 +21,9 @@ target is the **Instinct 3 Solar**; the manifest supports 120 Garmin wearables
 - Optional accelerometer swing counter, plus 5:00 and 10:00 Challenge presets
   (after the traditional timed max-swing gada competitions) where counting is
   always on and detected swings replace metronome rounds on screen
+- Rep mode for quantity-first sessions: no metronome or prescribed interval,
+  a large live per-set swing count, optional target cue, manual set/rest
+  boundaries, and UP/DOWN correction before a set is committed
 - Optional per-set exercise load exposure from wrist motion, recording dynamic
   acceleration exposure, peak, active seconds, and weight-volume when swing
   counting is also enabled; values are descriptive proxies, not tendon force
@@ -54,9 +57,9 @@ errors, missing series, metadata gaps, and a transparent data-quality score; use
 
 | Button | Idle | Recording | Paused |
 |---|---|---|---|
-| SELECT | Start workout | Free training: switch work/rest | Save & exit |
+| SELECT | Start workout | Free/Rep mode: switch work/rest | Save & exit |
 | BACK | Quit | Pause | Resume (unless finished) |
-| UP / DOWN | Choose workout preset | Tempo ±5 bpm | UP: discard and return home |
+| UP / DOWN | Choose workout preset | Tempo ±5 bpm; Rep mode: count ±1 | Browse sets |
 | MENU | Settings | Free rest: movement/side/discard menu; otherwise discard and return home | Discard and return home |
 
 Interval presets (e.g. 5 × 2:00 work / 1:00 rest) call work and rest with tone and
@@ -71,6 +74,13 @@ duration; duration controls move in 30-second steps.
 In Free training, SELECT completes the current set and enters REST; press SELECT
 again to begin the next WORK phase. Rest keeps activity and heart-rate recording
 running. BACK remains a true whole-session pause/resume control.
+Rep mode is enabled from MENU → Settings → Mode (or Garmin Connect settings).
+It uses the same manual work/rest flow but keeps the metronome silent and makes
+the current set's detected swings the primary metric. Its optional target (0
+means off) gives one cue when reached; on-watch target choices cycle through
+common values, while Garmin Connect accepts any value from 0–999. UP/DOWN adds
+or removes one rep while working, before SELECT commits that corrected count to
+the set summary and FIT lap.
 Garmin may label recorded set and rest boundaries as laps or splits. Work laps
 carry their one-based `set_number`; rest laps carry zero. Each boundary also
 records its work/rest phase, duration, implement weight, watch wrist, and
