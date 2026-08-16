@@ -140,6 +140,20 @@ make simulator-test     # also execute the tests in a running simulator
 make coverage           # function coverage of the unit tests (see below)
 ```
 
+Enable the repository's version-controlled Git hooks once per clone:
+
+```sh
+make install-hooks
+```
+
+The pre-commit hook checks only relevant staged files: XML well-formedness, the
+FIT XSD/Schematron contract, Monkey C formatting and linting, GitHub workflow
+syntax with `actionlint`, whitespace errors, unexpectedly large files, and
+private-key material. Install `actionlint` with `brew install actionlint` before
+editing workflows. The pre-push hook runs the complete `make check` suite. Hooks
+provide fast local feedback but can be bypassed, so CI repeats the authoritative
+checks.
+
 `make check` validates `resources/fitfields.xml` against the official
 `resources.xsd` bundled with the selected Connect IQ SDK. It then applies the
 declarative Schematron rules in `tools/schemas/fitfields.sch` for field-id,
