@@ -52,13 +52,33 @@ interpret insufficient data, and is covered by deterministic decline, spike,
 balance, and dropout scenarios. Outputs remain descriptive and explicitly avoid
 tendon-force, injury-risk, or readiness claims.
 
-### 4. History and workload trends
+### 4. History and workload trends — complete
 
 - Import multiple exports into a private local history.
 - Compare motion exposure, active time, volume, peaks, and smoothness with recent
   personal baselines.
 - Highlight abrupt load changes and repeated high-load sessions as review prompts.
 - Document retention, deletion, export, and backup behavior.
+
+Current CLI usage:
+
+```sh
+tools/.venv/bin/python tools/workout_history.py --database ~/mace-history.json import activity.fit export.zip
+tools/.venv/bin/python tools/workout_history.py --database ~/mace-history.json show
+tools/.venv/bin/python tools/workout_history.py --database ~/mace-history.json delete WORKOUT_ID
+tools/.venv/bin/python tools/workout_history.py --database ~/mace-history.json export backup.json
+tools/.venv/bin/python tools/workout_history.py --database ~/mace-history.json clear
+```
+
+The database is never uploaded, stores workout summaries rather than per-second
+sensor records, has no automatic retention deadline, and remains wherever the
+user selects with `--database`. `delete` removes one imported summary; `clear`
+removes all summaries; `export` creates a plain JSON backup under user control.
+
+Exit criterion: the CLI deduplicates and chronologically orders imports, compares
+the latest compatible workout against 3–8 prior personal sessions, flags changes
+of 50% or more for review, and never substitutes unrelated or missing workouts
+into a baseline.
 
 ### 5. Installable web experience
 
