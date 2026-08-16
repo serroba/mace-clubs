@@ -20,6 +20,16 @@ class SettingsMenuDelegate extends WatchUi.Menu2InputDelegate {
             Application.Properties.setValue(id, (item as WatchUi.ToggleMenuItem).isEnabled());
         } else if (id.equals("history")) {
             WatchUi.pushView(HistoryMenu.build(), new HistoryMenuDelegate(), WatchUi.SLIDE_UP);
+        } else if (id.equals("trainingMode")) {
+            var currentMode = SettingsMenu.numProp("trainingMode", TrainingMode.INTERVAL);
+            Application.Properties.setValue("trainingMode", currentMode == TrainingMode.REPS ? 0 : 1);
+            item.setLabel(SettingsMenu.trainingModeLabel());
+        } else if (id.equals("repTarget")) {
+            Application.Properties.setValue(
+                "repTarget",
+                TrainingMode.nextTarget(SettingsMenu.numProp("repTarget", TrainingMode.DEFAULT_TARGET))
+            );
+            item.setLabel(SettingsMenu.repTargetLabel());
         } else if (id.equals("circleShows")) {
             Application.Properties.setValue("circleShows", SettingsMenu.numProp("circleShows", 0) == 0 ? 1 : 0);
             item.setLabel(SettingsMenu.cornerLabel());

@@ -2,6 +2,10 @@
 <strings>
     <string id="AppName">Mace and Clubs</string>
     <string id="SettingDefaultBpm">Default tempo (bpm)</string>
+    <string id="SettingTrainingMode">Training mode</string>
+    <string id="TrainingIntervals">Intervals / tempo</string>
+    <string id="TrainingReps">Swing reps</string>
+    <string id="SettingRepTarget">Rep target (0 = off)</string>
     <string id="SettingEquipmentType">Training implement</string>
     <string id="SettingEquipmentCount">Number of clubs</string>
     <string id="SettingMaceWeight">Default mace weight (grams)</string>

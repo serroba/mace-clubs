@@ -1,5 +1,14 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <settings>
+    <setting propertyKey="@Properties.trainingMode" title="@Strings.SettingTrainingMode">
+        <settingConfig type="list">
+            <listEntry value="0">@Strings.TrainingIntervals</listEntry>
+            <listEntry value="1">@Strings.TrainingReps</listEntry>
+        </settingConfig>
+    </setting>
+    <setting propertyKey="@Properties.repTarget" title="@Strings.SettingRepTarget">
+        <settingConfig type="numeric" min="0" max="999"/>
+    </setting>
     <setting propertyKey="@Properties.defaultBpm" title="@Strings.SettingDefaultBpm">
         <settingConfig type="numeric" min="5" max="240"/>
     </setting>

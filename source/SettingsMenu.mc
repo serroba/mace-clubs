@@ -10,6 +10,8 @@ module SettingsMenu {
         // Instinct's circular safe area is too short for Menu2's secondary
         // labels. Keep the current value in one compact primary label.
         menu.addItem(new WatchUi.MenuItem("History", null, "history", null));
+        menu.addItem(new WatchUi.MenuItem(trainingModeLabel(), null, "trainingMode", null));
+        menu.addItem(new WatchUi.MenuItem(repTargetLabel(), null, "repTarget", null));
         menu.addItem(new WatchUi.MenuItem(cornerLabel(), null, "circleShows", null));
         menu.addItem(new WatchUi.MenuItem(wristLabel(), null, "watchWrist", null));
         menu.addItem(new WatchUi.MenuItem(movementLabel(), null, "movementType", null));
@@ -89,6 +91,14 @@ module SettingsMenu {
 
     function aboutLabel() as String {
         return Lang.format("Mace & Clubs v$1$", [AppVersion.LABEL]);
+    }
+
+    function trainingModeLabel() as String {
+        return Lang.format("Mode: $1$", [TrainingMode.label(numProp("trainingMode", 0))]);
+    }
+
+    function repTargetLabel() as String {
+        return Lang.format("Rep target: $1$", [TrainingMode.targetLabel(numProp("repTarget", 50))]);
     }
 
     // circleShows: 0 = rounds (default), 1 = heart rate.

@@ -50,6 +50,13 @@ module SwingCounter {
             return _count;
         }
 
+        function adjust(delta as Number) as Void {
+            _count += delta;
+            if (_count < 0) {
+                _count = 0;
+            }
+        }
+
         function reset() as Void {
             _count = 0;
             _armed = true;

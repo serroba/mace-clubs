@@ -42,7 +42,7 @@ class MaceClubsDelegate extends WatchUi.BehaviorDelegate {
         if (_view.paused) {
             _view.paused = false;
             _view.workout.resume();
-            if (!_view.isFreeResting()) {
+            if (!_view.isFreeResting() && !_view.isRepMode()) {
                 _view.metronome.start();
             }
             WatchUi.requestUpdate();
@@ -97,7 +97,11 @@ class MaceClubsDelegate extends WatchUi.BehaviorDelegate {
         } else if (action == Navigation.PREVIOUS_HOME) {
             showHomeConfirmation();
         } else if (action == Navigation.PREVIOUS_TEMPO_UP) {
-            _view.metronome.adjustBpm(1);
+            if (_view.isRepMode()) {
+                _view.adjustRepCount(1);
+            } else {
+                _view.metronome.adjustBpm(1);
+            }
         } else {
             _view.cyclePreset(-1);
         }
@@ -119,7 +123,11 @@ class MaceClubsDelegate extends WatchUi.BehaviorDelegate {
         } else if (_view.paused) {
             _view.cycleSummary(1);
         } else if (_view.workout.isStarted()) {
-            _view.metronome.adjustBpm(-1);
+            if (_view.isRepMode()) {
+                _view.adjustRepCount(-1);
+            } else {
+                _view.metronome.adjustBpm(-1);
+            }
         } else {
             _view.cyclePreset(1);
         }
