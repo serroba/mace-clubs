@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<resources xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="https://developer.garmin.com/downloads/connect-iq/resources.xsd">
+    <fitContributions>
+        <fitField id="0" displayInActivitySummary="true" sortOrder="0" dataLabel="@Strings.FitTotalSets" unitLabel="@Strings.FitSetsUnit" />
+        <fitField id="26" displayInActivitySummary="true" sortOrder="1" dataLabel="@Strings.FitImplement" unitLabel="@Strings.FitNoUnit" />
+        <fitField id="6" displayInActivitySummary="true" sortOrder="2" dataLabel="@Strings.FitClubCount" unitLabel="@Strings.FitCountUnit" />
+        <fitField id="7" displayInActivitySummary="true" sortOrder="3" dataLabel="@Strings.FitImplementWeight" unitLabel="@Strings.FitGramsUnit" />
+        <fitField id="23" displayInActivitySummary="true" sortOrder="4" dataLabel="@Strings.FitWorkTime" unitLabel="@Strings.FitSecondsUnit" />
+        <fitField id="24" displayInActivitySummary="true" sortOrder="5" dataLabel="@Strings.FitRestTime" unitLabel="@Strings.FitSecondsUnit" />
+        <fitField id="17" displayInActivitySummary="true" sortOrder="6" dataLabel="@Strings.FitTotalSwings" unitLabel="@Strings.FitSwingsUnit" />
+        <fitField id="1" displayInActivitySummary="true" sortOrder="7" precision="1" dataLabel="@Strings.FitBatteryUsed" unitLabel="@Strings.FitPercentUnit" />
+
+        <fitField id="8" displayInActivityLaps="true" sortOrder="10" dataLabel="@Strings.FitSetNumber" unitLabel="@Strings.FitSetsUnit" />
+        <fitField id="25" displayInActivityLaps="true" sortOrder="11" dataLabel="@Strings.FitPhase" unitLabel="@Strings.FitNoUnit" />
+        <fitField id="11" displayInActivityLaps="true" sortOrder="12" dataLabel="@Strings.FitPhaseDuration" unitLabel="@Strings.FitSecondsUnit" />
+        <fitField id="12" displayInActivityLaps="true" sortOrder="13" dataLabel="@Strings.FitImplementWeight" unitLabel="@Strings.FitGramsUnit" />
+        <fitField id="14" displayInActivityLaps="true" sortOrder="14" dataLabel="@Strings.FitSmoothness" unitLabel="@Strings.FitScoreUnit" />
+        <fitField id="18" displayInActivityLaps="true" sortOrder="15" dataLabel="@Strings.FitSwingCount" unitLabel="@Strings.FitSwingsUnit" />
+        <fitField id="19" displayInActivityLaps="true" sortOrder="16" dataLabel="@Strings.FitMotionExposure" unitLabel="@Strings.FitExposureUnit" />
+        <fitField id="20" displayInActivityLaps="true" sortOrder="17" dataLabel="@Strings.FitMotionPeak" unitLabel="@Strings.FitPeakUnit" />
+        <fitField id="21" displayInActivityLaps="true" sortOrder="18" dataLabel="@Strings.FitActiveSeconds" unitLabel="@Strings.FitSecondsUnit" />
+        <fitField id="22" displayInActivityLaps="true" sortOrder="19" dataLabel="@Strings.FitWeightVolume" unitLabel="@Strings.FitVolumeUnit" />
+    </fitContributions>
+</resources>

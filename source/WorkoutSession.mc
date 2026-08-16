@@ -34,6 +34,10 @@ class WorkoutSession {
     const FIELD_ID_MOTION_PEAK = 20;
     const FIELD_ID_ACTIVE_SECONDS = 21;
     const FIELD_ID_WEIGHT_VOLUME = 22;
+    const FIELD_ID_TOTAL_WORK_SECONDS = 23;
+    const FIELD_ID_TOTAL_REST_SECONDS = 24;
+    const FIELD_ID_PHASE_NAME = 25;
+    const FIELD_ID_EQUIPMENT_NAME = 26;
 
     private var _session as ActivityRecording.Session?;
     private var _setsField as FitContributor.Field?;
@@ -52,6 +56,14 @@ class WorkoutSession {
     private var _activeSecondsField as FitContributor.Field?;
     private var _weightVolumeField as FitContributor.Field?;
     private var _batteryField as FitContributor.Field?;
+    private var _equipmentTypeField as FitContributor.Field?;
+    private var _equipmentCountField as FitContributor.Field?;
+    private var _equipmentWeightField as FitContributor.Field?;
+    private var _watchWristField as FitContributor.Field?;
+    private var _totalWorkField as FitContributor.Field?;
+    private var _totalRestField as FitContributor.Field?;
+    private var _phaseNameField as FitContributor.Field?;
+    private var _equipmentNameField as FitContributor.Field?;
     private var _rmsField as FitContributor.Field?;
     private var _peakField as FitContributor.Field?;
     private var _zcField as FitContributor.Field?;
@@ -286,34 +298,55 @@ class WorkoutSession {
                 FitContributor.DATA_TYPE_FLOAT,
                 {:mesgType => FitContributor.MESG_TYPE_SESSION, :units => "%"}
             );
-            var equipmentType = session.createField(
+            _equipmentTypeField = session.createField(
                 "implement_type",
                 FIELD_ID_EQUIPMENT_TYPE,
                 FitContributor.DATA_TYPE_UINT8,
                 {:mesgType => FitContributor.MESG_TYPE_SESSION, :units => "0=mace 1=clubs"}
             );
-            var equipmentCount = session.createField(
+            _equipmentCountField = session.createField(
                 "implement_count",
                 FIELD_ID_EQUIPMENT_COUNT,
                 FitContributor.DATA_TYPE_UINT8,
                 {:mesgType => FitContributor.MESG_TYPE_SESSION, :units => "implements"}
             );
-            var equipmentWeight = session.createField(
+            _equipmentWeightField = session.createField(
                 "implement_weight",
                 FIELD_ID_EQUIPMENT_WEIGHT,
                 FitContributor.DATA_TYPE_UINT16,
                 {:mesgType => FitContributor.MESG_TYPE_SESSION, :units => "g"}
             );
-            var watchWrist = session.createField(
+            _watchWristField = session.createField(
                 "watch_wrist",
                 FIELD_ID_WATCH_WRIST,
                 FitContributor.DATA_TYPE_UINT8,
                 {:mesgType => FitContributor.MESG_TYPE_SESSION, :units => "0=left 1=right"}
             );
-            equipmentType.setData(_equipmentType);
-            equipmentCount.setData(_equipmentCount);
-            equipmentWeight.setData(_equipmentWeightGrams);
-            watchWrist.setData(_watchWrist);
+            _totalWorkField = session.createField(
+                "work_time",
+                FIELD_ID_TOTAL_WORK_SECONDS,
+                FitContributor.DATA_TYPE_UINT32,
+                {:mesgType => FitContributor.MESG_TYPE_SESSION, :units => "s"}
+            );
+            _totalRestField = session.createField(
+                "rest_time",
+                FIELD_ID_TOTAL_REST_SECONDS,
+                FitContributor.DATA_TYPE_UINT32,
+                {:mesgType => FitContributor.MESG_TYPE_SESSION, :units => "s"}
+            );
+            _phaseNameField = session.createField(
+                "phase_name",
+                FIELD_ID_PHASE_NAME,
+                FitContributor.DATA_TYPE_STRING,
+                {:mesgType => FitContributor.MESG_TYPE_LAP, :count => 5, :units => ""}
+            );
+            _equipmentNameField = session.createField(
+                "implement_name",
+                FIELD_ID_EQUIPMENT_NAME,
+                FitContributor.DATA_TYPE_STRING,
+                {:mesgType => FitContributor.MESG_TYPE_SESSION, :count => 8, :units => ""}
+            );
+            recordSessionSummary();
             _startBattery = System.getSystemStats().battery;
             _session = session;
             startMotionCapture(session);
@@ -561,7 +594,7 @@ class WorkoutSession {
     }
 
     function endRestLapWithDuration(durationSeconds as Number) as Void {
-        if (_sets == 0) {
+        if (_sets == 0 || durationSeconds <= 0) {
             return;
         }
         _blocks[_sets - 1].setRestSeconds(clampDuration(durationSeconds));
@@ -595,6 +628,10 @@ class WorkoutSession {
         var motionPeakField = _motionPeakField;
         var activeSecondsField = _activeSecondsField;
         var weightVolumeField = _weightVolumeField;
+        var phaseNameField = _phaseNameField;
+        if (phaseNameField != null) {
+            phaseNameField.setData(phase == 1 ? "Work" : "Rest");
+        }
         if (phaseField != null) {
             phaseField.setData(phase);
         }
@@ -655,6 +692,7 @@ class WorkoutSession {
             }
             recordBatteryUsed();
             recordSwingTotal();
+            recordSessionSummary();
             saveSmoothnessSummary();
             appendHistoryLog();
             session.save();
@@ -833,6 +871,41 @@ class WorkoutSession {
         }
     }
 
+    // Session fields are written at the end of the recording. Keep their
+    // Field objects alive and refresh every value just before save; values
+    // submitted only during setup can be lost before the session message is
+    // serialized on some devices.
+    private function recordSessionSummary() as Void {
+        var equipmentType = _equipmentTypeField;
+        var equipmentCount = _equipmentCountField;
+        var equipmentWeight = _equipmentWeightField;
+        var watchWrist = _watchWristField;
+        var totalWork = _totalWorkField;
+        var totalRest = _totalRestField;
+        var equipmentName = _equipmentNameField;
+        if (equipmentType != null) {
+            equipmentType.setData(_equipmentType);
+        }
+        if (equipmentCount != null) {
+            equipmentCount.setData(_equipmentCount);
+        }
+        if (equipmentWeight != null) {
+            equipmentWeight.setData(_equipmentWeightGrams);
+        }
+        if (watchWrist != null) {
+            watchWrist.setData(_watchWrist);
+        }
+        if (totalWork != null) {
+            totalWork.setData(getTotalWorkSeconds());
+        }
+        if (totalRest != null) {
+            totalRest.setData(getTotalRestSeconds());
+        }
+        if (equipmentName != null) {
+            equipmentName.setData(Equipment.implementName(_equipmentType));
+        }
+    }
+
     // Session-level battery cost: start minus end, floored at zero
     // (solar charge or a charger mid-session would otherwise go negative).
     private function recordBatteryUsed() as Void {
@@ -877,6 +950,14 @@ class WorkoutSession {
         _activeSecondsField = null;
         _weightVolumeField = null;
         _batteryField = null;
+        _equipmentTypeField = null;
+        _equipmentCountField = null;
+        _equipmentWeightField = null;
+        _watchWristField = null;
+        _totalWorkField = null;
+        _totalRestField = null;
+        _phaseNameField = null;
+        _equipmentNameField = null;
         _rmsField = null;
         _peakField = null;
         _zcField = null;
