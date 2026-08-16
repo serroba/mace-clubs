@@ -40,6 +40,17 @@ function testSetSummaryTracksWorkAndRestDurations(logger as Test.Logger) as Bool
 }
 
 (:test)
+function testZeroRestDoesNotEraseCompletedRest(logger as Test.Logger) as Boolean {
+    var ws = new WorkoutSession();
+    ws.addSetWithDuration(120);
+    ws.endRestLapWithDuration(45);
+    ws.endRestLap();
+    Test.assertEqualMessage(ws.getSetRestSeconds(0), 45, "zero rest closure preserves the recorded rest");
+    Test.assertEqualMessage(ws.getTotalRestSeconds(), 45, "zero rest closure adds no phantom duration");
+    return true;
+}
+
+(:test)
 function testEquipmentSelectionPreparesChosenSessionProfile(logger as Test.Logger) as Boolean {
     var session = new WorkoutSession();
     session.selectEquipment(Equipment.TYPE_CLUBS, 2);
