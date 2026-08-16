@@ -821,13 +821,12 @@ class WorkoutSession {
     // above, which stays a like-for-like comparison keyed by implement.
     private function appendHistoryLog() as Void {
         var score = getSmoothnessScore();
-        if (!_smoothnessEnabled || score < 0) {
+        if (_blocks.size() == 0) {
             return;
         }
-        var count = getSetSmoothnessCount();
         var sets = [] as Array<Number>;
-        for (var i = 0; i < count; i++) {
-            sets.add(getSetSmoothnessScore(i));
+        for (var i = 0; i < _blocks.size(); i++) {
+            sets.add(_blocks[i].getSmoothness());
         }
         var rec = SmoothnessLog.record(
             Time.now().value(),
@@ -839,6 +838,7 @@ class WorkoutSession {
             score,
             sets
         );
+        rec = SmoothnessLog.withDetails(rec, getTotalWorkSeconds(), getTotalRestSeconds(), _blocks);
         try {
             var stored = Storage.getValue(SmoothnessLog.STORAGE_KEY);
             var log = stored instanceof Array
