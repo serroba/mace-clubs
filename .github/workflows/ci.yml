@@ -169,3 +169,32 @@ jobs:
           language: "Monkey C"
           label: code-coverage/monkey-c
           fail-on-error: false
+
+  synthetic-fit:
+    name: Synthetic FIT and visual contract
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.13"
+          cache: pip
+          cache-dependency-path: tools/requirements.txt
+      - name: Install FIT tooling
+        run: pip install -r tools/requirements.txt coverage
+      - name: Generate and verify synthetic workout
+        run: |
+          python tools/synthetic_workout.py --check --output-dir build/synthetic-workout
+          python tools/report_fit.py build/synthetic-workout/synthetic-workout.fit \
+            -o build/synthetic-workout/synthetic-workout.html
+          python -m coverage run tools/test_synthetic_workout.py
+          python -m coverage report --include=tools/synthetic_workout.py --fail-under=95
+      - name: Upload review artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: synthetic-workout-visuals
+          path: |
+            build/synthetic-workout/synthetic-workout.fit
+            build/synthetic-workout/synthetic-workout.svg
+            build/synthetic-workout/synthetic-workout.html
+          if-no-files-found: error
