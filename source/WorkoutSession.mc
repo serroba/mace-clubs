@@ -828,7 +828,7 @@ class WorkoutSession {
         for (var i = 0; i < _blocks.size(); i++) {
             sets.add(_blocks[i].getSmoothness());
         }
-        var rec = SmoothnessLog.detailedRecord(
+        var rec = SmoothnessLog.record(
             Time.now().value(),
             _equipmentType,
             _equipmentCount,
@@ -836,11 +836,9 @@ class WorkoutSession {
             _movementType,
             _workingSide,
             score,
-            sets,
-            getTotalWorkSeconds(),
-            getTotalRestSeconds(),
-            _blocks
+            sets
         );
+        rec = SmoothnessLog.withDetails(rec, getTotalWorkSeconds(), getTotalRestSeconds(), _blocks);
         try {
             var stored = Storage.getValue(SmoothnessLog.STORAGE_KEY);
             var log = stored instanceof Array

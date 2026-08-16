@@ -96,7 +96,7 @@ function testDetailedHistoryKeepsWorkoutAndBlockMetrics(logger as Test.Logger) a
     first.setRestSeconds(90);
     first.setSwings(42);
     first.setLoadExposure(12345, 2800, 120);
-    var rec = SmoothnessLog.detailedRecord(
+    var rec = SmoothnessLog.record(
         1700000000,
         Equipment.TYPE_CLUBS,
         2,
@@ -104,11 +104,9 @@ function testDetailedHistoryKeepsWorkoutAndBlockMetrics(logger as Test.Logger) a
         Movement.TYPE_FLOW_OTHER,
         Movement.SIDE_TWO_HANDED,
         60,
-        [60],
-        180,
-        90,
-        [first]
+        [60]
     );
+    rec = SmoothnessLog.withDetails(rec, 180, 90, [first]);
     Test.assertMessage(SmoothnessLog.hasDetails(rec), "new record has detail marker");
     Test.assertEqualMessage(SmoothnessLog.totalWorkOf(rec), 180, "total work");
     Test.assertEqualMessage(SmoothnessLog.totalRestOf(rec), 90, "total rest");

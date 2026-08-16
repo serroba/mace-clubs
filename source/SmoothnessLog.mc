@@ -68,20 +68,12 @@ module SmoothnessLog {
     // New records append a versioned detail section after the legacy score
     // array. Old records remain readable because their original indexes and
     // declared score count never move.
-    function detailedRecord(
-        epoch as Number,
-        eqType as Number,
-        eqCount as Number,
-        weightG as Number,
-        moveType as Number,
-        side as Number,
-        sessionScore as Number,
-        setScores as Array<Number>,
+    function withDetails(
+        rec as Array<Storage.ValueType>,
         totalWork as Number,
         totalRest as Number,
         blocks as Array<WorkBlockSummary>
     ) as Array<Storage.ValueType> {
-        var rec = record(epoch, eqType, eqCount, weightG, moveType, side, sessionScore, setScores);
         var n = blocks.size();
         if (n > MAX_SETS) {
             n = MAX_SETS;
