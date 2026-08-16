@@ -470,20 +470,17 @@ class WorkoutSession {
         if (accel == null) {
             return;
         }
-        var f = Motion.features(accel.x as Array<Number>, accel.y as Array<Number>, accel.z as Array<Number>);
-        if (_smoothnessEnabled && _setSmoothness.isOpen()) {
-            _smoothness.add(f);
-        }
-        if (_loadExposureEnabled && _workOpen) {
-            _loadExposure.add(f);
-        }
-        if (_swingCounting && _workOpen) {
-            _swingCounter.addSamples(
-                accel.x as Array<Number>,
-                accel.y as Array<Number>,
-                accel.z as Array<Number>
-            );
-        }
+        var f = Motion.processWindow(
+            accel.x as Array<Number>,
+            accel.y as Array<Number>,
+            accel.z as Array<Number>,
+            _smoothnessEnabled ? _smoothness : null,
+            _setSmoothness.isOpen(),
+            _loadExposureEnabled ? _loadExposure : null,
+            _workOpen,
+            _swingCounting ? _swingCounter : null,
+            _swingCounting
+        );
         var rms = _rmsField;
         var peak = _peakField;
         var zc = _zcField;

@@ -76,4 +76,32 @@ module Motion {
             :dynamicPeak => dynamicPeak.toNumber()
         };
     }
+
+    // Shared production seam between the hardware listener and deterministic
+    // tests. The caller owns phase state; this function guarantees that every
+    // source (real sensor or synthetic) traverses the same feature, smoothness,
+    // exposure, and swing-counting path.
+    function processWindow(
+        x as Array<Number>,
+        y as Array<Number>,
+        z as Array<Number>,
+        smoothness as Smoothness.Tracker?,
+        smoothnessOpen as Boolean,
+        exposure as LoadExposure.Tracker?,
+        workOpen as Boolean,
+        counter as SwingCounter.Counter?,
+        swingCounting as Boolean
+    ) as Dictionary {
+        var result = features(x, y, z);
+        if (smoothness != null && smoothnessOpen) {
+            (smoothness as Smoothness.Tracker).add(result);
+        }
+        if (exposure != null && workOpen) {
+            (exposure as LoadExposure.Tracker).add(result);
+        }
+        if (counter != null && swingCounting && workOpen) {
+            (counter as SwingCounter.Counter).addSamples(x, y, z);
+        }
+        return result;
+    }
 }

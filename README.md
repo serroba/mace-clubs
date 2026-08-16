@@ -140,13 +140,14 @@ make simulator-test     # also execute the tests in a running simulator
 make coverage           # function coverage of the unit tests (see below)
 ```
 
-CI also generates a deterministic 50-second workout containing stillness,
-smooth swings, rest, irregular swings, and a deliberate acceleration spike.
-It independently calculates the expected motion features, exercises the same
-vectors through Monkey C unit tests, round-trips a freshly encoded FIT file,
-and compares the resulting SVG with the reviewed visual baseline. The generated
-FIT, SVG, and interactive HTML report are attached to each workflow run as the
-`synthetic-workout-visuals` artifact.
+The Monkey C suite also runs a deterministic 50-second workout containing
+stillness, smooth swings, rest, irregular swings, and a deliberate acceleration
+spike. Those curves are generated on-watch and traverse the same production
+feature, smoothness, exposure, and swing-counting path as real sensor samples.
+Behavioral assertions cover phase totals, rest exclusion, smoothness contrast,
+and peak retention. Python is limited to building a reviewable FIT/HTML/SVG
+fixture for the presentation contract; those artifacts are attached to each CI
+run as `synthetic-workout-visuals`.
 
 `make coverage` reports which functions the unit tests actually execute. It
 requires `monkey-c-coverage` on `PATH` (from the same monkey-c-rs project as

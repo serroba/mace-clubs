@@ -52,24 +52,18 @@ class SyntheticWorkoutTest(unittest.TestCase):
             self.assertEqual([0, 1, 0, 2], [lap.get_value("set_number") for lap in laps])
             self.assertEqual([0, 1, 0, 1], [lap.get_value("phase") for lap in laps])
 
-    def test_visual_and_monkey_test_are_deterministic(self):
+    def test_visual_is_deterministic(self):
         windows = SYNTHETIC.workout()
         svg = SYNTHETIC.render_svg(windows)
-        monkey = SYNTHETIC.render_monkey_test(windows)
         self.assertEqual(SYNTHETIC.BASELINE.read_text(), svg)
-        self.assertEqual(
-            SYNTHETIC.monkey_tokens(SYNTHETIC.GENERATED_MONKEY_TEST.read_text()),
-            SYNTHETIC.monkey_tokens(monkey),
-        )
         self.assertIn("deliberate spike", svg)
-        self.assertIn("testSyntheticSpikeMotionVector", monkey)
 
     def test_cli_generates_all_review_artifacts(self):
         with tempfile.TemporaryDirectory() as temporary:
             output = Path(temporary) / "artifacts"
             self.assertEqual(0, SYNTHETIC.main(["--output-dir", str(output)]))
             self.assertEqual(
-                {"synthetic-workout.fit", "synthetic-workout.svg", "SyntheticMotionVectorsTest.mc"},
+                {"synthetic-workout.fit", "synthetic-workout.svg"},
                 {path.name for path in output.iterdir()},
             )
 
@@ -77,15 +71,10 @@ class SyntheticWorkoutTest(unittest.TestCase):
         with tempfile.TemporaryDirectory() as temporary:
             root = Path(temporary)
             baseline = root / "baseline.svg"
-            monkey = root / "vectors.mc"
             baseline.write_text(SYNTHETIC.render_svg(SYNTHETIC.workout()))
-            monkey.write_text(SYNTHETIC.render_monkey_test(SYNTHETIC.workout()))
-            with patch.object(SYNTHETIC, "BASELINE", baseline), patch.object(
-                SYNTHETIC, "GENERATED_MONKEY_TEST", monkey
-            ):
+            with patch.object(SYNTHETIC, "BASELINE", baseline):
                 self.assertEqual(0, SYNTHETIC.main(["--check", "--output-dir", str(root / "ok")]))
                 baseline.write_text("changed")
-                monkey.write_text("changed")
                 with self.assertRaisesRegex(SystemExit, "visual baseline differs"):
                     SYNTHETIC.main(["--check", "--output-dir", str(root / "bad")])
 
