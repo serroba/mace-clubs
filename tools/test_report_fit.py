@@ -141,6 +141,12 @@ class ReportFitTest(unittest.TestCase):
         self.assertIn("Set ${anomalies", rendered)
         self.assertIn("Example &lt;activity&gt;", rendered)
         self.assertIn("Work</span>", rendered)
+        self.assertIn("Recording quality", rendered)
+        self.assertIn('id="quality-score"', rendered)
+        self.assertIn("set-1", rendered)
+        self.assertIn('"status":"usable_with_gaps"', rendered)
+        self.assertIn('"code":"sets.short"', rendered)
+        self.assertIn('"target":"set-1"', rendered)
 
     def test_main_writes_report(self):
         start = datetime(2026, 8, 16, tzinfo=timezone.utc)
