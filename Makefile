@@ -29,8 +29,7 @@ xml:
 	@find . -name '*.xml' -not -path './.git/*' -print0 | xargs -0 -n1 xmllint --noout
 
 fit-schema:
-	python3 tools/validate_fit_schema.py
-	python3 -m unittest tools/test_validate_fit_schema.py
+	bash tools/validate_fit_xml.sh
 
 format:
 	"$(FORMATTER)" source

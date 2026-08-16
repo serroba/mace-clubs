@@ -30,10 +30,6 @@ jobs:
         run: |
           sudo apt-get update -q && sudo apt-get install -y -q libxml2-utils
           find . -name '*.xml' -not -path './.git/*' -print0 | xargs -0 -n1 xmllint --noout
-      - name: Validate FIT contribution contract
-        run: |
-          python3 tools/validate_fit_schema.py
-          python3 -m unittest tools/test_validate_fit_schema.py
       - name: Test local tool discovery
         run: python3 -m unittest tools/test_resolve_tool.py
 
@@ -70,6 +66,11 @@ jobs:
       image: ghcr.io/matco/connectiq-tester:latest
     steps:
       - uses: actions/checkout@v6
+      - name: Validate Garmin resources and FIT presentation contract
+        shell: bash
+        run: |
+          apt-get update -qq && apt-get install -y -qq --no-install-recommends libxml2-utils
+          bash tools/validate_fit_xml.sh
       - name: Compile for each product in the manifest
         shell: bash
         run: |
