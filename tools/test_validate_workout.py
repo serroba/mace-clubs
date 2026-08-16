@@ -103,7 +103,7 @@ class ValidateWorkoutTest(unittest.TestCase):
         self.assertIn("laps.duration_mismatch", codes)
 
     def test_text_and_json_cli(self):
-        text = VALIDATOR.render_text(VALIDATOR.validate(healthy_report()), Path("activity.fit"))
+        text = VALIDATOR.render_text(VALIDATOR.validate(healthy_report()))
         self.assertIn("healthy (100/100)", text)
         self.assertIn("No integrity", text)
 

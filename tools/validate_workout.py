@@ -169,10 +169,9 @@ def parse_args(argv=None):
     return parser.parse_args(argv)
 
 
-def render_text(result: dict, source: Path) -> str:
+def render_text(result: dict) -> str:
     lines = [
         f"Workout integrity: {result['status']} ({result['score']}/100)",
-        f"Source: {source}",
         f"Coverage: motion {result['coverage']['motion']:.0%}, heart rate {result['coverage']['heart_rate']:.0%}",
     ]
     for item in result["findings"]:
@@ -188,7 +187,7 @@ def main(argv=None) -> int:
         source = fit_path(args.source, Path(temporary))
         report = collect(FitFile(str(source)))
     result = validate(report)
-    print(json.dumps(result, indent=2) if args.json else render_text(result, args.source))
+    print(json.dumps(result, indent=2) if args.json else render_text(result))
     return 1 if result["counts"]["errors"] else 0
 
 
