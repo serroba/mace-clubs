@@ -27,6 +27,22 @@ target is the **Instinct 3 Solar**; the manifest supports 120 Garmin wearables
 - Watch-wrist and equipment metadata written into each FIT session
 - Set total written to the FIT session, with work sets and timed rests recorded
   as separate lap boundaries for analysis in Garmin Connect and exported FIT files
+
+## Local workout report
+
+Garmin's original FIT export contains the app's opt-in per-second motion
+features even though Garmin Connect does not graph them. Generate a private,
+self-contained report locally from either the downloaded ZIP or a raw FIT file:
+
+```sh
+python3 -m venv tools/.venv
+tools/.venv/bin/pip install -r tools/requirements.txt
+tools/.venv/bin/python tools/report_fit.py ~/Downloads/activity.zip
+```
+
+The resulting HTML stays on your computer and combines motion intensity, heart
+rate, work/rest phases, and per-set smoothness. Motion exposure is a wrist-motion
+measurement, not an estimate of tendon force.
 - Tempo, tone, and vibration configurable from the Garmin Connect phone app
 
 ## Controls
