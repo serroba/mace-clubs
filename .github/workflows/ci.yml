@@ -18,6 +18,10 @@ jobs:
         run: |
           sudo apt-get update -q && sudo apt-get install -y -q libxml2-utils
           find . -name '*.xml' -not -path './.git/*' -print0 | xargs -0 -n1 xmllint --noout
+      - name: Validate FIT contribution contract
+        run: |
+          python3 tools/validate_fit_schema.py
+          python3 -m unittest tools/test_validate_fit_schema.py
 
   mc-lint:
     name: Monkey C format & lint

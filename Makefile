@@ -5,9 +5,9 @@ MONKEYC ?= monkeyc
 MONKEYDO ?= monkeydo
 RAFIKI ?= rafiki
 
-.PHONY: check doctor xml format format-check lint build test-build simulator-test coverage clean
+.PHONY: check doctor xml fit-schema format format-check lint build test-build simulator-test coverage clean
 
-check: doctor xml format-check lint build test-build
+check: doctor xml fit-schema format-check lint build test-build
 
 doctor:
 	@command -v java >/dev/null || { echo "java is not on PATH"; exit 1; }
@@ -18,6 +18,10 @@ doctor:
 
 xml:
 	@find . -name '*.xml' -not -path './.git/*' -print0 | xargs -0 -n1 xmllint --noout
+
+fit-schema:
+	python3 tools/validate_fit_schema.py
+	python3 -m unittest tools/test_validate_fit_schema.py
 
 format:
 	monkey-c-formatter source
