@@ -181,7 +181,7 @@ jobs:
           cache: pip
           cache-dependency-path: tools/requirements.txt
       - name: Install FIT tooling
-        run: pip install -r tools/requirements.txt
+        run: pip install -r tools/requirements.txt coverage
       - name: Generate and verify synthetic workout
         run: |
           python tools/synthetic_workout.py --check --output-dir build/synthetic-workout
