@@ -40,12 +40,17 @@ Exit criterion: the self-contained report explains recording quality, distinguis
 measured and derived values, and links each actionable finding to its timeline,
 lap, or set. CI covers both a healthy synthetic export and a degraded report.
 
-### 3. Within-session safety signals
+### 3. Within-session safety signals — complete
 
 - Show smoothness drift, late-session peak changes, left/right balance, and sensor
   dropout without converting them into medical or injury predictions.
 - Establish minimum sample sizes and confidence labels for every signal.
 - Validate calculations with synthetic fatigue, spike, and dropout scenarios.
+
+Exit criterion: every signal states its sample size and confidence, declines to
+interpret insufficient data, and is covered by deterministic decline, spike,
+balance, and dropout scenarios. Outputs remain descriptive and explicitly avoid
+tendon-force, injury-risk, or readiness claims.
 
 ### 4. History and workload trends
 

@@ -147,6 +147,9 @@ class ReportFitTest(unittest.TestCase):
         self.assertIn('"status":"usable_with_gaps"', rendered)
         self.assertIn('"code":"sets.short"', rendered)
         self.assertIn('"target":"set-1"', rendered)
+        self.assertIn("Within-session signals", rendered)
+        self.assertIn('"code":"smoothness_drift"', rendered)
+        self.assertIn("not tendon force", rendered)
 
     def test_main_writes_report(self):
         start = datetime(2026, 8, 16, tzinfo=timezone.utc)
