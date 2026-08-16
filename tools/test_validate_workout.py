@@ -6,6 +6,7 @@ from io import StringIO
 from pathlib import Path
 from unittest.mock import patch
 
+from tools import report_fit as REPORT_FIT
 from tools import validate_workout as VALIDATOR
 
 
@@ -76,6 +77,13 @@ class ValidateWorkoutTest(unittest.TestCase):
         result = VALIDATOR.validate(report)
         self.assertNotIn("laps.overlap", {item["code"] for item in result["findings"]})
 
+    def test_set_finding_links_to_affected_set(self):
+        report = healthy_report()
+        report["laps"][0]["elapsed"] = 3
+        result = VALIDATOR.validate(report)
+        short = next(item for item in result["findings"] if item["code"] == "sets.short")
+        self.assertEqual(short["target"], "set-1")
+
     def test_missing_laps_is_invalid(self):
         report = healthy_report()
         report["laps"] = []
@@ -111,9 +119,7 @@ class ValidateWorkoutTest(unittest.TestCase):
             source = Path(temporary) / "activity.fit"
             source.write_bytes(b"placeholder")
             stdout = StringIO()
-            fake_fit = object()
-            with patch.object(VALIDATOR, "FitFile", return_value=fake_fit), \
-                 patch.object(VALIDATOR, "collect", return_value=healthy_report()), \
+            with patch.object(VALIDATOR, "load_report", return_value=healthy_report()), \
                  redirect_stdout(stdout):
                 code = VALIDATOR.main([str(source), "--json"])
             self.assertEqual(code, 0)
@@ -126,12 +132,22 @@ class ValidateWorkoutTest(unittest.TestCase):
             source = Path(temporary) / "activity.fit"
             source.write_bytes(b"placeholder")
             stdout = StringIO()
-            with patch.object(VALIDATOR, "FitFile", return_value=object()), \
-                 patch.object(VALIDATOR, "collect", return_value=report), \
+            with patch.object(VALIDATOR, "load_report", return_value=report), \
                  redirect_stdout(stdout):
                 code = VALIDATOR.main([str(source)])
             self.assertEqual(code, 1)
             self.assertIn("ERROR", stdout.getvalue())
+
+    def test_load_report_uses_shared_parser(self):
+        source = Path("activity.fit")
+        parsed = object()
+        expected = healthy_report()
+        with patch.object(REPORT_FIT, "fit_path", return_value=source), \
+             patch.object(REPORT_FIT, "collect", return_value=expected), \
+             patch.object(VALIDATOR, "FitFile", return_value=parsed) as fit_file:
+            result = VALIDATOR.load_report(source)
+        self.assertIs(result, expected)
+        fit_file.assert_called_once_with(str(source))
 
 
 if __name__ == "__main__":

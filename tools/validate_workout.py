@@ -11,22 +11,18 @@ from pathlib import Path
 
 from fitparse import FitFile
 
-try:
-    from report_fit import collect, fit_path
-except ModuleNotFoundError:  # Imported as tools.validate_workout by the test suite.
-    from tools.report_fit import collect, fit_path
-
-
 @dataclass(frozen=True)
 class Finding:
     severity: str
     code: str
     message: str
     deduction: int = 0
+    target: str | None = None
 
 
-def finding(severity: str, code: str, message: str, deduction: int = 0) -> Finding:
-    return Finding(severity, code, message, deduction)
+def finding(severity: str, code: str, message: str, deduction: int = 0,
+            target: str | None = None) -> Finding:
+    return Finding(severity, code, message, deduction, target)
 
 
 def validate(report: dict) -> dict:
@@ -70,6 +66,7 @@ def validate(report: dict) -> dict:
             findings.append(finding(
                 "error", "laps.overlap",
                 f"Lap {current['lap']} overlaps lap {previous['lap']}.", 20,
+                f"lap-{current['lap']}",
             ))
             break
 
@@ -85,12 +82,14 @@ def validate(report: dict) -> dict:
             findings.append(finding(
                 "warning", "sets.short",
                 f"Set {lap['set']} lasted under 10 seconds and may be incomplete.", 5,
+                f"set-{lap['set']}",
             ))
         score = lap.get("smoothness")
         if score is not None and not 0 <= score <= 100:
             findings.append(finding(
                 "error", "smoothness.range",
                 f"Set {lap['set']} has smoothness {score}; expected 0–100.", 15,
+                f"set-{lap['set']}",
             ))
         for key, label in (("motion_peak", "motion peak"), ("exposure", "motion exposure"),
                            ("active_seconds", "active time"), ("swings", "swing count")):
@@ -98,6 +97,7 @@ def validate(report: dict) -> dict:
             if value is not None and value < 0:
                 findings.append(finding(
                     "error", f"{key}.negative", f"Set {lap['set']} has negative {label}.", 15,
+                    f"set-{lap['set']}",
                 ))
 
     motion = [point for point in records if point.get("rms") is not None or point.get("peak") is not None]
@@ -121,18 +121,22 @@ def validate(report: dict) -> dict:
         findings.append(finding(
             "info", "motion.unavailable",
             "No per-second wrist-motion series is present; Motion logging may have been off.", 0,
+            "timeline",
         ))
     elif motion_coverage < 0.9:
         findings.append(finding(
             "warning", "motion.coverage",
             f"Motion-series coverage is {motion_coverage:.0%}; expected at least 90%.", 12,
+            "timeline",
         ))
     if not heart_rate:
-        findings.append(finding("warning", "heart_rate.unavailable", "No heart-rate samples are present.", 8))
+        findings.append(finding("warning", "heart_rate.unavailable", "No heart-rate samples are present.", 8,
+                                "timeline"))
     elif hr_coverage < 0.8:
         findings.append(finding(
             "warning", "heart_rate.coverage",
             f"Heart-rate coverage is {hr_coverage:.0%}; expected at least 80%.", 6,
+            "timeline",
         ))
 
     if summary.get("movement") == "Unknown":
@@ -181,11 +185,19 @@ def render_text(result: dict) -> str:
     return "\n".join(lines)
 
 
+def load_report(source: Path) -> dict:
+    try:
+        from report_fit import collect, fit_path
+    except ModuleNotFoundError:  # Imported as tools.validate_workout by tests.
+        from tools.report_fit import collect, fit_path
+    with tempfile.TemporaryDirectory(prefix="mace-clubs-fit-") as temporary:
+        fit_source = fit_path(source, Path(temporary))
+        return collect(FitFile(str(fit_source)))
+
+
 def main(argv=None) -> int:
     args = parse_args(argv)
-    with tempfile.TemporaryDirectory(prefix="mace-clubs-fit-") as temporary:
-        source = fit_path(args.source, Path(temporary))
-        report = collect(FitFile(str(source)))
+    report = load_report(args.source)
     result = validate(report)
     print(json.dumps(result, indent=2) if args.json else render_text(result))
     return 1 if result["counts"]["errors"] else 0
