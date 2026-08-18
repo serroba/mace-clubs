@@ -4,9 +4,11 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { test } from "node:test";
 
-import { loadReport, main, renderText, validate } from "./validate-workout.js";
+import { type Report, type ValidationResult } from "./report-types.ts";
+import { buildFit, workout } from "./synthetic-workout.ts";
+import { loadReport, main, renderText, validate } from "./validate-workout.ts";
 
-function healthyReport() {
+function healthyReport(): Report {
     return {
         summary: { elapsed: 20, sets: 1, movement: "Flow / other",
                    side: "Two-handed", equipment: "Clubs: 2 x 4 kg" },
@@ -16,18 +18,19 @@ function healthyReport() {
                  active_seconds: 18, swings: 20 }],
         records: Array.from({ length: 20 }, (_, second) => ({
             t: second, rms: 1000, peak: 2000, hr: 90,
-            swing_total: second, swing_event: second ? 1 : 0,
+            swing_total: second, swing_event: second > 0 ? 1 : 0,
             swing_cadence: 60, smoothness_score: 80,
         })),
     };
 }
 
-const codes = (result) => new Set(result.findings.map((item) => item.code));
+const codes = (result: ValidationResult): Set<string> =>
+    new Set(result.findings.map((item) => item.code));
 
-function withCapturedStdout(run) {
-    const written = [];
-    const original = process.stdout.write;
-    process.stdout.write = (chunk) => {
+function withCapturedStdout<T>(run: () => T): { result: T; stdout: string } {
+    const written: string[] = [];
+    const original = process.stdout.write.bind(process.stdout);
+    process.stdout.write = (chunk: string | Uint8Array): boolean => {
         written.push(String(chunk));
         return true;
     };
@@ -36,6 +39,12 @@ function withCapturedStdout(run) {
     } finally {
         process.stdout.write = original;
     }
+}
+
+function recordAt(report: Report, index: number): NonNullable<Report["records"][number]> {
+    const record = report.records[index];
+    assert.ok(record !== undefined);
+    return record;
 }
 
 test("healthy recording scores 100", () => {
@@ -60,7 +69,9 @@ test("gaps and metadata are explained", () => {
 
 test("motion is optional when logging is off", () => {
     const report = healthyReport();
-    report.records = Array.from({ length: 20 }, (_, second) => ({ t: second, rms: null, peak: null, hr: 90 }));
+    report.records = Array.from({ length: 20 }, (_, second) => ({
+        t: second, rms: null, peak: null, hr: 90,
+    }));
     const result = validate(report);
     assert.equal(result.status, "healthy");
     assert.ok(codes(result).has("motion.unavailable"));
@@ -98,8 +109,11 @@ test("subsecond lap boundary rounding is allowed", () => {
 
 test("set finding links to affected set", () => {
     const report = healthyReport();
-    report.laps[0].elapsed = 3;
+    const lap = report.laps[0];
+    assert.ok(lap !== undefined);
+    lap.elapsed = 3;
     const short = validate(report).findings.find((item) => item.code === "sets.short");
+    assert.ok(short !== undefined);
     assert.equal(short.target, "set-1");
 });
 
@@ -123,7 +137,9 @@ test("laps without numbered work are invalid", () => {
 test("peak below rms and duration mismatch warn", () => {
     const report = healthyReport();
     report.summary.elapsed = 30;
-    report.records = Array.from({ length: 30 }, (_, second) => ({ t: second, rms: 2000, peak: 1000, hr: 90 }));
+    report.records = Array.from({ length: 30 }, (_, second) => ({
+        t: second, rms: 2000, peak: 1000, hr: 90,
+    }));
     const result = validate(report);
     assert.ok(codes(result).has("motion.peak_below_rms"));
     assert.ok(codes(result).has("laps.duration_mismatch"));
@@ -131,16 +147,17 @@ test("peak below rms and duration mismatch warn", () => {
 
 test("swing total regression is invalid", () => {
     const report = healthyReport();
-    report.records[10].swing_total = 3;
+    recordAt(report, 10).swing_total = 3;
     const result = validate(report);
     assert.equal(result.status, "invalid");
     const regression = result.findings.find((item) => item.code === "swings.regression");
+    assert.ok(regression !== undefined);
     assert.equal(regression.target, "timeline");
 });
 
 test("swing events must reconcile with total", () => {
     const report = healthyReport();
-    report.records[5].swing_event = 3;
+    recordAt(report, 5).swing_event = 3;
     assert.ok(codes(validate(report)).has("swings.event_mismatch"));
 });
 
@@ -155,8 +172,8 @@ test("partial swing series warns on coverage", () => {
 
 test("cadence and rolling smoothness ranges", () => {
     const report = healthyReport();
-    report.records[3].swing_cadence = 250;
-    report.records[4].smoothness_score = 130;
+    recordAt(report, 3).swing_cadence = 250;
+    recordAt(report, 4).smoothness_score = 130;
     const result = validate(report);
     assert.equal(result.status, "invalid");
     assert.ok(codes(result).has("cadence.range"));
@@ -177,7 +194,7 @@ test("text and json cli", () => {
     const { result, stdout } = withCapturedStdout(
         () => main(["activity.fit", "--json"], () => healthyReport()));
     assert.equal(result, 0);
-    assert.equal(JSON.parse(stdout).score, 100);
+    assert.equal((JSON.parse(stdout) as ValidationResult).score, 100);
 });
 
 test("cli fails for structural errors", () => {
@@ -194,16 +211,14 @@ test("cli rejects missing or extra arguments", () => {
 });
 
 test("loadReport parses a real FIT export", () => {
-    return import("./synthetic-workout.js").then(({ buildFit, workout }) => {
-        const root = mkdtempSync(join(tmpdir(), "mace-validate-"));
-        try {
-            const source = join(root, "activity.fit");
-            buildFit(workout(), source);
-            const report = loadReport(source);
-            assert.equal(report.summary.elapsed, 50);
-            assert.equal(validate(report).status, "healthy");
-        } finally {
-            rmSync(root, { recursive: true, force: true });
-        }
-    });
+    const root = mkdtempSync(join(tmpdir(), "mace-validate-"));
+    try {
+        const source = join(root, "activity.fit");
+        buildFit(workout(), source);
+        const report = loadReport(source);
+        assert.equal(report.summary.elapsed, 50);
+        assert.equal(validate(report).status, "healthy");
+    } finally {
+        rmSync(root, { recursive: true, force: true });
+    }
 });

@@ -9,5 +9,18 @@
   },
   "engines": {
     "node": ">=22.8"
+  },
+  "devDependencies": {
+    "@eslint/js": "^10.0.1",
+    "@types/node": "^26.2.0",
+    "eslint": "^10.8.1",
+    "typescript": "^6.0.3",
+    "typescript-eslint": "^8.67.0"
+  },
+  "scripts": {
+    "typecheck": "tsc -p tsconfig.json",
+    "lint": "eslint .",
+    "test": "node --experimental-strip-types --disable-warning=ExperimentalWarning --test *.test.ts",
+    "check": "npm run typecheck && npm run lint && npm run test"
   }
 }

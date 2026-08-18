@@ -3,18 +3,22 @@ import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { test } from "node:test";
-import { crc32 } from "node:zlib";
+import { crc32, deflateRawSync } from "node:zlib";
 
-import { fitPath, timestampSeconds } from "./fit-io.js";
-import { collect, main, render } from "./report-fit.js";
+import { type FitMessages, type Mesg } from "@garmin/fitsdk";
+
+import { type DecodedFit, fitPath, timestampSeconds, zipEntries } from "./fit-io.ts";
+import { collect, decodeSource, main, render } from "./report-fit.ts";
+import { type Report } from "./report-types.ts";
+import { buildFit, workout } from "./synthetic-workout.ts";
 
 const START = new Date(Date.UTC(2026, 7, 16));
 const DAY = 24 * 3600 * 1000;
 
 // Minimal stored-entry ZIP writer, enough to exercise the extractor.
-function storedZip(entries) {
-    const parts = [];
-    const centrals = [];
+function storedZip(entries: readonly [string, string | Buffer][]): Buffer {
+    const parts: Buffer[] = [];
+    const centrals: Buffer[] = [];
     let offset = 0;
     for (const [name, data] of entries) {
         const nameBuffer = Buffer.from(name);
@@ -49,35 +53,52 @@ function storedZip(entries) {
     return Buffer.concat([...parts, central, eocd]);
 }
 
+type FakeMesg = Mesg & Record<string, unknown> & { dev?: Record<string, string | number> };
+
 // Fabricate a readFit()-shaped wrapper; `dev` maps developer field names to values.
-function makeFit(kinds) {
-    const fieldNames = new Map();
-    const nameToKey = new Map();
-    const keyFor = (name) => {
-        if (!nameToKey.has(name)) {
-            const key = nameToKey.size;
+function makeFit(kinds: Partial<Record<keyof FitMessages, FakeMesg[]>>): DecodedFit {
+    const fieldNames = new Map<number, string>();
+    const nameToKey = new Map<string, number>();
+    const keyFor = (name: string): number => {
+        let key = nameToKey.get(name);
+        if (key === undefined) {
+            key = nameToKey.size;
             nameToKey.set(name, key);
             fieldNames.set(key, name);
         }
-        return nameToKey.get(name);
+        return key;
     };
-    const messages = {};
+    const messages: Record<string, Mesg[]> = {};
     for (const [kind, mesgs] of Object.entries(kinds)) {
-        messages[kind] = mesgs.map(({ dev, ...rest }) => (dev
-            ? { ...rest,
+        messages[kind] = mesgs.map(({ dev, ...rest }) => (dev === undefined
+            ? rest
+            : { ...rest,
                 developerFields: Object.fromEntries(
-                    Object.entries(dev).map(([name, value]) => [keyFor(name), value])) }
-            : rest));
+                    Object.entries(dev).map(([name, value]) => [keyFor(name), value])) }));
     }
     return { messages, fieldNames, errors: [] };
 }
 
-function withTempDir(run) {
+function withTempDir<T>(run: (root: string) => T): T {
     const root = mkdtempSync(join(tmpdir(), "mace-report-"));
     try {
         return run(root);
     } finally {
         rmSync(root, { recursive: true, force: true });
+    }
+}
+
+function silencingStdout<T>(run: () => T): { result: T; stdout: string } {
+    const written: string[] = [];
+    const original = process.stdout.write.bind(process.stdout);
+    process.stdout.write = (chunk: string | Uint8Array): boolean => {
+        written.push(String(chunk));
+        return true;
+    };
+    try {
+        return { result: run(), stdout: written.join("") };
+    } finally {
+        process.stdout.write = original;
     }
 }
 
@@ -107,6 +128,25 @@ test("zip without fit is rejected", () => {
     });
 });
 
+test("zip extractor inflates deflated entries and rejects other methods", () => {
+    const body = Buffer.from("squeezed activity bytes");
+    const compressed = deflateRawSync(body);
+    const zip = storedZip([["stored.fit", "plain"]]);
+    const deflated = storedZip([["packed.fit", compressed]]);
+    deflated.writeUInt16LE(8, 30 + "packed.fit".length + compressed.length + 10);
+    const storedEntry = zipEntries(zip)[0];
+    const deflatedEntry = zipEntries(deflated)[0];
+    assert.ok(storedEntry !== undefined && deflatedEntry !== undefined);
+    assert.equal(storedEntry.extract().toString(), "plain");
+    assert.equal(deflatedEntry.extract().toString(), body.toString());
+    const bogus = storedZip([["odd.fit", "data"]]);
+    bogus.writeUInt16LE(9, 30 + "odd.fit".length + 4 + 10);
+    const bogusEntry = zipEntries(bogus)[0];
+    assert.ok(bogusEntry !== undefined);
+    assert.throws(() => bogusEntry.extract(), /unsupported ZIP compression/);
+    assert.throws(() => zipEntries(Buffer.from("not zipped, definitely not")), /not a ZIP/);
+});
+
 test("collect aligns records and excludes short set", () => {
     const fit = makeFit({
         sessionMesgs: [{
@@ -128,14 +168,16 @@ test("collect aligns records and excludes short set", () => {
         activityMesgs: [{ localTimestamp: new Date(START.getTime() + DAY) }],
     });
     const report = collect(fit);
+    const record = report.records[0];
+    assert.ok(record !== undefined);
     assert.equal(report.summary.movement, "Flow / other");
     assert.equal(report.summary.valid_sets, 1);
     assert.equal(report.summary.work_seconds, 35);
-    assert.equal(report.records[0].t, 1);
-    assert.equal(report.records[0].swing_total, 1);
-    assert.equal(report.records[0].swing_event, 1);
-    assert.equal(report.records[0].swing_cadence, 60);
-    assert.equal(report.records[0].smoothness_score, 82);
+    assert.equal(record.t, 1);
+    assert.equal(record.swing_total, 1);
+    assert.equal(record.swing_event, 1);
+    assert.equal(record.swing_cadence, 60);
+    assert.equal(record.smoothness_score, 82);
     assert.equal(report.summary.date, "17 Aug 2026");
 });
 
@@ -160,7 +202,7 @@ test("collect requires a session", () => {
 });
 
 test("render is self-contained and marks anomalies", () => {
-    const report = {
+    const report: Report = {
         summary: { elapsed: 30, timer: 30, avg_hr: 80,
                    max_hr: 110, sets: 1, movement: "Flow / other",
                    side: "Two-handed", work_seconds: 3,
@@ -174,48 +216,32 @@ test("render is self-contained and marks anomalies", () => {
                     smoothness_score: 82 }],
     };
     const rendered = render(report, "Example <activity>");
-    assert.ok(rendered.includes("<!doctype html>"));
+    for (const expected of [
+        "<!doctype html>",
+        "Set ${anomalies",
+        "Example &lt;activity&gt;",
+        "Work</span>",
+        "Recording quality",
+        'id="quality-score"',
+        "set-1",
+        '"status":"usable_with_gaps"',
+        '"code":"sets.short"',
+        '"target":"set-1"',
+        "Within-session signals",
+        "Set rhythm comparison",
+        "Smoothness over time",
+        "d.smoothness_score",
+        "Swing detected",
+        "Synchronized acceleration, swing cadence",
+        '"code":"smoothness_drift"',
+        "not tendon force",
+    ]) {
+        assert.ok(rendered.includes(expected), expected);
+    }
     assert.ok(!rendered.includes("fetch("));
-    assert.ok(rendered.includes("Set ${anomalies"));
-    assert.ok(rendered.includes("Example &lt;activity&gt;"));
-    assert.ok(rendered.includes("Work</span>"));
-    assert.ok(rendered.includes("Recording quality"));
-    assert.ok(rendered.includes('id="quality-score"'));
-    assert.ok(rendered.includes("set-1"));
-    assert.ok(rendered.includes('"status":"usable_with_gaps"'));
-    assert.ok(rendered.includes('"code":"sets.short"'));
-    assert.ok(rendered.includes('"target":"set-1"'));
-    assert.ok(rendered.includes("Within-session signals"));
-    assert.ok(rendered.includes("Set rhythm comparison"));
-    assert.ok(rendered.includes("Smoothness over time"));
-    assert.ok(rendered.includes("d.smoothness_score"));
-    assert.ok(rendered.includes("Swing detected"));
-    assert.ok(rendered.includes("Synchronized acceleration, swing cadence"));
-    assert.ok(rendered.includes('"code":"smoothness_drift"'));
-    assert.ok(rendered.includes("not tendon force"));
 });
 
-test("zip extractor inflates deflated entries and rejects other methods", async () => {
-    const { deflateRawSync } = await import("node:zlib");
-    const { zipEntries } = await import("./fit-io.js");
-    const body = Buffer.from("squeezed activity bytes");
-    const compressed = deflateRawSync(body);
-    const zip = storedZip([["stored.fit", "plain"]]);
-    // rewrite the stored entry into a deflated one at the same offsets
-    const deflated = storedZip([["packed.fit", compressed]]);
-    deflated.writeUInt16LE(8, 8); // local header method
-    deflated.writeUInt16LE(8, 30 + "packed.fit".length + compressed.length + 10); // central method
-    assert.equal(zipEntries(zip)[0].extract().toString(), "plain");
-    assert.equal(zipEntries(deflated)[0].extract().toString(), body.toString());
-    const bogus = storedZip([["odd.fit", "data"]]);
-    bogus.writeUInt16LE(9, 30 + "odd.fit".length + 4 + 10);
-    assert.throws(() => zipEntries(bogus)[0].extract(), /unsupported ZIP compression/);
-    assert.throws(() => zipEntries(Buffer.from("not zipped, definitely not")), /not a ZIP/);
-});
-
-test("decodeSource reads a real FIT export end to end", async () => {
-    const { decodeSource } = await import("./report-fit.js");
-    const { buildFit, workout } = await import("./synthetic-workout.js");
+test("decodeSource reads a real FIT export end to end", () => {
     withTempDir((root) => {
         const source = join(root, "activity.fit");
         buildFit(workout(), source);
@@ -231,20 +257,16 @@ test("main derives the default output path", () => {
     withTempDir((root) => {
         const source = join(root, "activity.fit");
         writeFileSync(source, "placeholder");
-        const original = process.stdout.write;
-        process.stdout.write = () => true;
-        try {
-            assert.equal(main([source], () => collect(fit)), 0);
-        } finally {
-            process.stdout.write = original;
-        }
+        const { result } = silencingStdout(() => main([source], () => collect(fit)));
+        assert.equal(result, 0);
         assert.ok(readFileSync(join(root, "activity-report.html"), "utf8").includes("Mace &amp; Clubs"));
     });
 });
 
 test("main rejects missing or extra arguments", () => {
-    assert.throws(() => main([], () => null), /usage:/);
-    assert.throws(() => main(["a.fit", "b.fit"], () => null), /unexpected argument/);
+    const loader = (): Report => ({ summary: {}, laps: [], records: [] });
+    assert.throws(() => main([], loader), /usage:/);
+    assert.throws(() => main(["a.fit", "b.fit"], loader), /unexpected argument/);
 });
 
 test("main writes report", () => {
@@ -261,20 +283,9 @@ test("main writes report", () => {
         const source = join(root, "activity.fit");
         const output = join(root, "report.html");
         writeFileSync(source, "placeholder");
-        const written = [];
-        const original = process.stdout.write;
-        process.stdout.write = (chunk) => {
-            written.push(String(chunk));
-            return true;
-        };
-        let result;
-        try {
-            result = main([source, "-o", output], () => collect(fit));
-        } finally {
-            process.stdout.write = original;
-        }
+        const { result, stdout } = silencingStdout(() => main([source, "-o", output], () => collect(fit)));
         assert.equal(result, 0);
         assert.ok(readFileSync(output, "utf8").includes("Mace &amp; Clubs"));
-        assert.ok(written.join("").includes(output));
+        assert.ok(stdout.includes(output));
     });
 });

@@ -2,7 +2,7 @@
 set -euo pipefail
 
 repo_root="$(cd "$(dirname "$0")/.." && pwd)"
-monkeyc="$(node "$repo_root/tools/resolve-tool.js" monkeyc)"
+monkeyc="$(node --experimental-strip-types "$repo_root/tools/resolve-tool.ts" monkeyc)"
 resources_xsd="$(dirname "$monkeyc")/resources.xsd"
 fitfields="$repo_root/resources/fitfields.xml"
 schematron="$repo_root/tools/schemas/fitfields.sch"

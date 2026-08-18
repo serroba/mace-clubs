@@ -10,7 +10,7 @@ import { fileURLToPath } from "node:url";
 const CONNECT_IQ_TOOLS = new Set(["connectiq", "monkeyc", "monkeydo", "monkeygraph"]);
 const RUST_TOOLS = new Set(["monkey-c-formatter", "monkey-c-linter", "rafiki"]);
 
-function isExecutableFile(candidate) {
+function isExecutableFile(candidate: string): boolean {
     try {
         if (!statSync(candidate).isFile()) {
             return false;
@@ -22,9 +22,9 @@ function isExecutableFile(candidate) {
     }
 }
 
-function which(tool, path) {
+function which(tool: string, path: string): string | null {
     for (const entry of path.split(delimiter)) {
-        if (!entry) {
+        if (entry === "") {
             continue;
         }
         const candidate = join(entry, tool);
@@ -35,7 +35,7 @@ function which(tool, path) {
     return null;
 }
 
-function workingJava(candidate) {
+function workingJava(candidate: string): boolean {
     try {
         const result = spawnSync(candidate, ["-version"], { stdio: "ignore", timeout: 5000 });
         return result.status === 0;
@@ -44,21 +44,21 @@ function workingJava(candidate) {
     }
 }
 
-export function resolve(tool, home, path) {
+export function resolve(tool: string, home: string, path: string): string {
     const onPath = which(tool, path);
-    if (onPath && (tool !== "java" || workingJava(onPath))) {
+    if (onPath !== null && (tool !== "java" || workingJava(onPath))) {
         return onPath;
     }
 
     if (tool === "java") {
-        const javaHome = process.env.JAVA_HOME;
+        const javaHome = process.env["JAVA_HOME"];
         const candidates = [
-            javaHome ? join(javaHome, "bin/java") : null,
+            javaHome !== undefined && javaHome !== "" ? join(javaHome, "bin/java") : null,
             "/opt/homebrew/opt/openjdk/bin/java",
             "/usr/local/opt/openjdk/bin/java",
         ];
         for (const candidate of candidates) {
-            if (candidate && workingJava(candidate)) {
+            if (candidate !== null && workingJava(candidate)) {
                 return candidate;
             }
         }
@@ -70,7 +70,7 @@ export function resolve(tool, home, path) {
             join(home, ".Garmin/ConnectIQ/current-sdk.cfg"),
         ];
         for (const config of configs) {
-            let sdk;
+            let sdk: string;
             try {
                 sdk = readFileSync(config, "utf8").trim();
             } catch {
@@ -95,12 +95,13 @@ export function resolve(tool, home, path) {
     return tool;
 }
 
-export function main(argv = process.argv.slice(2)) {
-    if (argv.length !== 1) {
-        console.error("usage: resolve-tool.js TOOL");
+export function main(argv: readonly string[] = process.argv.slice(2)): number {
+    const tool = argv[0];
+    if (argv.length !== 1 || tool === undefined) {
+        console.error("usage: resolve-tool.ts TOOL");
         return 2;
     }
-    console.log(resolve(argv[0], homedir(), process.env.PATH ?? ""));
+    console.log(resolve(tool, homedir(), process.env["PATH"] ?? ""));
     return 0;
 }
 

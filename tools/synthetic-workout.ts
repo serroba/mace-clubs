@@ -3,22 +3,51 @@
 
 import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
-import { dirname, join } from "node:path";
+import { basename, dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
-import { Encoder, Profile } from "@garmin/fitsdk";
+import {
+    type ActivityMesg,
+    type DeveloperDataIdMesg,
+    type Encodable,
+    Encoder,
+    type FieldDescription,
+    type FieldDescriptionMesg,
+    type FileIdMesg,
+    type LapMesg,
+    Profile,
+    type RecordMesg,
+    type SessionMesg,
+} from "@garmin/fitsdk";
 
-import { pythonRound } from "./fit-io.js";
+import { pythonRound } from "./fit-io.ts";
 
 export const BASELINE = fileURLToPath(new URL("baselines/synthetic-workout.svg", import.meta.url));
 export const START_MS = 1_700_000_000_000;
 const SAMPLE_RATE = 25;
 
-export function samples(style, second) {
-    const axes = [[], [], []];
+export type Phase = "rest" | "work";
+export type Style = "still" | "smooth" | "irregular" | "spike";
+
+export interface Window {
+    second: number;
+    phase: Phase;
+    style: Style;
+    x: number[];
+    y: number[];
+    z: number[];
+    rms: number;
+    peak: number;
+    crossings: number;
+    dynamic_rms: number;
+    dynamic_peak: number;
+}
+
+export function samples(style: string, second: number): [number[], number[], number[]] {
+    const axes: [number[], number[], number[]] = [[], [], []];
     for (let index = 0; index < SAMPLE_RATE; index++) {
         const angle = (2 * Math.PI * index) / SAMPLE_RATE;
-        let values;
+        let values: [number, number, number];
         if (style === "still") {
             values = [0, 0, 1000];
         } else if (style === "smooth") {
@@ -44,32 +73,35 @@ export function samples(style, second) {
         } else {
             throw new Error(`unknown motion style: ${style}`);
         }
-        for (const [axis, value] of axes.map((entries, position) => [entries, values[position]])) {
-            axis.push(value);
-        }
+        axes[0].push(values[0]);
+        axes[1].push(values[1]);
+        axes[2].push(values[2]);
     }
     return axes;
 }
 
-function features(x, y, z) {
+const square = (value: number): number => value * value;
+
+function features(x: number[], y: number[], z: number[]): [number, number, number, number, number] {
     const magnitudes = x.map((value, index) =>
-        Math.sqrt(value * value + y[index] * y[index] + z[index] * z[index]));
+        Math.sqrt(value * value + (y[index] ?? 0) * (y[index] ?? 0) + (z[index] ?? 0) * (z[index] ?? 0)));
     const mean = magnitudes.reduce((total, value) => total + value, 0) / magnitudes.length;
-    const means = [x, y, z].map((axis) => axis.reduce((total, value) => total + value, 0) / axis.length);
+    const means = [x, y, z].map((axis) => axis.reduce((total, value) => total + value, 0) / axis.length) as
+        [number, number, number];
     let crossings = 0;
     let previous = 0;
     for (const magnitude of magnitudes) {
         const sign = magnitude > mean ? 1 : magnitude < mean ? -1 : 0;
-        if (sign && previous && sign !== previous) {
+        if (sign !== 0 && previous !== 0 && sign !== previous) {
             crossings += 1;
         }
-        if (sign) {
+        if (sign !== 0) {
             previous = sign;
         }
     }
     const dynamic = x.map((value, index) =>
-        Math.sqrt((value - means[0]) ** 2 + (y[index] - means[1]) ** 2 + (z[index] - means[2]) ** 2));
-    const rootMeanSquare = (values) =>
+        Math.sqrt(square(value - means[0]) + square((y[index] ?? 0) - means[1]) + square((z[index] ?? 0) - means[2])));
+    const rootMeanSquare = (values: number[]): number =>
         Math.trunc(Math.sqrt(values.reduce((total, value) => total + value * value, 0) / values.length));
     return [
         rootMeanSquare(magnitudes),
@@ -80,11 +112,11 @@ function features(x, y, z) {
     ];
 }
 
-export function workout() {
-    const timeline = [];
+export function workout(): Window[] {
+    const timeline: Window[] = [];
     for (let second = 0; second < 50; second++) {
-        let phase;
-        let style;
+        let phase: Phase;
+        let style: Style;
         if (second < 5 || (second >= 25 && second < 30)) {
             [phase, style] = ["rest", "still"];
         } else if (second < 25) {
@@ -103,11 +135,31 @@ export function workout() {
     return timeline;
 }
 
+// Profile.MesgNum is typed as an index signature; resolve the handful of
+// message numbers this fixture writes once, with a hard failure on typos.
+function mesgNum(name: string): number {
+    const value = Profile.MesgNum[name];
+    if (value === undefined) {
+        throw new Error(`unknown FIT message type: ${name}`);
+    }
+    return value;
+}
+
+const MESG = {
+    fileId: mesgNum("FILE_ID"),
+    developerDataId: mesgNum("DEVELOPER_DATA_ID"),
+    fieldDescription: mesgNum("FIELD_DESCRIPTION"),
+    record: mesgNum("RECORD"),
+    lap: mesgNum("LAP"),
+    session: mesgNum("SESSION"),
+    activity: mesgNum("ACTIVITY"),
+} as const;
+
 // FIT wire values for fit_base_type_id (profile type fitBaseType); the SDK's
 // Utils.FitBaseType indexes are NOT valid field_description content.
-const BASE_TYPE = { uint8: 2, string: 7, sint16: 131, uint16: 132, uint32: 134, float32: 136 };
+const BASE_TYPE = { uint8: 2, string: 7, sint16: 131, uint16: 132, uint32: 134, float32: 136 } as const;
 
-const FIELD_TYPES = [
+const FIELD_TYPES: readonly [number, string, string, number][] = [
     [0, "total_sets", "sets", BASE_TYPE.uint16],
     [1, "battery_used", "%", BASE_TYPE.float32],
     [2, "accel_rms", "mg", BASE_TYPE.uint16],
@@ -136,45 +188,52 @@ const FIELD_TYPES = [
     [30, "smoothness_score", "score", BASE_TYPE.uint8],
 ];
 
-const DEVELOPER_DATA_ID_MESG = {
-    mesgNum: Profile.MesgNum.DEVELOPER_DATA_ID,
+const DEVELOPER_DATA_ID_MESG: Encodable<DeveloperDataIdMesg> = {
+    mesgNum: MESG.developerDataId,
     applicationId: Array.from(Buffer.from("6f0f19e1a0e14842a7b70ac011223344", "hex")),
     applicationVersion: 999,
     developerDataIndex: 0,
 };
 
-const FIELD_DESCRIPTION_MESGS = FIELD_TYPES.map(([fieldId, name, units, baseType]) => ({
-    mesgNum: Profile.MesgNum.FIELD_DESCRIPTION,
-    developerDataIndex: 0,
-    fieldDefinitionNumber: fieldId,
-    fitBaseTypeId: baseType,
-    fieldName: name,
-    units,
-}));
+const FIELD_DESCRIPTION_MESGS: readonly Encodable<FieldDescriptionMesg>[] = FIELD_TYPES.map(
+    ([fieldId, name, units, baseType]) => ({
+        mesgNum: MESG.fieldDescription,
+        developerDataIndex: 0,
+        fieldDefinitionNumber: fieldId,
+        fitBaseTypeId: baseType,
+        fieldName: name,
+        units,
+    }),
+);
 
-const FIELD_DESCRIPTIONS = Object.fromEntries(FIELD_DESCRIPTION_MESGS.map((mesg) => [
-    mesg.fieldName,
-    { developerDataIdMesg: DEVELOPER_DATA_ID_MESG, fieldDescriptionMesg: mesg },
-]));
+// Developer fields are keyed by field definition number for both the encoder
+// registration and per-message values.
+const FIELD_DESCRIPTIONS: Record<number, FieldDescription> = Object.fromEntries(
+    FIELD_DESCRIPTION_MESGS.map((mesg) => [
+        mesg.fieldDefinitionNumber ?? 0,
+        { developerDataIdMesg: DEVELOPER_DATA_ID_MESG, fieldDescriptionMesg: mesg },
+    ]),
+);
 
-export function buildFit(windows, destination) {
+export function buildFit(windows: readonly Window[], destination: string): void {
     const encoder = new Encoder({ fieldDescriptions: FIELD_DESCRIPTIONS });
-    encoder.writeMesg({
-        mesgNum: Profile.MesgNum.FILE_ID,
+    const fileId: Encodable<FileIdMesg> = {
+        mesgNum: MESG.fileId,
         type: "activity",
         manufacturer: "development",
         product: 1,
         serialNumber: 424242,
         timeCreated: new Date(START_MS),
-    });
+    };
+    encoder.writeMesg(fileId);
     encoder.writeMesg(DEVELOPER_DATA_ID_MESG);
     for (const mesg of FIELD_DESCRIPTION_MESGS) {
         encoder.writeMesg(mesg);
     }
 
     let swingTotal = 0;
-    let recentEvents = [];
-    let smoothReference = null;
+    let recentEvents: number[] = [];
+    let smoothReference: [number, number, number] | null = null;
     let smoothTotal = 0;
     let smoothWindows = 0;
     let validWindows = 0;
@@ -197,34 +256,38 @@ export function buildFit(windows, destination) {
                         Math.abs(window.dynamic_rms - smoothReference[0]) / Math.max(Math.abs(smoothReference[0]), 40),
                         Math.abs(window.dynamic_peak - smoothReference[1]) / Math.max(Math.abs(smoothReference[1]), 80),
                         Math.abs(window.crossings - smoothReference[2]) / Math.max(Math.abs(smoothReference[2]), 2),
-                    ];
+                    ] as [number, number, number];
                     smoothTotal += Math.max(0, Math.min(100, Math.trunc(
                         100 - 100 * (0.45 * differences[0] + 0.35 * differences[1] + 0.20 * differences[2]))));
                     smoothWindows += 1;
                 }
-                smoothReference = smoothReference.map((old, index) =>
-                    0.8 * old + 0.2 * [window.dynamic_rms, window.dynamic_peak, window.crossings][index]);
+                smoothReference = [
+                    0.8 * smoothReference[0] + 0.2 * window.dynamic_rms,
+                    0.8 * smoothReference[1] + 0.2 * window.dynamic_peak,
+                    0.8 * smoothReference[2] + 0.2 * window.crossings,
+                ];
             }
             validWindows += 1;
         }
-        const smoothScore = smoothWindows ? pythonRound(smoothTotal / smoothWindows) : 0;
-        encoder.writeMesg({
-            mesgNum: Profile.MesgNum.RECORD,
+        const smoothScore = smoothWindows !== 0 ? pythonRound(smoothTotal / smoothWindows) : 0;
+        const record: Encodable<RecordMesg> = {
+            mesgNum: MESG.record,
             timestamp: new Date(START_MS + window.second * 1000),
             heartRate: 68 + pythonRound(window.second * 0.65) + (window.phase === "work" ? 7 : 0),
             developerFields: {
-                accel_rms: window.rms,
-                accel_peak: window.peak,
-                accel_zc: window.crossings,
-                swing_total: swingTotal,
-                swing_event: event,
-                swing_cadence: cadence,
-                smoothness_score: smoothScore,
+                2: window.rms,
+                3: window.peak,
+                4: window.crossings,
+                27: swingTotal,
+                28: event,
+                29: cadence,
+                30: smoothScore,
             },
-        });
+        };
+        encoder.writeMesg(record);
     }
 
-    const laps = [
+    const laps: readonly [number, number, number, number, number, number][] = [
         [0, 5, 0, 0, -1, 0],
         [5, 20, 1, 1, 88, 20],
         [25, 5, 0, 0, -1, 0],
@@ -232,31 +295,32 @@ export function buildFit(windows, destination) {
     ];
     laps.forEach(([start, duration, phase, setNumber, smoothness, swings], index) => {
         const segment = windows.slice(start, start + duration);
-        encoder.writeMesg({
-            mesgNum: Profile.MesgNum.LAP,
+        const lap: Encodable<LapMesg> = {
+            mesgNum: MESG.lap,
             messageIndex: index,
             startTime: new Date(START_MS + start * 1000),
             timestamp: new Date(START_MS + (start + duration) * 1000),
             totalElapsedTime: duration,
             totalTimerTime: duration,
             developerFields: {
-                set_number: setNumber,
-                phase,
-                phase_duration: duration,
-                set_smoothness: smoothness,
-                movement_type: 4,
-                working_side: 3,
-                swing_count: swings,
-                motion_exposure: segment.reduce((total, item) => total + item.dynamic_rms, 0),
-                motion_peak: Math.max(...segment.map((item) => item.dynamic_peak)),
-                active_seconds: phase ? duration : 0,
-                weight_volume: phase ? 8 * swings : 0,
+                8: setNumber,
+                10: phase,
+                11: duration,
+                14: smoothness,
+                15: 4,
+                16: 3,
+                18: swings,
+                19: segment.reduce((total, item) => total + item.dynamic_rms, 0),
+                20: Math.max(...segment.map((item) => item.dynamic_peak)),
+                21: phase !== 0 ? duration : 0,
+                22: phase !== 0 ? 8 * swings : 0,
             },
-        });
+        };
+        encoder.writeMesg(lap);
     });
 
-    encoder.writeMesg({
-        mesgNum: Profile.MesgNum.SESSION,
+    const session: Encodable<SessionMesg> = {
+        mesgNum: MESG.session,
         startTime: new Date(START_MS),
         timestamp: new Date(START_MS + 50_000),
         totalElapsedTime: 50,
@@ -265,105 +329,120 @@ export function buildFit(windows, destination) {
         maxHeartRate: 107,
         numLaps: laps.length,
         developerFields: {
-            total_sets: 2,
-            battery_used: 1.5,
-            implement_count: 2,
-            implement_weight: 4000,
-            total_swings: 37,
-            work_time: 40,
-            rest_time: 10,
-            implement_name: "Clubs: 2 x 4 kg",
+            0: 2,
+            1: 1.5,
+            6: 2,
+            7: 4000,
+            17: 37,
+            23: 40,
+            24: 10,
+            26: "Clubs: 2 x 4 kg",
         },
-    });
-    encoder.writeMesg({
-        mesgNum: Profile.MesgNum.ACTIVITY,
+    };
+    encoder.writeMesg(session);
+    const activity: Encodable<ActivityMesg> = {
+        mesgNum: MESG.activity,
         timestamp: new Date(START_MS + 50_000),
         totalTimerTime: 50,
         numSessions: 1,
-    });
+    };
+    encoder.writeMesg(activity);
 
     mkdirSync(dirname(destination), { recursive: true });
     writeFileSync(destination, encoder.close());
 }
 
-const fixed1 = (value) => value.toFixed(1);
+const fixed1 = (value: number): string => value.toFixed(1);
 
-export function renderSvg(windows) {
+export function renderSvg(windows: readonly Window[]): string {
     const [width, height] = [960, 580];
     const [left, right, top, chartBottom] = [72, 28, 92, 400];
     const chartWidth = width - left - right;
     const maximum = Math.max(...windows.map((item) => item.peak));
-    const x = (second) => left + (chartWidth * second) / (windows.length - 1);
-    const y = (value) => chartBottom - ((chartBottom - top) * value) / maximum;
-    const points = (key) => windows.map((item) => `${fixed1(x(item.second))},${fixed1(y(item[key]))}`).join(" ");
-    const backgrounds = [];
-    for (const [start, duration, phase] of [[0, 5, "Rest"], [5, 20, "Smooth"], [25, 5, "Rest"], [30, 20, "Irregular"]]) {
+    const x = (second: number): number => left + (chartWidth * second) / (windows.length - 1);
+    const y = (value: number): number => chartBottom - ((chartBottom - top) * value) / maximum;
+    const points = (key: "rms" | "peak"): string =>
+        windows.map((item) => `${fixed1(x(item.second))},${fixed1(y(item[key]))}`).join(" ");
+    const backgrounds: string[] = [];
+    const phases: readonly [number, number, string][] = [
+        [0, 5, "Rest"], [5, 20, "Smooth"], [25, 5, "Rest"], [30, 20, "Irregular"],
+    ];
+    for (const [start, duration, phase] of phases) {
         const color = phase === "Rest" ? "#e9f0f7" : "#fff0e9";
         backgrounds.push(
-            `<rect x="${fixed1(x(start))}" y="${top}" width="${fixed1((chartWidth * duration) / 50)}" `
-            + `height="${chartBottom - top}" fill="${color}"/><text x="${fixed1(x(start) + 8)}" y="${top + 20}" `
+            `<rect x="${fixed1(x(start))}" y="${String(top)}" width="${fixed1((chartWidth * duration) / 50)}" `
+            + `height="${String(chartBottom - top)}" fill="${color}"/><text x="${fixed1(x(start) + 8)}" `
+            + `y="${String(top + 20)}" `
             + `font-size="13" fill="#6f6961">${phase}</text>`,
         );
     }
-    const bars = [];
-    for (const [setNumber, score] of [[1, 88], [2, 61]]) {
+    const bars: string[] = [];
+    const scores: readonly [number, number][] = [[1, 88], [2, 61]];
+    for (const [setNumber, score] of scores) {
         const barX = 220 + (setNumber - 1) * 260;
         const barHeight = score * 0.65;
         bars.push(
-            `<rect x="${barX}" y="${fixed1(565 - barHeight)}" width="110" height="${fixed1(barHeight)}" `
-            + `rx="3" fill="#397a68"/><text x="${barX + 55}" y="${fixed1(553 - barHeight)}" `
-            + `text-anchor="middle" font-size="16" fill="#24211d">${score}</text><text x="${barX + 55}" `
-            + `y="578" text-anchor="middle" font-size="13" fill="#6f6961">Set ${setNumber}</text>`,
+            `<rect x="${String(barX)}" y="${fixed1(565 - barHeight)}" width="110" height="${fixed1(barHeight)}" `
+            + `rx="3" fill="#397a68"/><text x="${String(barX + 55)}" y="${fixed1(553 - barHeight)}" `
+            + `text-anchor="middle" font-size="16" fill="#24211d">${String(score)}</text><text x="${String(barX + 55)}" `
+            + `y="578" text-anchor="middle" font-size="13" fill="#6f6961">Set ${String(setNumber)}</text>`,
         );
     }
-    return `<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}" viewBox="0 0 ${width} ${height}">
-<rect width="100%" height="100%" fill="#f7f5f1"/><text x="${left}" y="38" font-family="system-ui,sans-serif" font-size="25" font-weight="600" fill="#24211d">Synthetic motion confidence check</text>
-<text x="${left}" y="64" font-family="system-ui,sans-serif" font-size="14" fill="#6f6961">Stillness → smooth periodic swings → rest → irregular swings with one deliberate spike</text>
+    return `<svg xmlns="http://www.w3.org/2000/svg" width="${String(width)}" height="${String(height)}" viewBox="0 0 ${String(width)} ${String(height)}">
+<rect width="100%" height="100%" fill="#f7f5f1"/><text x="${String(left)}" y="38" font-family="system-ui,sans-serif" font-size="25" font-weight="600" fill="#24211d">Synthetic motion confidence check</text>
+<text x="${String(left)}" y="64" font-family="system-ui,sans-serif" font-size="14" fill="#6f6961">Stillness → smooth periodic swings → rest → irregular swings with one deliberate spike</text>
 <g font-family="system-ui,sans-serif">${backgrounds.join("")}
-<line x1="${left}" y1="${chartBottom}" x2="${width - right}" y2="${chartBottom}" stroke="#bdb7af"/>
+<line x1="${String(left)}" y1="${String(chartBottom)}" x2="${String(width - right)}" y2="${String(chartBottom)}" stroke="#bdb7af"/>
 <polyline points="${points("rms")}" fill="none" stroke="#bd3e14" stroke-width="3"/>
 <polyline points="${points("peak")}" fill="none" stroke="#e4a02b" stroke-width="2"/>
-<text x="${left}" y="425" font-size="13" fill="#bd3e14">Acceleration RMS</text><text x="220" y="425" font-size="13" fill="#b37813">Peak acceleration</text>
-<text x="${left}" y="466" font-size="18" font-weight="600" fill="#24211d">Expected smoothness contrast</text>${bars.join("")}</g></svg>`;
+<text x="${String(left)}" y="425" font-size="13" fill="#bd3e14">Acceleration RMS</text><text x="220" y="425" font-size="13" fill="#b37813">Peak acceleration</text>
+<text x="${String(left)}" y="466" font-size="18" font-weight="600" fill="#24211d">Expected smoothness contrast</text>${bars.join("")}</g></svg>`;
 }
 
-export function generatedOutputs(directory) {
+export function generatedOutputs(directory: string): Map<string, Buffer | string> {
     const windows = workout();
     const fitDestination = join(directory, "synthetic-workout.fit");
     buildFit(windows, fitDestination);
-    return new Map([
+    return new Map<string, Buffer | string>([
         [fitDestination, readFileSync(fitDestination)],
         [join(directory, "synthetic-workout.svg"), renderSvg(windows)],
     ]);
 }
 
-function parseArgs(argv) {
-    const args = { outputDir: join("build", "synthetic-workout"), check: false };
+interface CliArgs {
+    outputDir: string;
+    check: boolean;
+}
+
+function parseArgs(argv: readonly string[]): CliArgs {
+    let outputDir = join("build", "synthetic-workout");
+    let check = false;
     for (let index = 0; index < argv.length; index++) {
         const argument = argv[index];
         if (argument === "--output-dir") {
-            args.outputDir = argv[++index];
+            index++;
+            outputDir = argv[index] ?? outputDir;
         } else if (argument === "--check") {
-            args.check = true;
+            check = true;
         } else {
-            throw new Error(`unexpected argument: ${argument}`);
+            throw new Error(`unexpected argument: ${String(argument)}`);
         }
     }
-    return args;
+    return { outputDir, check };
 }
 
-export function main(argv = process.argv.slice(2), baseline = BASELINE) {
+export function main(argv: readonly string[] = process.argv.slice(2), baseline: string = BASELINE): number {
     const args = parseArgs(argv);
     const temporary = mkdtempSync(join(tmpdir(), "mace-synthetic-"));
     try {
         const outputs = generatedOutputs(temporary);
-        const svg = [...outputs.entries()].find(([path]) => path.endsWith(".svg"))[1];
+        const svg = [...outputs.entries()].find(([path]) => path.endsWith(".svg"))?.[1];
         if (args.check && (!existsSync(baseline) || readFileSync(baseline, "utf8") !== svg)) {
             throw new Error(`visual baseline differs: regenerate ${baseline}`);
         }
         mkdirSync(args.outputDir, { recursive: true });
         for (const [source, content] of outputs) {
-            writeFileSync(join(args.outputDir, source.split("/").pop()), content);
+            writeFileSync(join(args.outputDir, basename(source)), content);
         }
     } finally {
         rmSync(temporary, { recursive: true, force: true });
@@ -376,7 +455,7 @@ if (process.argv[1] === fileURLToPath(import.meta.url)) {
     try {
         process.exitCode = main();
     } catch (error) {
-        console.error(error.message);
+        console.error(error instanceof Error ? error.message : String(error));
         process.exitCode = 1;
     }
 }

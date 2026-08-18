@@ -1,11 +1,19 @@
 #!/usr/bin/env node
 // Derive transparent, non-medical within-session workout signals.
 
-import { pythonRound } from "./fit-io.js";
+import { pythonRound } from "./fit-io.ts";
+import {
+    type Analysis,
+    type Confidence,
+    type Report,
+    type ReportLap,
+    type Signal,
+} from "./report-types.ts";
 
-const mean = (values) => values.reduce((total, value) => total + value, 0) / values.length;
+const mean = (values: readonly number[]): number =>
+    values.reduce((total, value) => total + value, 0) / values.length;
 
-export function confidence(samples) {
+export function confidence(samples: number): Confidence {
     if (samples >= 8) {
         return "high";
     }
@@ -18,7 +26,7 @@ export function confidence(samples) {
     return "insufficient";
 }
 
-function unavailable(code, label, reason, samples = 0) {
+function unavailable(code: string, label: string, reason: string, samples = 0): Signal {
     return {
         code, label, status: "unavailable", value: null,
         unit: null, direction: "unknown", confidence: confidence(samples),
@@ -26,20 +34,26 @@ function unavailable(code, label, reason, samples = 0) {
     };
 }
 
-function splitChange(values) {
+function splitChange(values: readonly number[]): [number, number, number] {
     const midpoint = Math.floor(values.length / 2);
     const early = mean(values.slice(0, midpoint));
     const late = mean(values.slice(values.length - midpoint));
     return [early, late, late - early];
 }
 
-function trendSignal(code, label, values, unit, relative = false) {
+function trendSignal(
+    code: string,
+    label: string,
+    values: readonly number[],
+    unit: string,
+    relative = false,
+): Signal {
     const samples = values.length;
     if (samples < 4) {
-        return unavailable(code, label, `Needs at least 4 valid work sets; found ${samples}.`, samples);
+        return unavailable(code, label, `Needs at least 4 valid work sets; found ${String(samples)}.`, samples);
     }
     const [early, late, change] = splitChange(values);
-    const value = relative && early ? (change / early) * 100 : change;
+    const value = relative && early !== 0 ? (change / early) * 100 : change;
     const threshold = relative ? 10 : 5;
     const direction = value >= threshold ? "higher" : value <= -threshold ? "lower" : "stable";
     const wording = value > 0 ? "increased" : value < 0 ? "decreased" : "was unchanged";
@@ -51,7 +65,16 @@ function trendSignal(code, label, values, unit, relative = false) {
     };
 }
 
-function balanceSignal(work) {
+function exposureOf(lap: ReportLap): number {
+    for (const candidate of [lap.exposure, lap.active_seconds, lap.elapsed]) {
+        if (typeof candidate === "number" && candidate !== 0) {
+            return candidate;
+        }
+    }
+    return 0;
+}
+
+function balanceSignal(work: readonly ReportLap[]): Signal {
     const unilateral = work.filter((lap) => lap.side === "Left" || lap.side === "Right");
     const sides = new Set(unilateral.map((lap) => lap.side));
     if (unilateral.length < 4 || sides.size !== 2) {
@@ -62,10 +85,10 @@ function balanceSignal(work) {
     }
     const totals = { Left: 0, Right: 0 };
     for (const lap of unilateral) {
-        totals[lap.side] += Number(lap.exposure || lap.active_seconds || lap.elapsed);
+        totals[lap.side === "Left" ? "Left" : "Right"] += exposureOf(lap);
     }
     const total = totals.Left + totals.Right;
-    const left = total ? (totals.Left / total) * 100 : 50;
+    const left = total !== 0 ? (totals.Left / total) * 100 : 50;
     const difference = left - 50;
     const direction = difference >= 5 ? "left" : difference <= -5 ? "right" : "balanced";
     return {
@@ -77,19 +100,19 @@ function balanceSignal(work) {
     };
 }
 
-function dropoutSignal(report) {
-    const elapsed = Number(report.summary.elapsed ?? 0);
+function dropoutSignal(report: Report): Signal {
+    const elapsed = report.summary.elapsed ?? 0;
     const times = report.records
         .filter((point) => point.rms != null || point.peak != null)
-        .map((point) => Number(point.t))
+        .map((point) => point.t)
         .sort((a, b) => a - b);
-    if (!elapsed || times.length === 0) {
+    if (elapsed === 0 || times.length === 0) {
         return unavailable("sensor_dropout", "Motion continuity", "No motion series is available.");
     }
     const boundaries = [0, ...times, elapsed];
     let longest = 0;
     for (let index = 1; index < boundaries.length; index++) {
-        longest = Math.max(longest, boundaries[index] - boundaries[index - 1] - 1);
+        longest = Math.max(longest, (boundaries[index] ?? 0) - (boundaries[index - 1] ?? 0) - 1);
     }
     const coverage = Math.min(100, (times.length / Math.max(1, pythonRound(elapsed))) * 100);
     const direction = longest >= 3 ? "gap" : "continuous";
@@ -102,16 +125,16 @@ function dropoutSignal(report) {
 }
 
 // Return descriptive signals; never injury, tendon-force, or readiness claims.
-export function analyze(report) {
+export function analyze(report: Report): Analysis {
     const work = report.laps.filter(
         (lap) => lap.phase === "work" && (lap.set ?? 0) > 0 && (lap.elapsed ?? 0) >= 10,
     );
     const smoothness = work
-        .filter((lap) => typeof lap.smoothness === "number" && lap.smoothness >= 0)
-        .map((lap) => Number(lap.smoothness));
+        .map((lap) => lap.smoothness)
+        .filter((value): value is number => typeof value === "number" && value >= 0);
     const peaks = work
-        .filter((lap) => typeof lap.motion_peak === "number" && lap.motion_peak >= 0)
-        .map((lap) => Number(lap.motion_peak));
+        .map((lap) => lap.motion_peak)
+        .filter((value): value is number => typeof value === "number" && value >= 0);
     const signals = [
         trendSignal("smoothness_drift", "Smoothness drift", smoothness, " points"),
         trendSignal("peak_change", "Late-session peak change", peaks, "%", true),

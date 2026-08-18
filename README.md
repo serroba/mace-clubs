@@ -43,8 +43,8 @@ self-contained report locally from either the downloaded ZIP or a raw FIT file:
 
 ```sh
 npm ci --prefix tools
-node tools/report-fit.js ~/Downloads/activity.zip
-node tools/validate-workout.js ~/Downloads/activity.zip
+node --experimental-strip-types tools/report-fit.ts ~/Downloads/activity.zip
+node --experimental-strip-types tools/validate-workout.ts ~/Downloads/activity.zip
 ```
 
 The resulting HTML stays on your computer and combines motion intensity, heart
@@ -112,6 +112,9 @@ still show `-- Sets`.
 
 Requires:
 
+- Node.js 22.8+ for the local FIT tooling and its type stripping
+  (`npm ci --prefix tools` once, then `make tools-check` runs the TypeScript
+  typecheck, lint, and tests);
 - a Java runtime available to the shell (`java -version` must succeed; a Homebrew
   OpenJDK install works even when macOS's `/usr/libexec/java_home` cannot find it);
 - the [Connect IQ SDK](https://developer.garmin.com/connect-iq/sdk/), installed via SDK

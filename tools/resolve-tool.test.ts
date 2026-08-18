@@ -4,22 +4,22 @@ import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { test } from "node:test";
 
-import { resolve } from "./resolve-tool.js";
+import { resolve } from "./resolve-tool.ts";
 
-function executable(path) {
+function executable(path: string): string {
     mkdirSync(dirname(path), { recursive: true });
     writeFileSync(path, "");
     chmodSync(path, 0o755);
     return path;
 }
 
-function workingExecutable(path) {
+function workingExecutable(path: string): string {
     executable(path);
     writeFileSync(path, "#!/bin/sh\nexit 0\n");
     return path;
 }
 
-function withHome(run) {
+function withHome<T>(run: (home: string) => T): T {
     const home = mkdtempSync(join(tmpdir(), "mace-resolve-"));
     try {
         return run(home);

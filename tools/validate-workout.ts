@@ -6,19 +6,37 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 
-import { fitPath, pythonRound, readFit } from "./fit-io.js";
-import { collect } from "./report-fit.js";
+import { fitPath, pythonRound, readFit } from "./fit-io.ts";
+import { collect } from "./report-fit.ts";
+import {
+    type Finding,
+    type Report,
+    type ReportLap,
+    type Severity,
+    type ValidationResult,
+    type ValidationStatus,
+} from "./report-types.ts";
 
-function finding(severity, code, message, deduction = 0, target = null) {
+function finding(
+    severity: Severity,
+    code: string,
+    message: string,
+    deduction = 0,
+    target: string | null = null,
+): Finding {
     return { severity, code, message, deduction, target };
 }
 
-// Return transparent integrity findings for a collected workout report.
-export function validate(report) {
-    const { summary, laps, records } = report;
-    const findings = [];
+function percent(ratio: number): string {
+    return `${String(pythonRound(ratio * 100))}%`;
+}
 
-    const elapsed = Number(summary.elapsed ?? 0);
+// Return transparent integrity findings for a collected workout report.
+export function validate(report: Report): ValidationResult {
+    const { summary, laps, records } = report;
+    const findings: Finding[] = [];
+
+    const elapsed = summary.elapsed ?? 0;
     if (elapsed <= 0) {
         findings.push(finding("error", "session.duration", "Session duration is missing or zero.", 30));
     }
@@ -35,11 +53,11 @@ export function validate(report) {
     if (work.length > 0 && recordedSets !== work.length) {
         findings.push(finding(
             "warning", "sets.total_mismatch",
-            `Session reports ${recordedSets} sets but ${work.length} work laps were found.`, 10,
+            `Session reports ${String(recordedSets)} sets but ${String(work.length)} work laps were found.`, 10,
         ));
     }
 
-    const numbers = work.map((lap) => Math.trunc(lap.set));
+    const numbers = work.map((lap) => Math.trunc(lap.set ?? 0));
     const expected = numbers.map((_, index) => index + 1);
     if (numbers.length > 0 && numbers.some((value, index) => value !== expected[index])) {
         findings.push(finding(
@@ -48,54 +66,60 @@ export function validate(report) {
         ));
     }
 
-    const ordered = [...laps].sort((a, b) => a.start - b.start);
+    const ordered = [...laps].sort((a, b) => (a.start ?? 0) - (b.start ?? 0));
     for (let index = 1; index < ordered.length; index++) {
         const previous = ordered[index - 1];
         const current = ordered[index];
+        if (previous === undefined || current === undefined) {
+            continue;
+        }
         // Garmin stores lap starts at whole-second precision while elapsed
         // durations retain milliseconds, so sub-second boundary overlap is
         // expected in otherwise healthy exports.
-        if (current.start < previous.end - 1.0) {
+        if ((current.start ?? 0) < (previous.end ?? 0) - 1.0) {
             findings.push(finding(
                 "error", "laps.overlap",
-                `Lap ${current.lap} overlaps lap ${previous.lap}.`, 20,
-                `lap-${current.lap}`,
+                `Lap ${String(current.lap)} overlaps lap ${String(previous.lap)}.`, 20,
+                `lap-${String(current.lap)}`,
             ));
             break;
         }
     }
 
-    const lapSeconds = laps.reduce((total, lap) => total + Number(lap.elapsed ?? 0), 0);
-    if (elapsed && laps.length > 0 && Math.abs(lapSeconds - elapsed) > Math.max(2.0, elapsed * 0.02)) {
+    const lapSeconds = laps.reduce((total, lap) => total + (lap.elapsed ?? 0), 0);
+    if (elapsed !== 0 && laps.length > 0 && Math.abs(lapSeconds - elapsed) > Math.max(2.0, elapsed * 0.02)) {
         findings.push(finding(
             "warning", "laps.duration_mismatch",
             `Laps total ${lapSeconds.toFixed(1)}s while the session reports ${elapsed.toFixed(1)}s.`, 8,
         ));
     }
 
+    const negatives: [keyof ReportLap, string][] = [
+        ["motion_peak", "motion peak"], ["exposure", "motion exposure"],
+        ["active_seconds", "active time"], ["swings", "swing count"],
+    ];
     for (const lap of work) {
-        if (Number(lap.elapsed ?? 0) < 10) {
+        if ((lap.elapsed ?? 0) < 10) {
             findings.push(finding(
                 "warning", "sets.short",
-                `Set ${lap.set} lasted under 10 seconds and may be incomplete.`, 5,
-                `set-${lap.set}`,
+                `Set ${String(lap.set)} lasted under 10 seconds and may be incomplete.`, 5,
+                `set-${String(lap.set)}`,
             ));
         }
         const score = lap.smoothness;
         if (score != null && !(score >= 0 && score <= 100)) {
             findings.push(finding(
                 "error", "smoothness.range",
-                `Set ${lap.set} has smoothness ${score}; expected 0–100.`, 15,
-                `set-${lap.set}`,
+                `Set ${String(lap.set)} has smoothness ${String(score)}; expected 0–100.`, 15,
+                `set-${String(lap.set)}`,
             ));
         }
-        for (const [key, label] of [["motion_peak", "motion peak"], ["exposure", "motion exposure"],
-                                    ["active_seconds", "active time"], ["swings", "swing count"]]) {
+        for (const [key, label] of negatives) {
             const value = lap[key];
-            if (value != null && value < 0) {
+            if (typeof value === "number" && value < 0) {
                 findings.push(finding(
-                    "error", `${key}.negative`, `Set ${lap.set} has negative ${label}.`, 15,
-                    `set-${lap.set}`,
+                    "error", `${key}.negative`, `Set ${String(lap.set)} has negative ${label}.`, 15,
+                    `set-${String(lap.set)}`,
                 ));
             }
         }
@@ -119,8 +143,8 @@ export function validate(report) {
     }
 
     const expectedSamples = Math.max(1, pythonRound(elapsed));
-    const motionCoverage = elapsed ? Math.min(1.0, motion.length / expectedSamples) : 0.0;
-    const hrCoverage = elapsed ? Math.min(1.0, heartRate.length / expectedSamples) : 0.0;
+    const motionCoverage = elapsed !== 0 ? Math.min(1.0, motion.length / expectedSamples) : 0.0;
+    const hrCoverage = elapsed !== 0 ? Math.min(1.0, heartRate.length / expectedSamples) : 0.0;
     if (motion.length === 0) {
         findings.push(finding(
             "info", "motion.unavailable",
@@ -145,31 +169,38 @@ export function validate(report) {
         ));
     }
 
-    const swingSeries = records.filter((point) => point.swing_total != null);
+    const swingSeries = records.filter(
+        (point): point is typeof point & { swing_total: number } => point.swing_total != null,
+    );
     for (let index = 1; index < swingSeries.length; index++) {
         const previous = swingSeries[index - 1];
         const current = swingSeries[index];
+        if (previous === undefined || current === undefined) {
+            continue;
+        }
         if (current.swing_total < previous.swing_total) {
             findings.push(finding(
                 "error", "swings.regression",
-                `Cumulative swing total drops from ${previous.swing_total} to ` +
-                `${current.swing_total} at ${current.t.toFixed(0)}s.`, 20, "timeline",
+                `Cumulative swing total drops from ${String(previous.swing_total)} to `
+                + `${String(current.swing_total)} at ${current.t.toFixed(0)}s.`, 20, "timeline",
             ));
             break;
         }
     }
-    const events = records.reduce((total, point) => total + (point.swing_event || 0), 0);
-    if (swingSeries.length > 0 && events) {
-        const delta = swingSeries[swingSeries.length - 1].swing_total - swingSeries[0].swing_total;
+    const events = records.reduce((total, point) => total + (point.swing_event ?? 0), 0);
+    const firstSwing = swingSeries[0];
+    const lastSwing = swingSeries[swingSeries.length - 1];
+    if (firstSwing !== undefined && lastSwing !== undefined && events !== 0) {
+        const delta = lastSwing.swing_total - firstSwing.swing_total;
         if (events !== delta) {
             findings.push(finding(
                 "warning", "swings.event_mismatch",
-                `${events} swing events were marked but the cumulative total grew by ${delta}.`, 10,
+                `${String(events)} swing events were marked but the cumulative total grew by ${String(delta)}.`, 10,
                 "timeline",
             ));
         }
     }
-    const swingCoverage = elapsed ? Math.min(1.0, swingSeries.length / expectedSamples) : 0.0;
+    const swingCoverage = elapsed !== 0 ? Math.min(1.0, swingSeries.length / expectedSamples) : 0.0;
     if (swingSeries.length > 0 && swingCoverage < 0.9) {
         findings.push(finding(
             "warning", "swings.coverage",
@@ -182,7 +213,7 @@ export function validate(report) {
         if (cadence != null && !(cadence >= 0 && cadence <= 240)) {
             findings.push(finding(
                 "error", "cadence.range",
-                `Swing cadence ${cadence} spm is outside the plausible 0–240 range.`, 15,
+                `Swing cadence ${String(cadence)} spm is outside the plausible 0–240 range.`, 15,
                 "timeline",
             ));
             break;
@@ -190,10 +221,11 @@ export function validate(report) {
     }
     const smoothnessSeries = records.filter((point) => point.smoothness_score != null);
     for (const point of smoothnessSeries) {
-        if (!(point.smoothness_score >= 0 && point.smoothness_score <= 100)) {
+        const score = point.smoothness_score ?? 0;
+        if (!(score >= 0 && score <= 100)) {
             findings.push(finding(
                 "error", "smoothness.series_range",
-                `Rolling smoothness ${point.smoothness_score} is outside 0–100.`, 15,
+                `Rolling smoothness ${String(score)} is outside 0–100.`, 15,
                 "timeline",
             ));
             break;
@@ -206,17 +238,17 @@ export function validate(report) {
     if (summary.side === "Unknown") {
         findings.push(finding("warning", "metadata.side", "Working-side metadata is unavailable.", 4));
     }
-    if (!summary.equipment) {
+    if (summary.equipment == null || summary.equipment === "") {
         findings.push(finding("info", "metadata.equipment", "Equipment description is unavailable.", 0));
     }
 
     const score = Math.max(0, 100 - findings.reduce((total, item) => total + item.deduction, 0));
     const errors = findings.filter((item) => item.severity === "error").length;
     const warnings = findings.filter((item) => item.severity === "warning").length;
-    let status;
-    if (errors) {
+    let status: ValidationStatus;
+    if (errors > 0) {
         status = "invalid";
-    } else if (score >= 90 && !warnings) {
+    } else if (score >= 90 && warnings === 0) {
         status = "healthy";
     } else {
         status = "usable_with_gaps";
@@ -233,13 +265,9 @@ export function validate(report) {
     };
 }
 
-function percent(ratio) {
-    return `${pythonRound(ratio * 100)}%`;
-}
-
-export function renderText(result) {
+export function renderText(result: ValidationResult): string {
     const lines = [
-        `Workout integrity: ${result.status} (${result.score}/100)`,
+        `Workout integrity: ${result.status} (${String(result.score)}/100)`,
         `Coverage: motion ${percent(result.coverage.motion)}, heart rate ${percent(result.coverage.heart_rate)}`,
     ];
     for (const item of result.findings) {
@@ -251,7 +279,7 @@ export function renderText(result) {
     return lines.join("\n");
 }
 
-export function loadReport(source) {
+export function loadReport(source: string): Report {
     const temporary = mkdtempSync(join(tmpdir(), "mace-clubs-fit-"));
     try {
         return collect(readFit(readFileSync(fitPath(source, temporary))));
@@ -260,28 +288,37 @@ export function loadReport(source) {
     }
 }
 
-function parseArgs(argv) {
-    const args = { source: null, json: false };
+interface CliArgs {
+    source: string;
+    json: boolean;
+}
+
+function parseArgs(argv: readonly string[]): CliArgs {
+    let source: string | null = null;
+    let json = false;
     for (const argument of argv) {
         if (argument === "--json") {
-            args.json = true;
-        } else if (args.source === null) {
-            args.source = argument;
+            json = true;
+        } else if (source === null) {
+            source = argument;
         } else {
             throw new Error(`unexpected argument: ${argument}`);
         }
     }
-    if (args.source === null) {
-        throw new Error("usage: validate-workout.js SOURCE [--json]");
+    if (source === null) {
+        throw new Error("usage: validate-workout.ts SOURCE [--json]");
     }
-    return args;
+    return { source, json };
 }
 
-export function main(argv = process.argv.slice(2), loader = loadReport) {
+export function main(
+    argv: readonly string[] = process.argv.slice(2),
+    loader: (source: string) => Report = loadReport,
+): number {
     const args = parseArgs(argv);
     const result = validate(loader(args.source));
     console.log(args.json ? JSON.stringify(result, null, 2) : renderText(result));
-    return result.counts.errors ? 1 : 0;
+    return result.counts.errors > 0 ? 1 : 0;
 }
 
 if (process.argv[1] === fileURLToPath(import.meta.url)) {

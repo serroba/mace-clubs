@@ -21,17 +21,23 @@ jobs:
           cache-dependency-path: tools/package-lock.json
       - name: Install report dependencies
         run: npm ci --prefix tools
+      # tsconfig includes every tools/*.ts file and eslint covers the whole
+      # directory, so untested CLIs are still typechecked and linted here.
+      - name: Typecheck all TypeScript at maximum strictness
+        run: npm run typecheck --prefix tools
+      - name: Lint all TypeScript
+        run: npm run lint --prefix tools
       - name: Test report generator with coverage
         run: |
-          node --test --experimental-test-coverage \
-            --test-coverage-include='tools/analyze-workout.js' \
-            --test-coverage-include='tools/report-fit.js' \
-            --test-coverage-include='tools/validate-workout.js' \
-            --test-coverage-include='tools/workout-history.js' \
-            --test-coverage-include='tools/fit-io.js' \
+          node --experimental-strip-types --test --experimental-test-coverage \
+            --test-coverage-include='tools/analyze-workout.ts' \
+            --test-coverage-include='tools/report-fit.ts' \
+            --test-coverage-include='tools/validate-workout.ts' \
+            --test-coverage-include='tools/workout-history.ts' \
+            --test-coverage-include='tools/fit-io.ts' \
             --test-coverage-lines=95 \
-            tools/analyze-workout.test.js tools/report-fit.test.js \
-            tools/validate-workout.test.js tools/workout-history.test.js
+            tools/analyze-workout.test.ts tools/report-fit.test.ts \
+            tools/validate-workout.test.ts tools/workout-history.test.ts
 
   lint:
     name: Lint XML resources
@@ -43,7 +49,7 @@ jobs:
           sudo apt-get update -q && sudo apt-get install -y -q libxml2-utils
           find . -name '*.xml' -not -path './.git/*' -print0 | xargs -0 -n1 xmllint --noout
       - name: Test local tool discovery
-        run: node --test tools/resolve-tool.test.js
+        run: node --experimental-strip-types --test tools/resolve-tool.test.ts
 
   mc-lint:
     name: Monkey C format & lint
@@ -241,14 +247,14 @@ jobs:
         run: npm ci --prefix tools
       - name: Generate and verify presentation fixture
         run: |
-          node tools/synthetic-workout.js --check --output-dir build/synthetic-workout
-          node tools/report-fit.js build/synthetic-workout/synthetic-workout.fit \
+          node --experimental-strip-types tools/synthetic-workout.ts --check --output-dir build/synthetic-workout
+          node --experimental-strip-types tools/report-fit.ts build/synthetic-workout/synthetic-workout.fit \
             -o build/synthetic-workout/synthetic-workout.html
-          node tools/validate-workout.js build/synthetic-workout/synthetic-workout.fit
-          node --test --experimental-test-coverage \
-            --test-coverage-include='tools/synthetic-workout.js' \
+          node --experimental-strip-types tools/validate-workout.ts build/synthetic-workout/synthetic-workout.fit
+          node --experimental-strip-types --test --experimental-test-coverage \
+            --test-coverage-include='tools/synthetic-workout.ts' \
             --test-coverage-lines=95 \
-            tools/synthetic-workout.test.js
+            tools/synthetic-workout.test.ts
       - name: Upload review artifacts
         uses: actions/upload-artifact@v4
         with:

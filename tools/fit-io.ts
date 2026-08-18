@@ -5,64 +5,91 @@ import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { basename, join } from "node:path";
 import { inflateRawSync } from "node:zlib";
 
-import { Decoder, Stream } from "@garmin/fitsdk";
+import { Decoder, type FieldValue, type FitMessages, type Mesg, Stream } from "@garmin/fitsdk";
 
-export function readFit(buffer) {
+export interface DecodedFit {
+    readonly messages: FitMessages;
+    readonly fieldNames: ReadonlyMap<number, string>;
+    readonly errors: readonly Error[];
+}
+
+export function readFit(buffer: Buffer): DecodedFit {
     const decoder = new Decoder(Stream.fromBuffer(buffer));
-    const fieldNames = new Map();
+    const fieldNames = new Map<number, string>();
     const { messages, errors } = decoder.read({
-        fieldDescriptionListener: (key, _developerDataIdMesg, fieldDescriptionMesg) =>
-            fieldNames.set(key, fieldDescriptionMesg.fieldName),
+        fieldDescriptionListener: (key, _developerDataIdMesg, fieldDescriptionMesg): void => {
+            fieldNames.set(key, fieldDescriptionMesg.fieldName ?? String(key));
+        },
     });
     return { messages, fieldNames, errors };
 }
 
-const camelCache = new Map();
+const camelCache = new Map<string, string>();
 
-function camel(name) {
+function camel(name: string): string {
     let cached = camelCache.get(name);
     if (cached === undefined) {
-        cached = name.replace(/_([a-z])/g, (_, letter) => letter.toUpperCase());
+        cached = name.replace(/_([a-z])/g, (_, letter: string) => letter.toUpperCase());
         camelCache.set(name, cached);
     }
     return cached;
 }
 
-export function messagesOf(fit, kind) {
-    return fit.messages[`${camel(kind)}Mesgs`] ?? [];
+export function messagesOf<K extends keyof FitMessages>(
+    fit: DecodedFit,
+    key: K,
+): NonNullable<FitMessages[K]> {
+    return fit.messages[key] ?? [];
 }
 
 // Native fields live on the message under the profile's camelCase name;
 // developer fields sit in developerFields keyed by the decoder's sequential
 // field-description key, which readFit maps back to the recorded field name.
-export function fieldValue(fit, mesg, name, fallback = null) {
-    const native = mesg[camel(name)];
+export function fieldValue(fit: DecodedFit, mesg: Mesg, name: string): FieldValue | null {
+    const native = (mesg as Record<string, unknown>)[camel(name)];
     if (native !== undefined && native !== null) {
-        return native;
+        return native as FieldValue;
     }
     const developer = mesg.developerFields;
-    if (developer) {
+    if (developer !== undefined) {
         for (const [key, value] of Object.entries(developer)) {
-            if (fit.fieldNames.get(Number(key)) === name && value !== undefined && value !== null) {
+            if (fit.fieldNames.get(Number(key)) === name && value !== undefined) {
                 return value;
             }
         }
     }
-    return fallback;
+    return null;
 }
 
-export function timestampSeconds(value) {
+export function numberField(fit: DecodedFit, mesg: Mesg, name: string): number | null;
+export function numberField(fit: DecodedFit, mesg: Mesg, name: string, fallback: number): number;
+export function numberField(
+    fit: DecodedFit,
+    mesg: Mesg,
+    name: string,
+    fallback: number | null = null,
+): number | null {
+    const value = fieldValue(fit, mesg, name);
+    return typeof value === "number" ? value : fallback;
+}
+
+export function dateField(fit: DecodedFit, mesg: Mesg, name: string): Date | null {
+    const value = fieldValue(fit, mesg, name);
+    return value instanceof Date ? value : null;
+}
+
+export function timestampSeconds(value: unknown): number | null {
     return value instanceof Date ? value.getTime() / 1000 : null;
 }
 
 // Python-compatible round: ties go to the nearest even integer at the target
 // precision, matching the numbers the retired Python tooling produced.
-export function pythonRound(value, digits = 0) {
+export function pythonRound(value: number, digits = 0): number {
     const factor = 10 ** digits;
     const scaled = value * factor;
     const floor = Math.floor(scaled);
     const difference = scaled - floor;
-    let rounded;
+    let rounded: number;
     if (difference > 0.5) {
         rounded = floor + 1;
     } else if (difference < 0.5) {
@@ -76,9 +103,15 @@ export function pythonRound(value, digits = 0) {
 const ZIP_EOCD = 0x06054b50;
 const ZIP_CENTRAL = 0x02014b50;
 
+export interface ZipEntry {
+    readonly name: string;
+    readonly isDirectory: boolean;
+    extract(): Buffer;
+}
+
 // Garmin ZIP exports only use stored and deflate entries, so a minimal
 // read-only central-directory walk avoids an archive dependency.
-export function zipEntries(buffer) {
+export function zipEntries(buffer: Buffer): ZipEntry[] {
     let eocd = -1;
     for (let index = buffer.length - 22; index >= Math.max(0, buffer.length - 65557); index--) {
         if (buffer.readUInt32LE(index) === ZIP_EOCD) {
@@ -91,7 +124,7 @@ export function zipEntries(buffer) {
     }
     const count = buffer.readUInt16LE(eocd + 10);
     let offset = buffer.readUInt32LE(eocd + 16);
-    const entries = [];
+    const entries: ZipEntry[] = [];
     for (let index = 0; index < count; index++) {
         if (buffer.readUInt32LE(offset) !== ZIP_CENTRAL) {
             throw new Error("corrupt ZIP central directory");
@@ -106,7 +139,7 @@ export function zipEntries(buffer) {
         entries.push({
             name,
             isDirectory: name.endsWith("/"),
-            extract() {
+            extract(): Buffer {
                 const localName = buffer.readUInt16LE(localOffset + 26);
                 const localExtra = buffer.readUInt16LE(localOffset + 28);
                 const start = localOffset + 30 + localName + localExtra;
@@ -117,7 +150,7 @@ export function zipEntries(buffer) {
                 if (method === 8) {
                     return inflateRawSync(data);
                 }
-                throw new Error(`unsupported ZIP compression method ${method} for ${name}`);
+                throw new Error(`unsupported ZIP compression method ${String(method)} for ${name}`);
             },
         });
         offset += 46 + nameLength + extraLength + commentLength;
@@ -126,25 +159,26 @@ export function zipEntries(buffer) {
 }
 
 // Resolve a raw FIT file or safely extract the activity from a ZIP.
-export function fitPath(source, directory) {
+export function fitPath(source: string, directory: string): string {
     if (!source.toLowerCase().endsWith(".zip")) {
         return source;
     }
     const candidates = zipEntries(readFileSync(source)).filter(
         (entry) => !entry.isDirectory && entry.name.toLowerCase().endsWith(".fit"),
     );
-    if (candidates.length === 0) {
+    const best = candidates.sort((a, b) => {
+        const aRank = a.name.toLowerCase().includes("activity") ? 0 : 1;
+        const bRank = b.name.toLowerCase().includes("activity") ? 0 : 1;
+        if (aRank !== bRank) {
+            return aRank - bRank;
+        }
+        return a.name < b.name ? -1 : a.name > b.name ? 1 : 0;
+    })[0];
+    if (best === undefined) {
         throw new Error(`${source} contains no FIT activity`);
     }
-    if (candidates.length > 1) {
-        candidates.sort((a, b) => {
-            const aRank = a.name.toLowerCase().includes("activity") ? 0 : 1;
-            const bRank = b.name.toLowerCase().includes("activity") ? 0 : 1;
-            return aRank - bRank || (a.name < b.name ? -1 : a.name > b.name ? 1 : 0);
-        });
-    }
     mkdirSync(directory, { recursive: true });
-    const destination = join(directory, basename(candidates[0].name));
-    writeFileSync(destination, candidates[0].extract());
+    const destination = join(directory, basename(best.name));
+    writeFileSync(destination, best.extract());
     return destination;
 }

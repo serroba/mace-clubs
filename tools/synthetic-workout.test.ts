@@ -4,10 +4,10 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { test } from "node:test";
 
-import { fieldValue, messagesOf, readFit } from "./fit-io.js";
-import { BASELINE, buildFit, main, renderSvg, samples, workout } from "./synthetic-workout.js";
+import { fieldValue, messagesOf, readFit } from "./fit-io.ts";
+import { BASELINE, buildFit, main, renderSvg, samples, workout } from "./synthetic-workout.ts";
 
-function withTempDir(run) {
+function withTempDir<T>(run: (root: string) => T): T {
     const root = mkdtempSync(join(tmpdir(), "mace-synthetic-test-"));
     try {
         return run(root);
@@ -18,15 +18,18 @@ function withTempDir(run) {
 
 test("scenario has expected phases and deliberate spike", () => {
     const windows = workout();
+    const spike = windows[42];
+    assert.ok(spike !== undefined);
     assert.equal(windows.length, 50);
     assert.equal(windows.filter((item) => item.phase === "rest").length, 10);
     assert.equal(windows.filter((item) => item.phase === "work").length, 40);
-    assert.equal(windows[42].style, "spike");
-    assert.ok(windows[42].peak > Math.max(...windows.slice(0, 42).map((item) => item.peak)));
+    assert.equal(spike.style, "spike");
+    assert.ok(spike.peak > Math.max(...windows.slice(0, 42).map((item) => item.peak)));
 });
 
 test("still window preserves gravity but has no dynamic motion", () => {
     const still = workout()[0];
+    assert.ok(still !== undefined);
     assert.deepEqual(
         [still.rms, still.peak, still.crossings, still.dynamic_rms, still.dynamic_peak],
         [1000, 1000, 0, 0, 0]);
@@ -42,23 +45,33 @@ test("generated fit round trips developer fields", () => {
         buildFit(workout(), path);
         const fit = readFit(readFileSync(path));
         assert.deepEqual(fit.errors, []);
-        const records = messagesOf(fit, "record");
+        const records = messagesOf(fit, "recordMesgs");
+        const firstRecord = records[0];
+        const spikeRecord = records[42];
+        const lastRecord = records[records.length - 1];
+        const spikeWindow = workout()[42];
+        assert.ok(firstRecord !== undefined && spikeRecord !== undefined
+                  && lastRecord !== undefined && spikeWindow !== undefined);
         assert.equal(records.length, 50);
-        assert.equal(fieldValue(fit, records[0], "accel_rms"), 1000);
-        assert.equal(fieldValue(fit, records[42], "accel_peak"), workout()[42].peak);
-        const events = records.map((record) => fieldValue(fit, record, "swing_event"));
+        assert.equal(fieldValue(fit, firstRecord, "accel_rms"), 1000);
+        assert.equal(fieldValue(fit, spikeRecord, "accel_peak"), spikeWindow.peak);
+        const events = records.map((record) => fieldValue(fit, record, "swing_event"))
+            .filter((value): value is number => typeof value === "number");
         const eventTotal = events.reduce((total, value) => total + value, 0);
+        assert.equal(events.length, records.length);
         assert.ok(eventTotal > 0);
-        assert.equal(eventTotal, fieldValue(fit, records[records.length - 1], "swing_total"));
+        assert.equal(eventTotal, fieldValue(fit, lastRecord, "swing_total"));
         assert.ok(records.every((record) => fieldValue(fit, record, "swing_cadence") !== null));
-        const smoothness = records.map((record) => fieldValue(fit, record, "smoothness_score"));
-        assert.ok(smoothness.every((score) => score !== null));
+        const smoothness = records.map((record) => fieldValue(fit, record, "smoothness_score"))
+            .filter((value): value is number => typeof value === "number");
+        assert.equal(smoothness.length, records.length);
         assert.ok(smoothness.some((score) => score > 0));
         assert.ok(smoothness.every((score) => score >= 0 && score <= 100));
-        const sessions = messagesOf(fit, "session");
-        assert.equal(fieldValue(fit, sessions[0], "total_sets"), 2);
-        assert.equal(fieldValue(fit, sessions[0], "work_time"), 40);
-        const laps = messagesOf(fit, "lap");
+        const session = messagesOf(fit, "sessionMesgs")[0];
+        assert.ok(session !== undefined);
+        assert.equal(fieldValue(fit, session, "total_sets"), 2);
+        assert.equal(fieldValue(fit, session, "work_time"), 40);
+        const laps = messagesOf(fit, "lapMesgs");
         assert.deepEqual(laps.map((lap) => fieldValue(fit, lap, "set_number")), [0, 1, 0, 2]);
         assert.deepEqual(laps.map((lap) => fieldValue(fit, lap, "phase")), [0, 1, 0, 1]);
     });
