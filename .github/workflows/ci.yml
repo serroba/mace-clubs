@@ -88,6 +88,11 @@ jobs:
         run: |
           apt-get update -qq && apt-get install -y -qq --no-install-recommends libxml2-utils
           bash tools/validate_fit_xml.sh
+      # Warning-only: annotates the run when new compatible wearables appear
+      # in the SDK that manifest.xml does not list yet.
+      - name: Report new SDK wearables missing from the manifest
+        shell: bash
+        run: bash tools/check_manifest_devices.sh
 
   build-shards:
     # These are disposable compatibility builds. Release tags perform one clean
