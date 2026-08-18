@@ -8,7 +8,9 @@ import { resolve } from "./resolve-tool.ts";
 
 function executable(path: string): string {
     mkdirSync(dirname(path), { recursive: true });
-    writeFileSync(path, "");
+    // A failing script, not an empty file: Linux runs empty executables
+    // successfully with exit 0, so an empty file would count as working java.
+    writeFileSync(path, "#!/bin/sh\nexit 1\n");
     chmodSync(path, 0o755);
     return path;
 }
