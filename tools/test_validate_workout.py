@@ -18,7 +18,9 @@ def healthy_report():
                   "phase": "work", "set": 1, "smoothness": 80,
                   "motion_peak": 2200, "exposure": 1000,
                   "active_seconds": 18, "swings": 20}],
-        "records": [{"t": second, "rms": 1000, "peak": 2000, "hr": 90}
+        "records": [{"t": second, "rms": 1000, "peak": 2000, "hr": 90,
+                     "swing_total": second, "swing_event": 1 if second else 0,
+                     "swing_cadence": 60, "smoothness_score": 80}
                     for second in range(20)],
     }
 
@@ -109,6 +111,42 @@ class ValidateWorkoutTest(unittest.TestCase):
         codes = {item["code"] for item in result["findings"]}
         self.assertIn("motion.peak_below_rms", codes)
         self.assertIn("laps.duration_mismatch", codes)
+
+    def test_swing_total_regression_is_invalid(self):
+        report = healthy_report()
+        report["records"][10]["swing_total"] = 3
+        result = VALIDATOR.validate(report)
+        self.assertEqual(result["status"], "invalid")
+        regression = next(item for item in result["findings"] if item["code"] == "swings.regression")
+        self.assertEqual(regression["target"], "timeline")
+
+    def test_swing_events_must_reconcile_with_total(self):
+        report = healthy_report()
+        report["records"][5]["swing_event"] = 3
+        result = VALIDATOR.validate(report)
+        self.assertIn("swings.event_mismatch", {item["code"] for item in result["findings"]})
+
+    def test_partial_swing_series_warns_on_coverage(self):
+        report = healthy_report()
+        for record in report["records"][4:]:
+            record["swing_total"] = None
+            record["swing_event"] = None
+        result = VALIDATOR.validate(report)
+        self.assertIn("swings.coverage", {item["code"] for item in result["findings"]})
+
+    def test_cadence_and_rolling_smoothness_ranges(self):
+        report = healthy_report()
+        report["records"][3]["swing_cadence"] = 250
+        report["records"][4]["smoothness_score"] = 130
+        result = VALIDATOR.validate(report)
+        codes = {item["code"] for item in result["findings"]}
+        self.assertEqual(result["status"], "invalid")
+        self.assertTrue({"cadence.range", "smoothness.series_range"} <= codes)
+
+    def test_series_counts_are_observed(self):
+        result = VALIDATOR.validate(healthy_report())
+        self.assertEqual(result["observed"]["swing_samples"], 20)
+        self.assertEqual(result["observed"]["smoothness_samples"], 20)
 
     def test_text_and_json_cli(self):
         text = VALIDATOR.render_text(VALIDATOR.validate(healthy_report()))

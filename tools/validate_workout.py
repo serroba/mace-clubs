@@ -139,6 +139,50 @@ def validate(report: dict) -> dict:
             "timeline",
         ))
 
+    swing_series = [point for point in records if point.get("swing_total") is not None]
+    for previous, current in zip(swing_series, swing_series[1:]):
+        if current["swing_total"] < previous["swing_total"]:
+            findings.append(finding(
+                "error", "swings.regression",
+                f"Cumulative swing total drops from {previous['swing_total']} to "
+                f"{current['swing_total']} at {current['t']:.0f}s.", 20, "timeline",
+            ))
+            break
+    events = sum(point.get("swing_event") or 0 for point in records)
+    if swing_series and events:
+        delta = swing_series[-1]["swing_total"] - swing_series[0]["swing_total"]
+        if events != delta:
+            findings.append(finding(
+                "warning", "swings.event_mismatch",
+                f"{events} swing events were marked but the cumulative total grew by {delta}.", 10,
+                "timeline",
+            ))
+    swing_coverage = min(1.0, len(swing_series) / expected_samples) if elapsed else 0.0
+    if swing_series and swing_coverage < 0.9:
+        findings.append(finding(
+            "warning", "swings.coverage",
+            f"Swing-series coverage is {swing_coverage:.0%}; expected at least 90%.", 8,
+            "timeline",
+        ))
+    for point in records:
+        cadence = point.get("swing_cadence")
+        if cadence is not None and not 0 <= cadence <= 240:
+            findings.append(finding(
+                "error", "cadence.range",
+                f"Swing cadence {cadence} spm is outside the plausible 0–240 range.", 15,
+                "timeline",
+            ))
+            break
+    smoothness_series = [point for point in records if point.get("smoothness_score") is not None]
+    for point in smoothness_series:
+        if not 0 <= point["smoothness_score"] <= 100:
+            findings.append(finding(
+                "error", "smoothness.series_range",
+                f"Rolling smoothness {point['smoothness_score']} is outside 0–100.", 15,
+                "timeline",
+            ))
+            break
+
     if summary.get("movement") == "Unknown":
         findings.append(finding("warning", "metadata.movement", "Movement metadata is unavailable.", 4))
     if summary.get("side") == "Unknown":
@@ -161,7 +205,8 @@ def validate(report: dict) -> dict:
         "counts": {"errors": errors, "warnings": warnings},
         "coverage": {"motion": round(motion_coverage, 3), "heart_rate": round(hr_coverage, 3)},
         "observed": {"laps": len(laps), "work_laps": len(work), "rest_laps": len(rest),
-                     "motion_samples": len(motion), "heart_rate_samples": len(heart_rate)},
+                     "motion_samples": len(motion), "heart_rate_samples": len(heart_rate),
+                     "swing_samples": len(swing_series), "smoothness_samples": len(smoothness_series)},
         "findings": [asdict(item) for item in findings],
     }
 
