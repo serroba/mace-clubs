@@ -21,6 +21,8 @@ target is the **Instinct 3 Solar**; the manifest supports 120 Garmin wearables
 - Optional accelerometer swing counter, plus 5:00 and 10:00 Challenge presets
   (after the traditional timed max-swing gada competitions) where counting is
   always on and detected swings replace metronome rounds on screen
+- Garmin Connect charts for cumulative swings and rolling swing cadence,
+  backed by per-second detected-swing events in exported FIT activities
 - Rep mode for quantity-first sessions: no metronome or prescribed interval,
   a large live per-set swing count, optional target cue, manual set/rest
   boundaries, and UP/DOWN correction before a set is committed
@@ -47,7 +49,10 @@ tools/.venv/bin/python tools/validate_workout.py ~/Downloads/activity.zip
 ```
 
 The resulting HTML stays on your computer and combines motion intensity, heart
-rate, work/rest phases, and per-set smoothness. Motion exposure is a wrist-motion
+rate, swing cadence, individual swing markers, work/rest phases, normalized set
+rhythm, per-set smoothness, and rolling smoothness where the FIT file contains
+it. Enabling both local smoothness and motion research export records the rolling
+score for Garmin Connect and this report. Motion exposure is a wrist-motion
 measurement, not an estimate of tendon force. The validator reports structural
 errors, missing series, metadata gaps, and a transparent data-quality score; use
 `--json` for automation. Its findings describe recording quality, not injury risk.

@@ -9,7 +9,7 @@
             <assert test="not(@displayInActivityLaps = 'true') or not(@sortOrder = preceding::fitField[@displayInActivityLaps = 'true']/@sortOrder)">Lap sortOrder values must be unique.</assert>
             <assert test="not(@displayInActivitySummary = 'true') or not(@sortOrder = preceding::fitField[@displayInActivitySummary = 'true']/@sortOrder)">Summary sortOrder values must be unique.</assert>
             <assert test="not(@displayInChart = 'true') or string-length(@chartTitle) &gt; 0">Chart fields require a chartTitle.</assert>
-            <assert test="not(@displayInChart = 'true') or @unitLabel = '@Strings.FitPeakUnit'">Motion charts must display their recorded mg unit.</assert>
+            <assert test="not(@displayInChart = 'true') or @unitLabel = '@Strings.FitPeakUnit' or @unitLabel = '@Strings.FitSwingsUnit' or @unitLabel = '@Strings.FitCadenceUnit' or @unitLabel = '@Strings.FitScoreUnit'">Charts must display an approved recorded unit.</assert>
             <assert test="starts-with(@dataLabel, '@Strings.')">dataLabel must use a localized string.</assert>
             <assert test="starts-with(@unitLabel, '@Strings.')">unitLabel must use a localized string.</assert>
             <assert test="not(@chartTitle) or starts-with(@chartTitle, '@Strings.')">chartTitle must use a localized string.</assert>

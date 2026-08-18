@@ -139,6 +139,10 @@ FIELD_TYPES = {
     23: ("work_time", "s", BaseType.UINT32, 4),
     24: ("rest_time", "s", BaseType.UINT32, 4),
     26: ("implement_name", "", BaseType.STRING, 16),
+    27: ("swing_total", "swings", BaseType.UINT16, 2),
+    28: ("swing_event", "swings", BaseType.UINT8, 1),
+    29: ("swing_cadence", "spm", BaseType.UINT8, 1),
+    30: ("smoothness_score", "score", BaseType.UINT8, 1),
 }
 
 
@@ -176,11 +180,44 @@ def build_fit(windows: list[Window], destination: Path) -> None:
         description.units = units
         builder.add(description)
 
+    swing_total = 0
+    recent_events = []
+    smooth_reference = None
+    smooth_total = smooth_windows = valid_windows = 0
     for window in windows:
+        # The committed fixture mirrors the production record contract. Its
+        # deterministic event shape is presentation data; Monkey C tests own
+        # the detector and production-pipeline assertions.
+        event = int(window.phase == "work" and window.second % 2 == 0)
+        swing_total += event
+        recent_events.append(event)
+        recent_events = recent_events[-10:]
+        cadence = round(sum(recent_events) * 60 / len(recent_events))
+        if window.phase == "work" and window.dynamic_rms >= 40:
+            if smooth_reference is None:
+                smooth_reference = [float(window.dynamic_rms), float(window.dynamic_peak), float(window.crossings)]
+            else:
+                if valid_windows >= 4:
+                    differences = (
+                        abs(window.dynamic_rms - smooth_reference[0]) / max(abs(smooth_reference[0]), 40),
+                        abs(window.dynamic_peak - smooth_reference[1]) / max(abs(smooth_reference[1]), 80),
+                        abs(window.crossings - smooth_reference[2]) / max(abs(smooth_reference[2]), 2),
+                    )
+                    smooth_total += max(0, min(100, int(100 - 100 * (0.45 * differences[0] + 0.35 * differences[1] + 0.20 * differences[2]))))
+                    smooth_windows += 1
+                smooth_reference = [0.8 * old + 0.2 * new for old, new in zip(
+                    smooth_reference, (window.dynamic_rms, window.dynamic_peak, window.crossings)
+                )]
+            valid_windows += 1
+        smooth_score = round(smooth_total / smooth_windows) if smooth_windows else 0
         record = RecordMessage(developer_fields=[
             developer_field(2, window.rms),
             developer_field(3, window.peak),
             developer_field(4, window.crossings),
+            developer_field(27, swing_total),
+            developer_field(28, event),
+            developer_field(29, cadence),
+            developer_field(30, smooth_score),
         ])
         record.timestamp = START_MS + window.second * 1000
         record.heart_rate = 68 + round(window.second * 0.65) + (7 if window.phase == "work" else 0)

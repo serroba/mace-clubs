@@ -129,8 +129,14 @@ def collect(fit: FitFile) -> dict:
             "rms": value(record, "accel_rms"),
             "peak": value(record, "accel_peak"),
             "zc": value(record, "accel_zc"),
+            "swing_total": value(record, "swing_total"),
+            "swing_event": value(record, "swing_event"),
+            "swing_cadence": value(record, "swing_cadence"),
+            "smoothness_score": value(record, "smoothness_score"),
         }
-        if any(point[key] is not None for key in ("hr", "rms", "peak", "zc")):
+        if any(point[key] is not None for key in (
+            "hr", "rms", "peak", "zc", "swing_total", "swing_event", "swing_cadence", "smoothness_score"
+        )):
             records.append(point)
 
     starts = [lap["start_abs"] for lap in raw_laps]
@@ -183,7 +189,7 @@ def render(report: dict, title: str) -> str:
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>{safe_title}</title>
 <style>
-  :root {{ color-scheme: light dark; --bg:#f7f5f1; --surface:#fff; --ink:#24211d; --muted:#6f6961; --grid:#d9d4cc; --work:#e66b38; --rest:#4d7ca8; --rms:#bd3e14; --peak:#e4a02b; --hr:#b32747; --smooth:#397a68; --warn:#ad561f; --error:#a33131; --ok:#397a68; }}
+  :root {{ color-scheme: light dark; --bg:#f7f5f1; --surface:#fff; --ink:#24211d; --muted:#6f6961; --grid:#d9d4cc; --work:#e66b38; --rest:#4d7ca8; --rms:#bd3e14; --peak:#e4a02b; --hr:#b32747; --swing:#397a68; --smooth:#397a68; --warn:#ad561f; --error:#a33131; --ok:#397a68; }}
   @media (prefers-color-scheme:dark) {{ :root {{ --bg:#171614; --surface:#211f1c; --ink:#f3eee7; --muted:#b8afa4; --grid:#49443e; --work:#f1814f; --rest:#6c9ccc; --rms:#ff7848; --peak:#ffc052; --hr:#ff698b; --smooth:#67c4a9; --warn:#ff9a55; --error:#ff7777; --ok:#67c4a9; }} }}
   * {{ box-sizing:border-box; }} body {{ margin:0; background:var(--bg); color:var(--ink); font:15px/1.45 system-ui,-apple-system,sans-serif; }}
   main {{ max-width:1120px; margin:auto; padding:28px 24px 56px; }} h1 {{ margin:0 0 4px; font-size:clamp(24px,4vw,38px); font-weight:600; }}
@@ -192,8 +198,8 @@ def render(report: dict, title: str) -> str:
   section {{ margin:30px 0; }} h2 {{ font-size:18px; font-weight:600; margin:0 0 3px; }} .note {{ color:var(--muted); margin:0 0 12px; font-size:13px; }}
   svg {{ display:block; width:100%; height:auto; background:var(--surface); border:1px solid var(--grid); }} .grid line {{ stroke:var(--grid); stroke-opacity:.65; }}
   .axis text,.label {{ fill:var(--muted); font-size:12px; }} .axis path,.axis line {{ stroke:var(--grid); }} .phase-work {{ fill:var(--work); opacity:.10; }} .phase-rest {{ fill:var(--rest); opacity:.075; }}
-  .line-rms {{ fill:none; stroke:var(--rms); stroke-width:1.5; }} .line-peak {{ fill:none; stroke:var(--peak); stroke-width:1.1; opacity:.72; }} .line-hr {{ fill:none; stroke:var(--hr); stroke-width:1.4; }}
-  .smooth-bar {{ fill:var(--smooth); }} .duration-mark {{ fill:var(--work); }} .anomaly {{ fill:var(--warn); }} .legend {{ display:flex; flex-wrap:wrap; gap:14px; margin:6px 0 10px; color:var(--muted); font-size:13px; }}
+  .line-rms {{ fill:none; stroke:var(--rms); stroke-width:1.5; }} .line-peak {{ fill:none; stroke:var(--peak); stroke-width:1.1; opacity:.72; }} .line-hr {{ fill:none; stroke:var(--hr); stroke-width:1.4; }} .line-swing {{ fill:none; stroke:var(--swing); stroke-width:1.8; }} .swing-event {{ stroke:var(--swing); stroke-width:1.2; opacity:.8; }} .reference {{ stroke:var(--muted); stroke-width:1; stroke-dasharray:5 4; opacity:.8; }} .crosshair {{ stroke:var(--ink); stroke-width:1; opacity:.45; pointer-events:none; }}
+  .smooth-bar {{ fill:var(--smooth); }} .line-smooth {{ fill:none; stroke:var(--smooth); stroke-width:2; }} .duration-mark {{ fill:var(--work); }} .anomaly {{ fill:var(--warn); }} .legend {{ display:flex; flex-wrap:wrap; gap:14px; margin:6px 0 10px; color:var(--muted); font-size:13px; }}
   .legend button {{ color:inherit; border:0; padding:2px 0; background:none; cursor:pointer; }} .legend button[aria-pressed=false] {{ opacity:.4; }} .swatch {{ width:18px; height:3px; display:inline-block; vertical-align:middle; margin-right:5px; }}
   .tooltip {{ position:fixed; pointer-events:none; display:none; background:var(--surface); color:var(--ink); border:1px solid var(--grid); padding:7px 9px; font-size:12px; z-index:5; }}
   .insight {{ border-left:3px solid var(--warn); padding:8px 12px; color:var(--muted); }}
@@ -214,10 +220,12 @@ def render(report: dict, title: str) -> str:
   <h1>Mace &amp; Clubs workout</h1><div class="subtitle" id="subtitle"></div>
   <div class="metrics" id="metrics"></div>
   <section><h2>Recording quality</h2><p class="note">Checks whether this export is complete and internally consistent. It is not an injury or readiness score.</p><div class="quality"><div class="quality-score"><strong id="quality-score"></strong><span id="quality-status"></span></div><div><div class="availability" id="availability"></div><div id="findings"></div><p class="provenance"><b>Measured:</b> heart rate, lap timing, and wrist acceleration. <b>Derived:</b> coverage, consistency findings, smoothness, and this quality score.</p></div></div></section>
-  <section><h2>Motion through the session</h2><p class="note">Per-second wrist acceleration. Work and rest intervals are shaded.</p>
-    <div class="legend"><button data-series="rms" aria-pressed="true"><i class="swatch" style="background:var(--rms)"></i>Dynamic intensity (RMS)</button><button data-series="peak" aria-pressed="true"><i class="swatch" style="background:var(--peak)"></i>Peak acceleration</button><button data-series="hr" aria-pressed="true"><i class="swatch" style="background:var(--hr)"></i>Heart rate</button><span><i class="swatch" style="height:10px;background:var(--work);opacity:.3"></i>Work</span><span><i class="swatch" style="height:10px;background:var(--rest);opacity:.25"></i>Rest</span></div>
-    <svg id="timeline" role="img" aria-label="Motion and heart rate timeline"></svg>
+  <section><h2>Workout timeline</h2><p class="note">Acceleration, swing rhythm, and heart rate share one time cursor. Swing ticks mark individual detections; work and rest are shaded.</p>
+    <div class="legend"><button data-series="rms" aria-pressed="true"><i class="swatch" style="background:var(--rms)"></i>Dynamic intensity (RMS)</button><button data-series="peak" aria-pressed="true"><i class="swatch" style="background:var(--peak)"></i>Peak acceleration</button><button data-series="swing" aria-pressed="true"><i class="swatch" style="background:var(--swing)"></i>Swing cadence</button><button data-series="hr" aria-pressed="true"><i class="swatch" style="background:var(--hr)"></i>Heart rate</button><span><i class="swatch" style="height:10px;background:var(--work);opacity:.3"></i>Work</span><span><i class="swatch" style="height:10px;background:var(--rest);opacity:.25"></i>Rest</span></div>
+    <svg id="timeline" role="img" aria-label="Synchronized acceleration, swing cadence, and heart rate timeline"></svg>
   </section>
+  <section id="rhythm-section"><h2>Set rhythm comparison</h2><p class="note">Each work set is normalized from 0–100%, making cadence drift and pacing differences directly comparable.</p><svg id="rhythm" role="img" aria-label="Normalized swing cadence by set"></svg></section>
+  <section id="smooth-time-section"><h2>Smoothness over time</h2><p class="note">The rolling repeatability score becomes available after four valid motion windows. Work and rest phases are shaded for context.</p><svg id="smooth-time" role="img" aria-label="Smoothness score over time"></svg></section>
   <section><h2>Set consistency</h2><p class="note">Smoothness is a repeatability score from wrist motion; very short sets are flagged and excluded from trend interpretation.</p><svg id="sets" role="img" aria-label="Smoothness and duration by set"></svg></section>
   <section><h2>Within-session signals</h2><p class="note" id="signal-disclaimer"></p><div class="signals" id="signals"></div></section>
   <p class="insight" id="insight"></p>
@@ -255,14 +263,30 @@ function timeAxis(svg,box){{
   for(let i=0;i<=ticks;i++){{const xx=box.l+(box.r-box.l)*i/ticks,t=S('text',{{x:xx,y:box.b+22,'text-anchor':i===0?'start':i===ticks?'end':'middle',fill:css('--muted'),'font-size':'12'}});t.textContent=fmt(summary.elapsed*i/ticks);svg.append(t);}}
 }}
 function drawTimeline(){{
-  const svg=document.getElementById('timeline'),w=Math.max(320,svg.clientWidth||900),h=w<500?390:440,m={{l:64,r:18,t:18,b:34}},motionBox={{l:m.l,r:w-m.r,t:m.t,b:w<500?235:270}},hrBox={{l:m.l,r:w-m.r,t:w<500?270:310,b:h-m.b}};svg.replaceChildren();svg.setAttribute('viewBox',`0 0 ${{w}} ${{h}}`);
+  const svg=document.getElementById('timeline'),w=Math.max(320,svg.clientWidth||900),hasSwing=records.some(d=>Number.isFinite(d.swing_cadence)),h=hasSwing?(w<500?560:620):(w<500?390:440),m={{l:64,r:18,t:18,b:34}},motionBox={{l:m.l,r:w-m.r,t:m.t,b:hasSwing?(w<500?220:250):(w<500?235:270)}},swingBox={{l:m.l,r:w-m.r,t:w<500?250:285,b:w<500?365:410}},hrBox={{l:m.l,r:w-m.r,t:hasSwing?(w<500?400:445):(w<500?270:310),b:h-m.b}};svg.replaceChildren();svg.setAttribute('viewBox',`0 0 ${{w}} ${{h}}`);
   const motion=records.filter(d=>Number.isFinite(d.rms)||Number.isFinite(d.peak)), maxMotion=Math.max(1,...motion.flatMap(d=>[d.rms||0,d.peak||0]));
-  const hrs=records.filter(d=>Number.isFinite(d.hr)),hrExt=hrs.length?extent(hrs,d=>d.hr):[50,120],x=scale(0,summary.elapsed,m.l,w-m.r),y=scale(0,maxMotion,motionBox.b,motionBox.t),yh=scale(Math.max(35,hrExt[0]-8),hrExt[1]+8,hrBox.b,hrBox.t);
-  laps.forEach(d=>{{for(const [i,box] of [motionBox,hrBox].entries()){{const attrs={{x:x(d.start),y:box.t,width:Math.max(1,x(d.end)-x(d.start)),height:box.b-box.t,class:d.phase==='work'?'phase-work':'phase-rest'}};if(i===0)attrs.id=`lap-${{d.lap}}`;const r=S('rect',attrs);svg.append(r);}}}});
-  yAxis(svg,motionBox,[0,maxMotion],'Acceleration (mg)');yAxis(svg,hrBox,[Math.max(35,hrExt[0]-8),hrExt[1]+8],'Heart rate (bpm)');timeAxis(svg,hrBox);
-  const paths={{rms:S('path',{{d:linePath(records,x,y,d=>d.rms),class:'line-rms'}}),peak:S('path',{{d:linePath(records,x,y,d=>d.peak),class:'line-peak'}}),hr:S('path',{{d:linePath(records,x,yh,d=>d.hr),class:'line-hr'}})}};Object.values(paths).forEach(p=>svg.append(p));
-  const hit=S('rect',{{x:m.l,y:m.t,width:w-m.l-m.r,height:h-m.t-m.b,fill:'transparent'}});svg.append(hit);hit.addEventListener('pointermove',e=>{{const box=svg.getBoundingClientRect(),px=(e.clientX-box.left)*w/box.width,t=(px-m.l)*(summary.elapsed)/(w-m.l-m.r);const d=records.reduce((a,b)=>Math.abs(b.t-t)<Math.abs(a.t-t)?b:a);tooltip.style.display='block';tooltip.style.left=`${{Math.min(innerWidth-190,e.clientX+12)}}px`;tooltip.style.top=`${{e.clientY+12}}px`;tooltip.innerHTML=`<b>${{fmt(d.t)}}</b><br>RMS ${{d.rms??'—'}} mg · peak ${{d.peak??'—'}} mg<br>HR ${{d.hr??'—'}} bpm`;}});hit.addEventListener('pointerleave',()=>tooltip.style.display='none');
+  const hrs=records.filter(d=>Number.isFinite(d.hr)),hrExt=hrs.length?extent(hrs,d=>d.hr):[50,120],cadences=records.filter(d=>Number.isFinite(d.swing_cadence)),maxCadence=Math.max(60,...cadences.map(d=>d.swing_cadence)),x=scale(0,summary.elapsed,m.l,w-m.r),y=scale(0,maxMotion,motionBox.b,motionBox.t),ys=scale(0,maxCadence,swingBox.b,swingBox.t),yh=scale(Math.max(35,hrExt[0]-8),hrExt[1]+8,hrBox.b,hrBox.t);
+  const timelineBoxes=hasSwing?[motionBox,swingBox,hrBox]:[motionBox,hrBox];laps.forEach(d=>{{for(const [i,box] of timelineBoxes.entries()){{const attrs={{x:x(d.start),y:box.t,width:Math.max(1,x(d.end)-x(d.start)),height:box.b-box.t,class:d.phase==='work'?'phase-work':'phase-rest'}};if(i===0)attrs.id=`lap-${{d.lap}}`;svg.append(S('rect',attrs));}}}});
+  yAxis(svg,motionBox,[0,maxMotion],'Acceleration (mg)');if(hasSwing)yAxis(svg,swingBox,[0,maxCadence],'Swings / min');yAxis(svg,hrBox,[Math.max(35,hrExt[0]-8),hrExt[1]+8],'Heart rate (bpm)');timeAxis(svg,hrBox);
+  const avgCadence=cadences.length?cadences.reduce((n,d)=>n+d.swing_cadence,0)/cadences.length:0;if(hasSwing&&avgCadence)svg.append(S('line',{{x1:swingBox.l,x2:swingBox.r,y1:ys(avgCadence),y2:ys(avgCadence),class:'reference'}}));
+  const paths={{rms:S('path',{{d:linePath(records,x,y,d=>d.rms),class:'line-rms'}}),peak:S('path',{{d:linePath(records,x,y,d=>d.peak),class:'line-peak'}}),swing:S('path',{{d:linePath(records,x,ys,d=>d.swing_cadence),class:'line-swing'}}),hr:S('path',{{d:linePath(records,x,yh,d=>d.hr),class:'line-hr'}})}};Object.values(paths).forEach(p=>svg.append(p));
+  const eventGroup=S('g');records.filter(d=>d.swing_event>0).forEach(d=>eventGroup.append(S('line',{{x1:x(d.t),x2:x(d.t),y1:swingBox.b-10,y2:swingBox.b,class:'swing-event'}})));if(hasSwing)svg.append(eventGroup);
+  document.querySelector('[data-series="swing"]').style.display=hasSwing?'':'none';
+  const crosshair=S('line',{{x1:m.l,x2:m.l,y1:m.t,y2:hrBox.b,class:'crosshair'}});crosshair.style.display='none';svg.append(crosshair);
+  const hit=S('rect',{{x:m.l,y:m.t,width:w-m.l-m.r,height:h-m.t-m.b,fill:'transparent'}});svg.append(hit);hit.addEventListener('pointermove',e=>{{const box=svg.getBoundingClientRect(),px=(e.clientX-box.left)*w/box.width,t=(px-m.l)*(summary.elapsed)/(w-m.l-m.r),d=records.reduce((a,b)=>Math.abs(b.t-t)<Math.abs(a.t-t)?b:a),xx=x(d.t);crosshair.setAttribute('x1',xx);crosshair.setAttribute('x2',xx);crosshair.style.display='';tooltip.style.display='block';tooltip.style.left=`${{Math.min(innerWidth-220,e.clientX+12)}}px`;tooltip.style.top=`${{e.clientY+12}}px`;tooltip.innerHTML=`<b>${{fmt(d.t)}}</b><br>RMS ${{d.rms??'—'}} mg · peak ${{d.peak??'—'}} mg<br>Cadence ${{d.swing_cadence??'—'}} spm · total ${{d.swing_total??'—'}}${{d.swing_event?'<br><b>Swing detected</b>':''}}<br>Smoothness ${{d.smoothness_score??'—'}}<br>HR ${{d.hr??'—'}} bpm`;}});hit.addEventListener('pointerleave',()=>{{tooltip.style.display='none';crosshair.style.display='none';}});
   document.querySelectorAll('[data-series]').forEach(b=>b.onclick=()=>{{const k=b.dataset.series,on=b.getAttribute('aria-pressed')==='true';b.setAttribute('aria-pressed',String(!on));paths[k].style.display=on?'none':'';}});
+}}
+function drawRhythm(){{
+  const section=document.getElementById('rhythm-section'),hasSwing=records.some(d=>Number.isFinite(d.swing_cadence));section.style.display=hasSwing?'':'none';if(!hasSwing)return;
+  const svg=document.getElementById('rhythm'),w=Math.max(320,svg.clientWidth||900),h=w<500?280:330,box={{l:64,r:w-24,t:24,b:h-42}},maxCadence=Math.max(60,...records.map(d=>d.swing_cadence||0)),x=scale(0,100,box.l,box.r),y=scale(0,maxCadence,box.b,box.t);svg.replaceChildren();svg.setAttribute('viewBox',`0 0 ${{w}} ${{h}}`);yAxis(svg,box,[0,maxCadence],'Swings / min');
+  work.forEach((lap,i)=>{{const data=records.filter(d=>d.t>=lap.start&&d.t<=lap.end&&Number.isFinite(d.swing_cadence)).map(d=>({{...d,t:(d.t-lap.start)*100/Math.max(1,lap.end-lap.start)}})),color=`hsl(${{(i*47)%360}} 55% 48%)`,path=S('path',{{d:linePath(data,x,y,d=>d.swing_cadence),fill:'none',stroke:color,'stroke-width':'1.5',opacity:'.82'}});svg.append(path);const label=S('text',{{x:box.r-4,y:box.t+14+i*14,'text-anchor':'end',fill:color,'font-size':'11'}});label.textContent=`Set ${{lap.set}}`;svg.append(label);}});
+  for(let i=0;i<=4;i++){{const label=S('text',{{x:x(i*25),y:h-16,'text-anchor':i===0?'start':i===4?'end':'middle',fill:css('--muted'),'font-size':'12'}});label.textContent=`${{i*25}}%`;svg.append(label);}}
+}}
+function drawSmoothTime(){{
+  const section=document.getElementById('smooth-time-section'),data=records.filter(d=>Number.isFinite(d.smoothness_score)&&d.smoothness_score>0);section.style.display=data.length?'':'none';if(!data.length)return;
+  const svg=document.getElementById('smooth-time'),w=Math.max(320,svg.clientWidth||900),h=w<500?270:310,box={{l:64,r:w-24,t:24,b:h-42}},x=scale(0,summary.elapsed,box.l,box.r),y=scale(0,100,box.b,box.t);svg.replaceChildren();svg.setAttribute('viewBox',`0 0 ${{w}} ${{h}}`);
+  laps.forEach(d=>svg.append(S('rect',{{x:x(d.start),y:box.t,width:Math.max(1,x(d.end)-x(d.start)),height:box.b-box.t,class:d.phase==='work'?'phase-work':'phase-rest'}})));
+  yAxis(svg,box,[0,100],'Smoothness');timeAxis(svg,box);svg.append(S('path',{{d:linePath(data,x,y,d=>d.smoothness_score),class:'line-smooth'}}));
 }}
 function drawSets(){{
   const svg=document.getElementById('sets'),w=Math.max(320,svg.clientWidth||900),h=w<500?280:320,m={{l:64,r:28,t:22,b:42}};svg.replaceChildren();svg.setAttribute('viewBox',`0 0 ${{w}} ${{h}}`);
@@ -273,7 +297,7 @@ function drawSets(){{
 }}
 const first=valid.slice(0,3).map(d=>d.smoothness).filter(Number.isFinite),last=valid.slice(-3).map(d=>d.smoothness).filter(Number.isFinite),avg=a=>a.length?a.reduce((x,y)=>x+y,0)/a.length:null,delta=avg(last)-avg(first),anomalies=work.filter(d=>d.elapsed<10);
 document.getElementById('insight').textContent=!first.length||!last.length?'Not enough comparable smoothness data for a session trend.':anomalies.length?`Set ${{anomalies.map(d=>d.set).join(', ')}} lasted under 10 seconds and is excluded from the smoothness comparison. Across comparable sets, the last three averaged ${{Math.abs(delta).toFixed(1)}} points ${{delta<0?'lower':'higher'}} than the first three.`:`Across comparable sets, the last three averaged ${{Math.abs(delta).toFixed(1)}} points ${{delta<0?'lower':'higher'}} than the first three.`;
-let lastWidth=0;new ResizeObserver(entries=>{{const width=Math.round(entries[0].contentRect.width);if(width===lastWidth)return;lastWidth=width;drawTimeline();drawSets();}}).observe(document.querySelector('main'));
+let lastWidth=0;new ResizeObserver(entries=>{{const width=Math.round(entries[0].contentRect.width);if(width===lastWidth)return;lastWidth=width;drawTimeline();drawRhythm();drawSmoothTime();drawSets();}}).observe(document.querySelector('main'));
 </script></body></html>"""
 
 

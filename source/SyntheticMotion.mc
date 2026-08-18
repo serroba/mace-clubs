@@ -61,6 +61,7 @@ module SyntheticMotion {
         var irregular = new Smoothness.Tracker();
         var exposure = new LoadExposure.Tracker();
         var counter = new SwingCounter.Counter();
+        var swingSeries = new SwingSeries.Tracker();
         var records = [] as Array<Dictionary>;
         var workSeconds = 0;
         var restSeconds = 0;
@@ -83,6 +84,11 @@ module SyntheticMotion {
                 counter,
                 true
             );
+            var swingPoint = swingSeries.addTotal(counter.getCount());
+            result.put(:swingTotal, swingPoint[:total] as Number);
+            result.put(:swingEvent, swingPoint[:event] as Number);
+            result.put(:swingCadence, swingPoint[:cadence] as Number);
+            result.put(:smoothnessScore, tracker == null ? -1 : (tracker as Smoothness.Tracker).getScore());
             records.add(result);
             workSeconds += work ? 1 : 0;
             restSeconds += work ? 0 : 1;

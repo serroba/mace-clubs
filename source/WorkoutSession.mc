@@ -38,6 +38,10 @@ class WorkoutSession {
     const FIELD_ID_TOTAL_REST_SECONDS = 24;
     const FIELD_ID_PHASE_NAME = 25;
     const FIELD_ID_EQUIPMENT_NAME = 26;
+    const FIELD_ID_RECORD_SWING_TOTAL = 27;
+    const FIELD_ID_RECORD_SWING_EVENT = 28;
+    const FIELD_ID_SWING_CADENCE = 29;
+    const FIELD_ID_RECORD_SMOOTHNESS = 30;
 
     private var _session as ActivityRecording.Session?;
     private var _setsField as FitContributor.Field?;
@@ -67,6 +71,10 @@ class WorkoutSession {
     private var _rmsField as FitContributor.Field?;
     private var _peakField as FitContributor.Field?;
     private var _zcField as FitContributor.Field?;
+    private var _recordSwingTotalField as FitContributor.Field?;
+    private var _recordSwingEventField as FitContributor.Field?;
+    private var _swingCadenceField as FitContributor.Field?;
+    private var _recordSmoothnessField as FitContributor.Field?;
     private var _sets as Number = 0;
     private var _started as Boolean = false;
     private var _startBattery as Float?;
@@ -86,6 +94,7 @@ class WorkoutSession {
     private var _workingSide as Number = Movement.SIDE_TWO_HANDED;
     private var _blocks as Array<WorkBlockSummary> = [];
     private var _swingCounter as SwingCounter.Counter;
+    private var _swingSeries as SwingSeries.Tracker;
     private var _swingCounting as Boolean = false;
     private var _forceSwingCounting as Boolean = false;
     private var _workOpen as Boolean = false;
@@ -96,6 +105,7 @@ class WorkoutSession {
         _loadExposure = new LoadExposure.Tracker();
         _setSmoothness = new SmoothnessSetSummaries();
         _swingCounter = new SwingCounter.Counter();
+        _swingSeries = new SwingSeries.Tracker();
         reloadEquipment();
     }
 
@@ -422,6 +432,26 @@ class WorkoutSession {
                 {:mesgType => FitContributor.MESG_TYPE_LAP, :units => "kg-swings"}
             );
         }
+        if (swingEnabled) {
+            _recordSwingTotalField = session.createField(
+                "swing_total",
+                FIELD_ID_RECORD_SWING_TOTAL,
+                FitContributor.DATA_TYPE_UINT16,
+                {:mesgType => FitContributor.MESG_TYPE_RECORD, :units => "swings"}
+            );
+            _recordSwingEventField = session.createField(
+                "swing_event",
+                FIELD_ID_RECORD_SWING_EVENT,
+                FitContributor.DATA_TYPE_UINT8,
+                {:mesgType => FitContributor.MESG_TYPE_RECORD, :units => "swings"}
+            );
+            _swingCadenceField = session.createField(
+                "swing_cadence",
+                FIELD_ID_SWING_CADENCE,
+                FitContributor.DATA_TYPE_UINT8,
+                {:mesgType => FitContributor.MESG_TYPE_RECORD, :units => "spm"}
+            );
+        }
         // Local smoothness does not create FIT fields. The separate research
         // setting remains the explicit opt-in path for exporting summaries.
         if (exportEnabled) {
@@ -443,6 +473,14 @@ class WorkoutSession {
                 FitContributor.DATA_TYPE_UINT8,
                 {:mesgType => FitContributor.MESG_TYPE_RECORD, :units => "crossings"}
             );
+            if (_smoothnessEnabled) {
+                _recordSmoothnessField = session.createField(
+                    "smoothness_score",
+                    FIELD_ID_RECORD_SMOOTHNESS,
+                    FitContributor.DATA_TYPE_UINT8,
+                    {:mesgType => FitContributor.MESG_TYPE_RECORD, :units => "score"}
+                );
+            }
         }
         try {
             Sensor.registerSensorDataListener(
@@ -493,6 +531,26 @@ class WorkoutSession {
         if (zc != null) {
             var crossings = f[:zc] as Number;
             zc.setData(crossings > 255 ? 255 : crossings);
+        }
+        var smoothnessField = _recordSmoothnessField;
+        var smoothnessScore = _smoothness.getScore();
+        if (smoothnessField != null && smoothnessScore >= 0) {
+            smoothnessField.setData(smoothnessScore);
+        }
+        if (_swingCounting) {
+            var swingPoint = _swingSeries.addTotal(_swingCounter.getCount());
+            var totalField = _recordSwingTotalField;
+            var eventField = _recordSwingEventField;
+            var cadenceField = _swingCadenceField;
+            if (totalField != null) {
+                totalField.setData(swingPoint[:total] as Number);
+            }
+            if (eventField != null) {
+                eventField.setData(swingPoint[:event] as Number);
+            }
+            if (cadenceField != null) {
+                cadenceField.setData(swingPoint[:cadence] as Number);
+            }
         }
     }
 
@@ -572,6 +630,7 @@ class WorkoutSession {
             setNumberField.setData(_sets);
             writeLapMetadata(1, block);
             session.addLap();
+            prepareOpenLap(0);
         }
         if (Attention has :vibrate) {
             Attention.vibrate(
@@ -601,6 +660,33 @@ class WorkoutSession {
             setNumberField.setData(0);
             writeLapMetadata(0, _blocks[_sets - 1]);
             session.addLap();
+            prepareOpenLap(1);
+        }
+    }
+
+    // ActivityRecording writes a final partial lap when the session is
+    // saved. Never leave the completed set's metadata attached to that open
+    // lap, or Garmin exports a tiny duplicate of the final work set.
+    private function prepareOpenLap(phase as Number) as Void {
+        var setNumberField = _setNumberField;
+        var phaseField = _phaseField;
+        var durationField = _phaseDurationField;
+        var phaseNameField = _phaseNameField;
+        var lapSwingsField = _lapSwingsField;
+        if (setNumberField != null) {
+            setNumberField.setData(0);
+        }
+        if (phaseField != null) {
+            phaseField.setData(phase);
+        }
+        if (durationField != null) {
+            durationField.setData(0);
+        }
+        if (phaseNameField != null) {
+            phaseNameField.setData(phase == 1 ? "Work" : "Rest");
+        }
+        if (lapSwingsField != null) {
+            lapSwingsField.setData(0);
         }
     }
 
@@ -879,6 +965,7 @@ class WorkoutSession {
             return;
         }
         _swingCounter.adjust(delta > 0 ? 1 : -1);
+        _swingSeries.align(_swingCounter.getCount());
     }
 
     private function recordSwingTotal() as Void {
@@ -978,6 +1065,10 @@ class WorkoutSession {
         _rmsField = null;
         _peakField = null;
         _zcField = null;
+        _recordSwingTotalField = null;
+        _recordSwingEventField = null;
+        _swingCadenceField = null;
+        _recordSmoothnessField = null;
         _sets = 0;
         _blocks = [];
         _started = false;
@@ -988,6 +1079,7 @@ class WorkoutSession {
         _loadExposure = new LoadExposure.Tracker();
         _setSmoothness = new SmoothnessSetSummaries();
         _swingCounter = new SwingCounter.Counter();
+        _swingSeries = new SwingSeries.Tracker();
         _swingCounting = false;
         _forceSwingCounting = false;
         _workOpen = false;

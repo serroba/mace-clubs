@@ -12,6 +12,9 @@
 
         <fitField id="2" displayInChart="true" sortOrder="30" chartTitle="@Strings.FitMotionIntensityChart" dataLabel="@Strings.FitMotionIntensity" unitLabel="@Strings.FitPeakUnit" fillColor="D45522" />
         <fitField id="3" displayInChart="true" sortOrder="31" chartTitle="@Strings.FitMotionPeakChart" dataLabel="@Strings.FitMotionPeak" unitLabel="@Strings.FitPeakUnit" fillColor="E4A02B" />
+        <fitField id="27" displayInChart="true" sortOrder="32" chartTitle="@Strings.FitSwingTotalChart" dataLabel="@Strings.FitSwingTotal" unitLabel="@Strings.FitSwingsUnit" fillColor="397A68" />
+        <fitField id="29" displayInChart="true" sortOrder="33" chartTitle="@Strings.FitSwingCadenceChart" dataLabel="@Strings.FitSwingCadence" unitLabel="@Strings.FitCadenceUnit" fillColor="4D7CA8" />
+        <fitField id="30" displayInChart="true" sortOrder="34" chartTitle="@Strings.FitSmoothnessChart" dataLabel="@Strings.FitSmoothness" unitLabel="@Strings.FitScoreUnit" fillColor="397A68" />
 
         <fitField id="8" displayInActivityLaps="true" sortOrder="10" dataLabel="@Strings.FitSetNumber" unitLabel="@Strings.FitSetsUnit" />
         <fitField id="25" displayInActivityLaps="true" sortOrder="11" dataLabel="@Strings.FitPhase" unitLabel="@Strings.FitNoUnit" />

@@ -22,6 +22,16 @@ function testSyntheticWorkoutDistinguishesSmoothAndIrregularWork(logger as Test.
     Test.assertMessage(smooth >= 90, "stable periodic work remains highly repeatable");
     Test.assertMessage(irregular >= 0, "irregular work produces a score");
     Test.assertMessage(smooth > irregular, "smooth work scores above irregular work");
+    var records = workout[:records] as Array<Dictionary>;
+    var hasLiveSmoothness = false;
+    for (var i = 0; i < records.size(); i++) {
+        var score = records[i][:smoothnessScore] as Number;
+        if (score >= 0) {
+            hasLiveSmoothness = true;
+            Test.assertMessage(score <= 100, "live smoothness remains bounded");
+        }
+    }
+    Test.assertMessage(hasLiveSmoothness, "synthetic workout emits smoothness over time");
     return true;
 }
 
@@ -48,5 +58,22 @@ function testSyntheticRestPreservesGravityWithoutDynamicLoad(logger as Test.Logg
     Test.assertEqualMessage(records[0][:rms] as Number, 1000, "still wrist retains gravity");
     Test.assertEqualMessage(records[0][:dynamicRms] as Number, 0, "still wrist has no dynamic load");
     Test.assertEqualMessage(records[25][:dynamicPeak] as Number, 0, "second rest starts still");
+    return true;
+}
+
+(:test)
+function testSyntheticWorkoutProducesSwingTimeSeries(logger as Test.Logger) as Boolean {
+    var workout = SyntheticMotion.run();
+    var records = workout[:records] as Array<Dictionary>;
+    var events = 0;
+    for (var i = 0; i < records.size(); i++) {
+        events += records[i][:swingEvent] as Number;
+    }
+    Test.assertEqualMessage(events, workout[:swings] as Number, "events reconcile with total swings");
+    Test.assertEqualMessage(
+        records[records.size() - 1][:swingTotal] as Number,
+        workout[:swings] as Number,
+        "final cumulative point matches workout total"
+    );
     return true;
 }
