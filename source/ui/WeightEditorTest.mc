@@ -38,7 +38,7 @@ function testWeightEditorSavesTheConfiguredDefault(logger as Test.Logger) as Boo
 (:test)
 function testWeightEditorScreenRenders(logger as Test.Logger) as Boolean {
     var editor = new WeightEditorView(Equipment.TYPE_CLUBS);
-    editor.onUpdate(RenderTestSupport.offscreenDc());
+    RenderTestSupport.render(editor);
     return true;
 }
 

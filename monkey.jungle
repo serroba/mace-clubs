@@ -1,2 +1,5 @@
 project.manifest = manifest.xml
 base.sourcePath = source
+# The Linux simulator cannot draw device fonts offscreen; CI compiles the
+# no-op render(). Local test builds use monkey.local.jungle instead.
+base.excludeAnnotations = offscreenRender

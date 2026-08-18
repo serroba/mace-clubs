@@ -22,9 +22,9 @@ class StartedWorkoutStub extends WorkoutSession {
 (:test)
 function testIdleIntervalScreenRenders(logger as Test.Logger) as Boolean {
     var view = new MaceClubsView();
-    view.onUpdate(RenderTestSupport.offscreenDc());
+    RenderTestSupport.render(view);
     view.cyclePreset(1);
-    view.onUpdate(RenderTestSupport.offscreenDc());
+    RenderTestSupport.render(view);
     Test.assertMessage(!view.isStarting(), "idle screen leaves the countdown off");
     return true;
 }
@@ -35,7 +35,7 @@ function testStartCountdownScreenRenders(logger as Test.Logger) as Boolean {
     view.startWorkout();
     Test.assertMessage(view.isStarting(), "SELECT arms the five-second countdown");
     Test.assertMessage(view.getStartCountdownRemaining() > 0, "countdown reports remaining seconds");
-    view.onUpdate(RenderTestSupport.offscreenDc());
+    RenderTestSupport.render(view);
     view.cancelStartCountdown();
     Test.assertMessage(!view.isStarting(), "BACK cancels the countdown");
     Test.assertMessage(view.getStartCountdownRemaining() == 0, "no countdown remains after cancel");
@@ -50,12 +50,12 @@ function testPausedAndDoneSummariesRender(logger as Test.Logger) as Boolean {
     view.workout.endRestLapWithDuration(60);
     view.workout.addSetWithDuration(90);
     view.paused = true;
-    view.onUpdate(RenderTestSupport.offscreenDc());
+    RenderTestSupport.render(view);
     view.cycleSummary(1);
     view.cycleSummary(-1);
-    view.onUpdate(RenderTestSupport.offscreenDc());
+    RenderTestSupport.render(view);
     view.done = true;
-    view.onUpdate(RenderTestSupport.offscreenDc());
+    RenderTestSupport.render(view);
     return true;
 }
 
@@ -64,7 +64,7 @@ function testIntervalWorkoutScreenRenders(logger as Test.Logger) as Boolean {
     var view = new MaceClubsView();
     view.workout = new StartedWorkoutStub();
     view.plan = new Intervals.Plan(3, 120, 60);
-    view.onUpdate(RenderTestSupport.offscreenDc());
+    RenderTestSupport.render(view);
     return true;
 }
 
@@ -74,11 +74,11 @@ function testFreeTrainingScreensRender(logger as Test.Logger) as Boolean {
     view.workout = new StartedWorkoutStub();
     view.plan = null;
     view.freePhase = FreeTraining.PHASE_WORK;
-    view.onUpdate(RenderTestSupport.offscreenDc());
+    RenderTestSupport.render(view);
     Test.assertMessage(!view.isFreeResting(), "work phase is not a free rest");
     view.advanceFreeTraining();
     Test.assertMessage(view.isFreeResting(), "SELECT advances work into rest");
-    view.onUpdate(RenderTestSupport.offscreenDc());
+    RenderTestSupport.render(view);
     view.advanceFreeTraining();
     Test.assertMessage(!view.isFreeResting(), "SELECT advances rest into the next set");
     return true;
@@ -93,7 +93,7 @@ function testComboWorkScreenRenders(logger as Test.Logger) as Boolean {
     view.workout = workout;
     view.plan = null;
     view.freePhase = FreeTraining.PHASE_WORK;
-    view.onUpdate(RenderTestSupport.offscreenDc());
+    RenderTestSupport.render(view);
     return true;
 }
 
@@ -107,7 +107,7 @@ function testDiscardResetsTheViewState(logger as Test.Logger) as Boolean {
     Test.assertMessage(!view.paused, "discard clears the paused flag");
     Test.assertMessage(!view.done, "discard clears the done flag");
     Test.assertMessage(view.plan == null, "discard drops the interval plan");
-    view.onUpdate(RenderTestSupport.offscreenDc());
+    RenderTestSupport.render(view);
     return true;
 }
 

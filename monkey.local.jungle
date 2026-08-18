@@ -1,0 +1,5 @@
+project.manifest = manifest.xml
+base.sourcePath = source
+# Full offscreen render tests: macOS/Windows simulators rasterize device
+# fonts into buffered bitmaps, so local suites run the real draw paths.
+base.excludeAnnotations = noOffscreenRender

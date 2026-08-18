@@ -50,16 +50,16 @@ module HistoryDetailFixtures {
 (:test)
 function testHistoryDetailScrollWrapsThroughOverviewAndSets(logger as Test.Logger) as Boolean {
     var view = new HistoryDetailView(HistoryDetailFixtures.detailedRecord());
-    view.onUpdate(RenderTestSupport.offscreenDc());
+    RenderTestSupport.render(view);
     view.scroll(1);
-    view.onUpdate(RenderTestSupport.offscreenDc());
+    RenderTestSupport.render(view);
     view.scroll(1);
-    view.onUpdate(RenderTestSupport.offscreenDc());
+    RenderTestSupport.render(view);
     // Two sets plus the overview: a third scroll wraps back to the overview.
     view.scroll(1);
-    view.onUpdate(RenderTestSupport.offscreenDc());
+    RenderTestSupport.render(view);
     view.scroll(-1);
-    view.onUpdate(RenderTestSupport.offscreenDc());
+    RenderTestSupport.render(view);
     return true;
 }
 
@@ -76,8 +76,8 @@ function testHistoryDetailRendersLegacyRecordsWithoutDetails(logger as Test.Logg
         [75] as Array<Number>
     );
     var view = new HistoryDetailView(rec);
-    view.onUpdate(RenderTestSupport.offscreenDc());
+    RenderTestSupport.render(view);
     view.scroll(1);
-    view.onUpdate(RenderTestSupport.offscreenDc());
+    RenderTestSupport.render(view);
     return true;
 }

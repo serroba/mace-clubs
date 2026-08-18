@@ -23,19 +23,19 @@ function testCustomEditorAdjustsAndClampsEachField(logger as Test.Logger) as Boo
     for (var i = 0; i < 60; i++) {
         editor.adjust(-1);
     }
-    editor.onUpdate(RenderTestSupport.offscreenDc());
+    RenderTestSupport.render(editor);
     editor.advance();
     // Work clamps at 30 seconds.
     for (var i = 0; i < 130; i++) {
         editor.adjust(-1);
     }
-    editor.onUpdate(RenderTestSupport.offscreenDc());
+    RenderTestSupport.render(editor);
     editor.advance();
     // Rest may reach zero but never below.
     for (var i = 0; i < 130; i++) {
         editor.adjust(-1);
     }
     editor.adjust(1);
-    editor.onUpdate(RenderTestSupport.offscreenDc());
+    RenderTestSupport.render(editor);
     return true;
 }
