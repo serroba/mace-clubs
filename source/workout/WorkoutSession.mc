@@ -3,78 +3,15 @@ import Toybox.ActivityRecording;
 import Toybox.Application;
 import Toybox.Application.Storage;
 import Toybox.Attention;
-import Toybox.FitContributor;
 import Toybox.Lang;
 import Toybox.Sensor;
 import Toybox.System;
 import Toybox.Time;
 
-// Wraps the FIT recording session and custom developer fields.
+// Wraps the FIT recording session; FitFields owns the developer fields.
 class WorkoutSession {
-    const FIELD_ID_SETS = 0;
-    const FIELD_ID_BATTERY = 1;
-    const FIELD_ID_ACCEL_RMS = 2;
-    const FIELD_ID_ACCEL_PEAK = 3;
-    const FIELD_ID_ACCEL_ZC = 4;
-    const FIELD_ID_EQUIPMENT_TYPE = 5;
-    const FIELD_ID_EQUIPMENT_COUNT = 6;
-    const FIELD_ID_EQUIPMENT_WEIGHT = 7;
-    const FIELD_ID_SET_NUMBER = 8;
-    const FIELD_ID_WATCH_WRIST = 9;
-    const FIELD_ID_PHASE = 10;
-    const FIELD_ID_PHASE_DURATION = 11;
-    const FIELD_ID_LAP_WEIGHT = 12;
-    const FIELD_ID_LAP_WRIST = 13;
-    const FIELD_ID_SET_SMOOTHNESS = 14;
-    const FIELD_ID_MOVEMENT_TYPE = 15;
-    const FIELD_ID_WORKING_SIDE = 16;
-    const FIELD_ID_TOTAL_SWINGS = 17;
-    const FIELD_ID_LAP_SWINGS = 18;
-    const FIELD_ID_MOTION_EXPOSURE = 19;
-    const FIELD_ID_MOTION_PEAK = 20;
-    const FIELD_ID_ACTIVE_SECONDS = 21;
-    const FIELD_ID_WEIGHT_VOLUME = 22;
-    const FIELD_ID_TOTAL_WORK_SECONDS = 23;
-    const FIELD_ID_TOTAL_REST_SECONDS = 24;
-    const FIELD_ID_PHASE_NAME = 25;
-    const FIELD_ID_EQUIPMENT_NAME = 26;
-    const FIELD_ID_RECORD_SWING_TOTAL = 27;
-    const FIELD_ID_RECORD_SWING_EVENT = 28;
-    const FIELD_ID_SWING_CADENCE = 29;
-    const FIELD_ID_RECORD_SMOOTHNESS = 30;
-
     private var _session as ActivityRecording.Session?;
-    private var _setsField as FitContributor.Field?;
-    private var _setNumberField as FitContributor.Field?;
-    private var _phaseField as FitContributor.Field?;
-    private var _phaseDurationField as FitContributor.Field?;
-    private var _lapWeightField as FitContributor.Field?;
-    private var _lapWristField as FitContributor.Field?;
-    private var _setSmoothnessField as FitContributor.Field?;
-    private var _movementTypeField as FitContributor.Field?;
-    private var _workingSideField as FitContributor.Field?;
-    private var _totalSwingsField as FitContributor.Field?;
-    private var _lapSwingsField as FitContributor.Field?;
-    private var _motionExposureField as FitContributor.Field?;
-    private var _motionPeakField as FitContributor.Field?;
-    private var _activeSecondsField as FitContributor.Field?;
-    private var _weightVolumeField as FitContributor.Field?;
-    private var _batteryField as FitContributor.Field?;
-    private var _equipmentTypeField as FitContributor.Field?;
-    private var _equipmentCountField as FitContributor.Field?;
-    private var _equipmentWeightField as FitContributor.Field?;
-    private var _watchWristField as FitContributor.Field?;
-    private var _totalWorkField as FitContributor.Field?;
-    private var _totalRestField as FitContributor.Field?;
-    private var _phaseNameField as FitContributor.Field?;
-    private var _equipmentNameField as FitContributor.Field?;
-    private var _rmsField as FitContributor.Field?;
-    private var _peakField as FitContributor.Field?;
-    private var _zcField as FitContributor.Field?;
-    private var _recordSwingTotalField as FitContributor.Field?;
-    private var _recordSwingEventField as FitContributor.Field?;
-    private var _swingCadenceField as FitContributor.Field?;
-    private var _recordSmoothnessField as FitContributor.Field?;
+    private var _fit as FitFields;
     private var _sets as Number = 0;
     private var _started as Boolean = false;
     private var _startBattery as Float?;
@@ -101,6 +38,7 @@ class WorkoutSession {
     private var _swingsAtBlockStart as Number = 0;
 
     function initialize() {
+        _fit = new FitFields();
         _smoothness = new Smoothness.Tracker();
         _loadExposure = new LoadExposure.Tracker();
         _setSmoothness = new SmoothnessSetSummaries();
@@ -236,126 +174,7 @@ class WorkoutSession {
                     :subSport => Activity.SUB_SPORT_STRENGTH_TRAINING
                 }
             );
-            _setsField = session.createField(
-                "total_sets",
-                FIELD_ID_SETS,
-                FitContributor.DATA_TYPE_UINT16,
-                {:mesgType => FitContributor.MESG_TYPE_SESSION, :units => "sets"}
-            );
-            _setNumberField = session.createField(
-                "set_number",
-                FIELD_ID_SET_NUMBER,
-                FitContributor.DATA_TYPE_UINT16,
-                {:mesgType => FitContributor.MESG_TYPE_LAP, :units => "set"}
-            );
-            _phaseField = session.createField(
-                "phase",
-                FIELD_ID_PHASE,
-                FitContributor.DATA_TYPE_UINT8,
-                {:mesgType => FitContributor.MESG_TYPE_LAP, :units => "0=rest 1=work"}
-            );
-            _phaseDurationField = session.createField(
-                "phase_duration",
-                FIELD_ID_PHASE_DURATION,
-                FitContributor.DATA_TYPE_UINT16,
-                {:mesgType => FitContributor.MESG_TYPE_LAP, :units => "s"}
-            );
-            _lapWeightField = session.createField(
-                "implement_weight",
-                FIELD_ID_LAP_WEIGHT,
-                FitContributor.DATA_TYPE_UINT16,
-                {:mesgType => FitContributor.MESG_TYPE_LAP, :units => "g"}
-            );
-            _lapWristField = session.createField(
-                "watch_wrist",
-                FIELD_ID_LAP_WRIST,
-                FitContributor.DATA_TYPE_UINT8,
-                {:mesgType => FitContributor.MESG_TYPE_LAP, :units => "0=left 1=right"}
-            );
-            _setSmoothnessField = session.createField(
-                "set_smoothness",
-                FIELD_ID_SET_SMOOTHNESS,
-                FitContributor.DATA_TYPE_SINT16,
-                {:mesgType => FitContributor.MESG_TYPE_LAP, :units => "score"}
-            );
-            _movementTypeField = session.createField(
-                "movement_type",
-                FIELD_ID_MOVEMENT_TYPE,
-                FitContributor.DATA_TYPE_UINT8,
-                {:mesgType => FitContributor.MESG_TYPE_LAP, :units => "movement"}
-            );
-            _workingSideField = session.createField(
-                "working_side",
-                FIELD_ID_WORKING_SIDE,
-                FitContributor.DATA_TYPE_UINT8,
-                {:mesgType => FitContributor.MESG_TYPE_LAP, :units => "side"}
-            );
-            _totalSwingsField = session.createField(
-                "total_swings",
-                FIELD_ID_TOTAL_SWINGS,
-                FitContributor.DATA_TYPE_UINT16,
-                {:mesgType => FitContributor.MESG_TYPE_SESSION, :units => "swings"}
-            );
-            _lapSwingsField = session.createField(
-                "swing_count",
-                FIELD_ID_LAP_SWINGS,
-                FitContributor.DATA_TYPE_UINT16,
-                {:mesgType => FitContributor.MESG_TYPE_LAP, :units => "swings"}
-            );
-            _batteryField = session.createField(
-                "battery_used",
-                FIELD_ID_BATTERY,
-                FitContributor.DATA_TYPE_FLOAT,
-                {:mesgType => FitContributor.MESG_TYPE_SESSION, :units => "%"}
-            );
-            _equipmentTypeField = session.createField(
-                "implement_type",
-                FIELD_ID_EQUIPMENT_TYPE,
-                FitContributor.DATA_TYPE_UINT8,
-                {:mesgType => FitContributor.MESG_TYPE_SESSION, :units => "0=mace 1=clubs"}
-            );
-            _equipmentCountField = session.createField(
-                "implement_count",
-                FIELD_ID_EQUIPMENT_COUNT,
-                FitContributor.DATA_TYPE_UINT8,
-                {:mesgType => FitContributor.MESG_TYPE_SESSION, :units => "implements"}
-            );
-            _equipmentWeightField = session.createField(
-                "implement_weight",
-                FIELD_ID_EQUIPMENT_WEIGHT,
-                FitContributor.DATA_TYPE_UINT16,
-                {:mesgType => FitContributor.MESG_TYPE_SESSION, :units => "g"}
-            );
-            _watchWristField = session.createField(
-                "watch_wrist",
-                FIELD_ID_WATCH_WRIST,
-                FitContributor.DATA_TYPE_UINT8,
-                {:mesgType => FitContributor.MESG_TYPE_SESSION, :units => "0=left 1=right"}
-            );
-            _totalWorkField = session.createField(
-                "work_time",
-                FIELD_ID_TOTAL_WORK_SECONDS,
-                FitContributor.DATA_TYPE_UINT32,
-                {:mesgType => FitContributor.MESG_TYPE_SESSION, :units => "s"}
-            );
-            _totalRestField = session.createField(
-                "rest_time",
-                FIELD_ID_TOTAL_REST_SECONDS,
-                FitContributor.DATA_TYPE_UINT32,
-                {:mesgType => FitContributor.MESG_TYPE_SESSION, :units => "s"}
-            );
-            _phaseNameField = session.createField(
-                "phase_name",
-                FIELD_ID_PHASE_NAME,
-                FitContributor.DATA_TYPE_STRING,
-                {:mesgType => FitContributor.MESG_TYPE_LAP, :count => 5, :units => ""}
-            );
-            _equipmentNameField = session.createField(
-                "implement_name",
-                FIELD_ID_EQUIPMENT_NAME,
-                FitContributor.DATA_TYPE_STRING,
-                {:mesgType => FitContributor.MESG_TYPE_SESSION, :count => 8, :units => ""}
-            );
+            _fit.createCoreFields(session);
             recordSessionSummary();
             _startBattery = System.getSystemStats().battery;
             _session = session;
@@ -407,80 +226,15 @@ class WorkoutSession {
             return;
         }
         if (_loadExposureEnabled) {
-            _motionExposureField = session.createField(
-                "motion_exposure",
-                FIELD_ID_MOTION_EXPOSURE,
-                FitContributor.DATA_TYPE_UINT32,
-                {:mesgType => FitContributor.MESG_TYPE_LAP, :units => "mg-s"}
-            );
-            _motionPeakField = session.createField(
-                "motion_peak",
-                FIELD_ID_MOTION_PEAK,
-                FitContributor.DATA_TYPE_UINT16,
-                {:mesgType => FitContributor.MESG_TYPE_LAP, :units => "mg"}
-            );
-            _activeSecondsField = session.createField(
-                "active_seconds",
-                FIELD_ID_ACTIVE_SECONDS,
-                FitContributor.DATA_TYPE_UINT16,
-                {:mesgType => FitContributor.MESG_TYPE_LAP, :units => "s"}
-            );
-            _weightVolumeField = session.createField(
-                "weight_volume",
-                FIELD_ID_WEIGHT_VOLUME,
-                FitContributor.DATA_TYPE_UINT32,
-                {:mesgType => FitContributor.MESG_TYPE_LAP, :units => "kg-swings"}
-            );
+            _fit.createLoadExposureFields(session);
         }
         if (swingEnabled) {
-            _recordSwingTotalField = session.createField(
-                "swing_total",
-                FIELD_ID_RECORD_SWING_TOTAL,
-                FitContributor.DATA_TYPE_UINT16,
-                {:mesgType => FitContributor.MESG_TYPE_RECORD, :units => "swings"}
-            );
-            _recordSwingEventField = session.createField(
-                "swing_event",
-                FIELD_ID_RECORD_SWING_EVENT,
-                FitContributor.DATA_TYPE_UINT8,
-                {:mesgType => FitContributor.MESG_TYPE_RECORD, :units => "swings"}
-            );
-            _swingCadenceField = session.createField(
-                "swing_cadence",
-                FIELD_ID_SWING_CADENCE,
-                FitContributor.DATA_TYPE_UINT8,
-                {:mesgType => FitContributor.MESG_TYPE_RECORD, :units => "spm"}
-            );
+            _fit.createSwingFields(session);
         }
         // Local smoothness does not create FIT fields. The separate research
         // setting remains the explicit opt-in path for exporting summaries.
         if (exportEnabled) {
-            _rmsField = session.createField(
-                "accel_rms",
-                FIELD_ID_ACCEL_RMS,
-                FitContributor.DATA_TYPE_UINT16,
-                {:mesgType => FitContributor.MESG_TYPE_RECORD, :units => "mg"}
-            );
-            _peakField = session.createField(
-                "accel_peak",
-                FIELD_ID_ACCEL_PEAK,
-                FitContributor.DATA_TYPE_UINT16,
-                {:mesgType => FitContributor.MESG_TYPE_RECORD, :units => "mg"}
-            );
-            _zcField = session.createField(
-                "accel_zc",
-                FIELD_ID_ACCEL_ZC,
-                FitContributor.DATA_TYPE_UINT8,
-                {:mesgType => FitContributor.MESG_TYPE_RECORD, :units => "crossings"}
-            );
-            if (_smoothnessEnabled) {
-                _recordSmoothnessField = session.createField(
-                    "smoothness_score",
-                    FIELD_ID_RECORD_SMOOTHNESS,
-                    FitContributor.DATA_TYPE_UINT8,
-                    {:mesgType => FitContributor.MESG_TYPE_RECORD, :units => "score"}
-                );
-            }
+            _fit.createMotionExportFields(session, _smoothnessEnabled);
         }
         try {
             Sensor.registerSensorDataListener(
@@ -492,10 +246,7 @@ class WorkoutSession {
         } catch (e) {
             // no high-rate accel on this device; features stay unwritten
             _loadExposureEnabled = false;
-            _motionExposureField = null;
-            _motionPeakField = null;
-            _activeSecondsField = null;
-            _weightVolumeField = null;
+            _fit.clearLoadExposureFields();
         }
     }
 
@@ -519,38 +270,15 @@ class WorkoutSession {
             _swingCounting ? _swingCounter : null,
             _swingCounting
         );
-        var rms = _rmsField;
-        var peak = _peakField;
-        var zc = _zcField;
-        if (rms != null) {
-            rms.setData(f[:rms] as Number);
-        }
-        if (peak != null) {
-            peak.setData(f[:peak] as Number);
-        }
-        if (zc != null) {
-            var crossings = f[:zc] as Number;
-            zc.setData(crossings > 255 ? 255 : crossings);
-        }
-        var smoothnessField = _recordSmoothnessField;
-        var smoothnessScore = _smoothness.getScore();
-        if (smoothnessField != null && smoothnessScore >= 0) {
-            smoothnessField.setData(smoothnessScore);
-        }
+        _fit.writeMotionFeatures(f[:rms] as Number, f[:peak] as Number, f[:zc] as Number);
+        _fit.writeRecordSmoothness(_smoothness.getScore());
         if (_swingCounting) {
             var swingPoint = _swingSeries.addTotal(_swingCounter.getCount());
-            var totalField = _recordSwingTotalField;
-            var eventField = _recordSwingEventField;
-            var cadenceField = _swingCadenceField;
-            if (totalField != null) {
-                totalField.setData(swingPoint[:total] as Number);
-            }
-            if (eventField != null) {
-                eventField.setData(swingPoint[:event] as Number);
-            }
-            if (cadenceField != null) {
-                cadenceField.setData(swingPoint[:cadence] as Number);
-            }
+            _fit.writeSwingPoint(
+                swingPoint[:total] as Number,
+                swingPoint[:event] as Number,
+                swingPoint[:cadence] as Number
+            );
         }
     }
 
@@ -617,20 +345,15 @@ class WorkoutSession {
             _loadExposure.reset();
         }
         _blocks.add(block);
-        var field = _setsField;
-        if (field != null) {
-            field.setData(_sets);
-        }
+        _fit.writeSets(_sets);
         // Connect IQ cannot emit Garmin's native strength-set messages. A lap
         // is the supported FIT boundary that preserves each completed set's
         // timestamp and duration for Garmin Connect and exported FIT analysis.
-        var setNumberField = _setNumberField;
         var session = _session;
-        if (setNumberField != null && session != null && session.isRecording()) {
-            setNumberField.setData(_sets);
-            writeLapMetadata(1, block);
+        if (_fit.hasLapFields() && session != null && session.isRecording()) {
+            _fit.writeLapBoundary(_sets, 1, block);
             session.addLap();
-            prepareOpenLap(0);
+            _fit.prepareOpenLap(0);
         }
         if (Attention has :vibrate) {
             Attention.vibrate(
@@ -654,39 +377,11 @@ class WorkoutSession {
             return;
         }
         _blocks[_sets - 1].setRestSeconds(clampDuration(durationSeconds));
-        var setNumberField = _setNumberField;
         var session = _session;
-        if (setNumberField != null && session != null && session.isRecording()) {
-            setNumberField.setData(0);
-            writeLapMetadata(0, _blocks[_sets - 1]);
+        if (_fit.hasLapFields() && session != null && session.isRecording()) {
+            _fit.writeLapBoundary(0, 0, _blocks[_sets - 1]);
             session.addLap();
-            prepareOpenLap(1);
-        }
-    }
-
-    // ActivityRecording writes a final partial lap when the session is
-    // saved. Never leave the completed set's metadata attached to that open
-    // lap, or Garmin exports a tiny duplicate of the final work set.
-    private function prepareOpenLap(phase as Number) as Void {
-        var setNumberField = _setNumberField;
-        var phaseField = _phaseField;
-        var durationField = _phaseDurationField;
-        var phaseNameField = _phaseNameField;
-        var lapSwingsField = _lapSwingsField;
-        if (setNumberField != null) {
-            setNumberField.setData(0);
-        }
-        if (phaseField != null) {
-            phaseField.setData(phase);
-        }
-        if (durationField != null) {
-            durationField.setData(0);
-        }
-        if (phaseNameField != null) {
-            phaseNameField.setData(phase == 1 ? "Work" : "Rest");
-        }
-        if (lapSwingsField != null) {
-            lapSwingsField.setData(0);
+            _fit.prepareOpenLap(1);
         }
     }
 
@@ -695,66 +390,6 @@ class WorkoutSession {
             return 0;
         }
         return durationSeconds > 65535 ? 65535 : durationSeconds;
-    }
-
-    // FIT is an adapter over the app's block model. It does not define it.
-    private function writeLapMetadata(phase as Number, block as WorkBlockSummary) as Void {
-        var phaseField = _phaseField;
-        var durationField = _phaseDurationField;
-        var weightField = _lapWeightField;
-        var wristField = _lapWristField;
-        var smoothnessField = _setSmoothnessField;
-        var movementField = _movementTypeField;
-        var workingSideField = _workingSideField;
-        var lapSwingsField = _lapSwingsField;
-        var exposureField = _motionExposureField;
-        var motionPeakField = _motionPeakField;
-        var activeSecondsField = _activeSecondsField;
-        var weightVolumeField = _weightVolumeField;
-        var phaseNameField = _phaseNameField;
-        if (phaseNameField != null) {
-            phaseNameField.setData(phase == 1 ? "Work" : "Rest");
-        }
-        if (phaseField != null) {
-            phaseField.setData(phase);
-        }
-        if (durationField != null) {
-            durationField.setData(phase == 1 ? block.getWorkSeconds() : block.getRestSeconds());
-        }
-        if (weightField != null) {
-            weightField.setData(block.getEquipmentWeightGrams());
-        }
-        if (wristField != null) {
-            wristField.setData(block.getWatchWrist());
-        }
-        if (smoothnessField != null) {
-            smoothnessField.setData(phase == 1 ? block.getSmoothness() : -1);
-        }
-        if (movementField != null) {
-            movementField.setData(block.getMovementType());
-        }
-        if (workingSideField != null) {
-            workingSideField.setData(block.getWorkingSide());
-        }
-        if (lapSwingsField != null) {
-            var swings = phase == 1 ? block.getSwings() : 0;
-            lapSwingsField.setData(swings < 0 ? 0 : swings);
-        }
-        if (exposureField != null) {
-            var exposure = phase == 1 ? block.getMotionExposure() : 0;
-            exposureField.setData(exposure < 0 ? 0 : exposure);
-        }
-        if (motionPeakField != null) {
-            var peak = phase == 1 ? block.getMotionPeak() : 0;
-            motionPeakField.setData(peak < 0 ? 0 : peak);
-        }
-        if (activeSecondsField != null) {
-            var active = phase == 1 ? block.getActiveSeconds() : 0;
-            activeSecondsField.setData(active < 0 ? 0 : active);
-        }
-        if (weightVolumeField != null) {
-            weightVolumeField.setData(phase == 1 ? block.getWeightVolume() : 0);
-        }
     }
 
     function beginSmoothnessSet() as Void {
@@ -969,9 +604,8 @@ class WorkoutSession {
     }
 
     private function recordSwingTotal() as Void {
-        var field = _totalSwingsField;
-        if (field != null && _swingCounting) {
-            field.setData(getTotalSwings());
+        if (_swingCounting) {
+            _fit.writeSwingTotal(getTotalSwings());
         }
     }
 
@@ -980,45 +614,25 @@ class WorkoutSession {
     // submitted only during setup can be lost before the session message is
     // serialized on some devices.
     private function recordSessionSummary() as Void {
-        var equipmentType = _equipmentTypeField;
-        var equipmentCount = _equipmentCountField;
-        var equipmentWeight = _equipmentWeightField;
-        var watchWrist = _watchWristField;
-        var totalWork = _totalWorkField;
-        var totalRest = _totalRestField;
-        var equipmentName = _equipmentNameField;
-        if (equipmentType != null) {
-            equipmentType.setData(_equipmentType);
-        }
-        if (equipmentCount != null) {
-            equipmentCount.setData(_equipmentCount);
-        }
-        if (equipmentWeight != null) {
-            equipmentWeight.setData(_equipmentWeightGrams);
-        }
-        if (watchWrist != null) {
-            watchWrist.setData(_watchWrist);
-        }
-        if (totalWork != null) {
-            totalWork.setData(getTotalWorkSeconds());
-        }
-        if (totalRest != null) {
-            totalRest.setData(getTotalRestSeconds());
-        }
-        if (equipmentName != null) {
-            equipmentName.setData(Equipment.implementName(_equipmentType));
-        }
+        _fit.writeSessionSummary(
+            _equipmentType,
+            _equipmentCount,
+            _equipmentWeightGrams,
+            _watchWrist,
+            getTotalWorkSeconds(),
+            getTotalRestSeconds(),
+            Equipment.implementName(_equipmentType)
+        );
     }
 
     // Session-level battery cost: start minus end, floored at zero
     // (solar charge or a charger mid-session would otherwise go negative).
     private function recordBatteryUsed() as Void {
-        var field = _batteryField;
         var start = _startBattery;
-        if (field == null || start == null) {
+        if (start == null) {
             return;
         }
-        field.setData(batteryDelta(start, System.getSystemStats().battery));
+        _fit.writeBatteryUsed(batteryDelta(start, System.getSystemStats().battery));
     }
 
     function batteryDelta(startPct as Float, endPct as Float) as Float {
@@ -1038,37 +652,7 @@ class WorkoutSession {
             session.discard();
             _session = null;
         }
-        _setsField = null;
-        _setNumberField = null;
-        _phaseField = null;
-        _phaseDurationField = null;
-        _lapWeightField = null;
-        _lapWristField = null;
-        _setSmoothnessField = null;
-        _movementTypeField = null;
-        _workingSideField = null;
-        _totalSwingsField = null;
-        _lapSwingsField = null;
-        _motionExposureField = null;
-        _motionPeakField = null;
-        _activeSecondsField = null;
-        _weightVolumeField = null;
-        _batteryField = null;
-        _equipmentTypeField = null;
-        _equipmentCountField = null;
-        _equipmentWeightField = null;
-        _watchWristField = null;
-        _totalWorkField = null;
-        _totalRestField = null;
-        _phaseNameField = null;
-        _equipmentNameField = null;
-        _rmsField = null;
-        _peakField = null;
-        _zcField = null;
-        _recordSwingTotalField = null;
-        _recordSwingEventField = null;
-        _swingCadenceField = null;
-        _recordSmoothnessField = null;
+        _fit.reset();
         _sets = 0;
         _blocks = [];
         _started = false;
