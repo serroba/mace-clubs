@@ -45,6 +45,10 @@ class SyntheticWorkoutTest(unittest.TestCase):
             self.assertEqual(50, len(records))
             self.assertEqual(1000, records[0].get_value("accel_rms"))
             self.assertEqual(SYNTHETIC.workout()[42].peak, records[42].get_value("accel_peak"))
+            events = [record.get_value("swing_event") for record in records]
+            self.assertGreater(sum(events), 0)
+            self.assertEqual(sum(events), records[-1].get_value("swing_total"))
+            self.assertTrue(all(record.get_value("swing_cadence") is not None for record in records))
             sessions = list(fit.get_messages("session"))
             self.assertEqual(2, sessions[0].get_value("total_sets"))
             self.assertEqual(40, sessions[0].get_value("work_time"))

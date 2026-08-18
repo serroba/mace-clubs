@@ -50,3 +50,20 @@ function testSyntheticRestPreservesGravityWithoutDynamicLoad(logger as Test.Logg
     Test.assertEqualMessage(records[25][:dynamicPeak] as Number, 0, "second rest starts still");
     return true;
 }
+
+(:test)
+function testSyntheticWorkoutProducesSwingTimeSeries(logger as Test.Logger) as Boolean {
+    var workout = SyntheticMotion.run();
+    var records = workout[:records] as Array<Dictionary>;
+    var events = 0;
+    for (var i = 0; i < records.size(); i++) {
+        events += records[i][:swingEvent] as Number;
+    }
+    Test.assertEqualMessage(events, workout[:swings] as Number, "events reconcile with total swings");
+    Test.assertEqualMessage(
+        records[records.size() - 1][:swingTotal] as Number,
+        workout[:swings] as Number,
+        "final cumulative point matches workout total"
+    );
+    return true;
+}

@@ -139,6 +139,9 @@ FIELD_TYPES = {
     23: ("work_time", "s", BaseType.UINT32, 4),
     24: ("rest_time", "s", BaseType.UINT32, 4),
     26: ("implement_name", "", BaseType.STRING, 16),
+    27: ("swing_total", "swings", BaseType.UINT16, 2),
+    28: ("swing_event", "swings", BaseType.UINT8, 1),
+    29: ("swing_cadence", "spm", BaseType.UINT8, 1),
 }
 
 
@@ -176,11 +179,24 @@ def build_fit(windows: list[Window], destination: Path) -> None:
         description.units = units
         builder.add(description)
 
+    swing_total = 0
+    recent_events = []
     for window in windows:
+        # The committed fixture mirrors the production record contract. Its
+        # deterministic event shape is presentation data; Monkey C tests own
+        # the detector and production-pipeline assertions.
+        event = int(window.phase == "work" and window.second % 2 == 0)
+        swing_total += event
+        recent_events.append(event)
+        recent_events = recent_events[-10:]
+        cadence = round(sum(recent_events) * 60 / len(recent_events))
         record = RecordMessage(developer_fields=[
             developer_field(2, window.rms),
             developer_field(3, window.peak),
             developer_field(4, window.crossings),
+            developer_field(27, swing_total),
+            developer_field(28, event),
+            developer_field(29, cadence),
         ])
         record.timestamp = START_MS + window.second * 1000
         record.heart_rate = 68 + round(window.second * 0.65) + (7 if window.phase == "work" else 0)
