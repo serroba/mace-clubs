@@ -69,8 +69,11 @@ $(BIN_DIR):
 build: $(DEVELOPER_KEY) | $(BIN_DIR)
 	"$(MONKEYC)" -f monkey.jungle -d $(DEVICE) -o $(BIN_DIR)/mace-clubs.prg -y $(DEVELOPER_KEY)
 
+# monkey.local.jungle keeps the offscreen render tests in local builds;
+# CI's Linux simulator cannot draw device fonts offscreen (see
+# RenderTestSupport) and compiles monkey.jungle instead.
 test-build: $(DEVELOPER_KEY) | $(BIN_DIR)
-	"$(MONKEYC)" -f monkey.jungle -d $(DEVICE) -o $(BIN_DIR)/mace-clubs-test.prg -y $(DEVELOPER_KEY) --unit-test
+	"$(MONKEYC)" -f monkey.local.jungle -d $(DEVICE) -o $(BIN_DIR)/mace-clubs-test.prg -y $(DEVELOPER_KEY) --unit-test
 
 simulator-test: test-build
 	"$(MONKEYDO)" $(BIN_DIR)/mace-clubs-test.prg $(DEVICE) -t
