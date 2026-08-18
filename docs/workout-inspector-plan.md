@@ -63,11 +63,11 @@ tendon-force, injury-risk, or readiness claims.
 Current CLI usage:
 
 ```sh
-tools/.venv/bin/python tools/workout_history.py --database ~/mace-history.json import activity.fit export.zip
-tools/.venv/bin/python tools/workout_history.py --database ~/mace-history.json show
-tools/.venv/bin/python tools/workout_history.py --database ~/mace-history.json delete WORKOUT_ID
-tools/.venv/bin/python tools/workout_history.py --database ~/mace-history.json export backup.json
-tools/.venv/bin/python tools/workout_history.py --database ~/mace-history.json clear
+node --experimental-strip-types tools/workout-history.ts --database ~/mace-history.json import activity.fit export.zip
+node --experimental-strip-types tools/workout-history.ts --database ~/mace-history.json show
+node --experimental-strip-types tools/workout-history.ts --database ~/mace-history.json delete WORKOUT_ID
+node --experimental-strip-types tools/workout-history.ts --database ~/mace-history.json export backup.json
+node --experimental-strip-types tools/workout-history.ts --database ~/mace-history.json clear
 ```
 
 The database is never uploaded, stores workout summaries rather than per-second

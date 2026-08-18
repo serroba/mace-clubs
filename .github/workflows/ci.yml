@@ -14,12 +14,30 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v6
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: tools/package-lock.json
       - name: Install report dependencies
-        run: python -m pip install -r tools/requirements.txt coverage
+        run: npm ci --prefix tools
+      # tsconfig includes every tools/*.ts file and eslint covers the whole
+      # directory, so untested CLIs are still typechecked and linted here.
+      - name: Typecheck all TypeScript at maximum strictness
+        run: npm run typecheck --prefix tools
+      - name: Lint all TypeScript
+        run: npm run lint --prefix tools
       - name: Test report generator with coverage
         run: |
-          python -m coverage run -m unittest tools/test_analyze_workout.py tools/test_report_fit.py tools/test_validate_workout.py tools/test_workout_history.py
-          python -m coverage report --include=tools/analyze_workout.py,tools/report_fit.py,tools/validate_workout.py,tools/workout_history.py --fail-under=95
+          node --experimental-strip-types --test --experimental-test-coverage \
+            --test-coverage-include='tools/analyze-workout.ts' \
+            --test-coverage-include='tools/report-fit.ts' \
+            --test-coverage-include='tools/validate-workout.ts' \
+            --test-coverage-include='tools/workout-history.ts' \
+            --test-coverage-include='tools/fit-io.ts' \
+            --test-coverage-lines=95 \
+            tools/analyze-workout.test.ts tools/report-fit.test.ts \
+            tools/validate-workout.test.ts tools/workout-history.test.ts
 
   lint:
     name: Lint XML resources
@@ -31,7 +49,7 @@ jobs:
           sudo apt-get update -q && sudo apt-get install -y -q libxml2-utils
           find . -name '*.xml' -not -path './.git/*' -print0 | xargs -0 -n1 xmllint --noout
       - name: Test local tool discovery
-        run: python3 -m unittest tools/test_resolve_tool.py
+        run: node --experimental-strip-types --test tools/resolve-tool.test.ts
 
   mc-lint:
     name: Monkey C format & lint
@@ -220,21 +238,23 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v6
-      - uses: actions/setup-python@v6
+      - uses: actions/setup-node@v4
         with:
-          python-version: "3.13"
-          cache: pip
-          cache-dependency-path: tools/requirements.txt
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: tools/package-lock.json
       - name: Install FIT tooling
-        run: pip install -r tools/requirements.txt coverage
+        run: npm ci --prefix tools
       - name: Generate and verify presentation fixture
         run: |
-          python tools/synthetic_workout.py --check --output-dir build/synthetic-workout
-          python tools/report_fit.py build/synthetic-workout/synthetic-workout.fit \
+          node --experimental-strip-types tools/synthetic-workout.ts --check --output-dir build/synthetic-workout
+          node --experimental-strip-types tools/report-fit.ts build/synthetic-workout/synthetic-workout.fit \
             -o build/synthetic-workout/synthetic-workout.html
-          python tools/validate_workout.py build/synthetic-workout/synthetic-workout.fit
-          python -m coverage run tools/test_synthetic_workout.py
-          python -m coverage report --include=tools/synthetic_workout.py --fail-under=95
+          node --experimental-strip-types tools/validate-workout.ts build/synthetic-workout/synthetic-workout.fit
+          node --experimental-strip-types --test --experimental-test-coverage \
+            --test-coverage-include='tools/synthetic-workout.ts' \
+            --test-coverage-lines=95 \
+            tools/synthetic-workout.test.ts
       - name: Upload review artifacts
         uses: actions/upload-artifact@v4
         with:

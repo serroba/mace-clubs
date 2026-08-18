@@ -1,0 +1,35 @@
+{
+    "compilerOptions": {
+        "target": "es2023",
+        "lib": ["es2023"],
+        // "bundler" resolution because @garmin/fitsdk's declaration files use
+        // extensionless relative imports, which nodenext rejects. Our own
+        // imports carry explicit .ts extensions, so Node's runtime resolution
+        // is unaffected.
+        "module": "esnext",
+        "moduleResolution": "bundler",
+        "types": ["node"],
+
+        "noEmit": true,
+        "allowImportingTsExtensions": true,
+        "isolatedModules": true,
+        "verbatimModuleSyntax": true,
+        "erasableSyntaxOnly": true,
+
+        "strict": true,
+        "exactOptionalPropertyTypes": true,
+        "noUncheckedIndexedAccess": true,
+        "noImplicitOverride": true,
+        "noPropertyAccessFromIndexSignature": true,
+        "noFallthroughCasesInSwitch": true,
+        "noImplicitReturns": true,
+        "noUnusedLocals": true,
+        "noUnusedParameters": true,
+        "allowUnreachableCode": false,
+        "allowUnusedLabels": false,
+        "forceConsistentCasingInFileNames": true,
+
+        "skipLibCheck": false
+    },
+    "include": ["*.ts"]
+}

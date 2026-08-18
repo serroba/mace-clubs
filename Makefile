@@ -1,7 +1,8 @@
 DEVICE ?= instinct3solar45mm
 DEVELOPER_KEY ?= developer_key.der
 BIN_DIR ?= bin
-TOOL_RESOLVER := python3 tools/resolve_tool.py
+NODE_TS := node --experimental-strip-types --disable-warning=ExperimentalWarning
+TOOL_RESOLVER := $(NODE_TS) tools/resolve-tool.ts
 JAVA ?= $(shell $(TOOL_RESOLVER) java)
 MONKEYC ?= $(shell $(TOOL_RESOLVER) monkeyc)
 MONKEYDO ?= $(shell $(TOOL_RESOLVER) monkeydo)
@@ -11,9 +12,9 @@ RAFIKI ?= $(shell $(TOOL_RESOLVER) rafiki)
 JAVA_PATH := $(if $(findstring /,$(JAVA)),$(dir $(JAVA)):,)
 export PATH := $(JAVA_PATH)$(PATH)
 
-.PHONY: check pre-commit install-hooks doctor tool-resolver-test xml fit-schema format format-check lint build test-build simulator-test coverage clean
+.PHONY: check pre-commit install-hooks doctor tools-check tool-resolver-test xml fit-schema format format-check lint build test-build simulator-test coverage clean
 
-check: doctor tool-resolver-test xml fit-schema format-check lint build test-build
+check: doctor tools-check xml fit-schema format-check lint build test-build
 
 pre-commit:
 	bash tools/pre_commit.sh
@@ -22,14 +23,21 @@ install-hooks:
 	bash tools/install_hooks.sh
 
 doctor:
+	@command -v node >/dev/null || { echo "node is not on PATH (the local tooling needs Node.js 22+)"; exit 1; }
 	@"$(JAVA)" -version >/dev/null 2>&1 || { echo "a working Java runtime was not found (or set JAVA=/path/to/java)"; exit 1; }
 	@command -v "$(MONKEYC)" >/dev/null || { echo "monkeyc is not on PATH (or set MONKEYC=/path/to/monkeyc)"; exit 1; }
 	@command -v "$(FORMATTER)" >/dev/null || { echo "monkey-c-formatter was not found (install it with cargo or set FORMATTER=/path/to/monkey-c-formatter)"; exit 1; }
 	@command -v "$(LINTER)" >/dev/null || { echo "monkey-c-linter was not found (install it with cargo or set LINTER=/path/to/monkey-c-linter)"; exit 1; }
 	@command -v xmllint >/dev/null || { echo "xmllint is not on PATH"; exit 1; }
 
+# Typecheck, lint, and test every TypeScript tool. tools-check is the full
+# gate; tool-resolver-test stays as the fast target CI's XML job uses.
+tools-check:
+	@test -d tools/node_modules || { echo "tools/node_modules missing - run: npm ci --prefix tools"; exit 1; }
+	cd tools && npx tsc -p tsconfig.json && npx eslint . && $(NODE_TS) --test *.test.ts
+
 tool-resolver-test:
-	python3 -m unittest tools/test_resolve_tool.py
+	$(NODE_TS) --test tools/resolve-tool.test.ts
 
 xml:
 	@find . -name '*.xml' -not -path './.git/*' -print0 | xargs -0 -n1 xmllint --noout
