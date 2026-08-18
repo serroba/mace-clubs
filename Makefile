@@ -1,7 +1,7 @@
 DEVICE ?= instinct3solar45mm
 DEVELOPER_KEY ?= developer_key.der
 BIN_DIR ?= bin
-TOOL_RESOLVER := python3 tools/resolve_tool.py
+TOOL_RESOLVER := node tools/resolve-tool.js
 JAVA ?= $(shell $(TOOL_RESOLVER) java)
 MONKEYC ?= $(shell $(TOOL_RESOLVER) monkeyc)
 MONKEYDO ?= $(shell $(TOOL_RESOLVER) monkeydo)
@@ -22,6 +22,7 @@ install-hooks:
 	bash tools/install_hooks.sh
 
 doctor:
+	@command -v node >/dev/null || { echo "node is not on PATH (the local tooling needs Node.js 22+)"; exit 1; }
 	@"$(JAVA)" -version >/dev/null 2>&1 || { echo "a working Java runtime was not found (or set JAVA=/path/to/java)"; exit 1; }
 	@command -v "$(MONKEYC)" >/dev/null || { echo "monkeyc is not on PATH (or set MONKEYC=/path/to/monkeyc)"; exit 1; }
 	@command -v "$(FORMATTER)" >/dev/null || { echo "monkey-c-formatter was not found (install it with cargo or set FORMATTER=/path/to/monkey-c-formatter)"; exit 1; }
@@ -29,7 +30,7 @@ doctor:
 	@command -v xmllint >/dev/null || { echo "xmllint is not on PATH"; exit 1; }
 
 tool-resolver-test:
-	python3 -m unittest tools/test_resolve_tool.py
+	node --test tools/resolve-tool.test.js
 
 xml:
 	@find . -name '*.xml' -not -path './.git/*' -print0 | xargs -0 -n1 xmllint --noout

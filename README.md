@@ -42,10 +42,9 @@ features even though Garmin Connect does not graph them. Generate a private,
 self-contained report locally from either the downloaded ZIP or a raw FIT file:
 
 ```sh
-python3 -m venv tools/.venv
-tools/.venv/bin/pip install -r tools/requirements.txt
-tools/.venv/bin/python tools/report_fit.py ~/Downloads/activity.zip
-tools/.venv/bin/python tools/validate_workout.py ~/Downloads/activity.zip
+npm ci --prefix tools
+node tools/report-fit.js ~/Downloads/activity.zip
+node tools/validate-workout.js ~/Downloads/activity.zip
 ```
 
 The resulting HTML stays on your computer and combines motion intensity, heart

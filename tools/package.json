@@ -1,0 +1,13 @@
+{
+  "name": "mace-clubs-tools",
+  "version": "0.0.0",
+  "description": "Local FIT tooling for Mace & Clubs",
+  "type": "module",
+  "private": true,
+  "dependencies": {
+    "@garmin/fitsdk": "^21.213.0"
+  },
+  "engines": {
+    "node": ">=22.8"
+  }
+}

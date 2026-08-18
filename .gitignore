@@ -7,8 +7,7 @@ gen/
 developer_key*
 .DS_Store
 dist/
-tools/.venv/
-__pycache__/
-.coverage
 *.fit
 build/
+node_modules/
+__pycache__/
