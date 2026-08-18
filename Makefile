@@ -12,7 +12,7 @@ RAFIKI ?= $(shell $(TOOL_RESOLVER) rafiki)
 JAVA_PATH := $(if $(findstring /,$(JAVA)),$(dir $(JAVA)):,)
 export PATH := $(JAVA_PATH)$(PATH)
 
-.PHONY: check pre-commit install-hooks doctor tools-check tool-resolver-test xml fit-schema format format-check lint build test-build simulator-test coverage clean
+.PHONY: check pre-commit install-hooks doctor tools-check tool-resolver-test manifest-check xml fit-schema format format-check lint build test-build simulator-test coverage clean
 
 check: doctor tools-check xml fit-schema format-check lint build test-build
 
@@ -38,6 +38,10 @@ tools-check:
 
 tool-resolver-test:
 	$(NODE_TS) --test tools/resolve-tool.test.ts
+
+# Warning-only: reports CIQ 3.1+ wearables missing from manifest.xml.
+manifest-check:
+	bash tools/check_manifest_devices.sh
 
 xml:
 	@find . -name '*.xml' -not -path './.git/*' -print0 | xargs -0 -n1 xmllint --noout
