@@ -132,9 +132,10 @@ def collect(fit: FitFile) -> dict:
             "swing_total": value(record, "swing_total"),
             "swing_event": value(record, "swing_event"),
             "swing_cadence": value(record, "swing_cadence"),
+            "smoothness_score": value(record, "smoothness_score"),
         }
         if any(point[key] is not None for key in (
-            "hr", "rms", "peak", "zc", "swing_total", "swing_event", "swing_cadence"
+            "hr", "rms", "peak", "zc", "swing_total", "swing_event", "swing_cadence", "smoothness_score"
         )):
             records.append(point)
 
@@ -198,7 +199,7 @@ def render(report: dict, title: str) -> str:
   svg {{ display:block; width:100%; height:auto; background:var(--surface); border:1px solid var(--grid); }} .grid line {{ stroke:var(--grid); stroke-opacity:.65; }}
   .axis text,.label {{ fill:var(--muted); font-size:12px; }} .axis path,.axis line {{ stroke:var(--grid); }} .phase-work {{ fill:var(--work); opacity:.10; }} .phase-rest {{ fill:var(--rest); opacity:.075; }}
   .line-rms {{ fill:none; stroke:var(--rms); stroke-width:1.5; }} .line-peak {{ fill:none; stroke:var(--peak); stroke-width:1.1; opacity:.72; }} .line-hr {{ fill:none; stroke:var(--hr); stroke-width:1.4; }} .line-swing {{ fill:none; stroke:var(--swing); stroke-width:1.8; }} .swing-event {{ stroke:var(--swing); stroke-width:1.2; opacity:.8; }} .reference {{ stroke:var(--muted); stroke-width:1; stroke-dasharray:5 4; opacity:.8; }} .crosshair {{ stroke:var(--ink); stroke-width:1; opacity:.45; pointer-events:none; }}
-  .smooth-bar {{ fill:var(--smooth); }} .duration-mark {{ fill:var(--work); }} .anomaly {{ fill:var(--warn); }} .legend {{ display:flex; flex-wrap:wrap; gap:14px; margin:6px 0 10px; color:var(--muted); font-size:13px; }}
+  .smooth-bar {{ fill:var(--smooth); }} .line-smooth {{ fill:none; stroke:var(--smooth); stroke-width:2; }} .duration-mark {{ fill:var(--work); }} .anomaly {{ fill:var(--warn); }} .legend {{ display:flex; flex-wrap:wrap; gap:14px; margin:6px 0 10px; color:var(--muted); font-size:13px; }}
   .legend button {{ color:inherit; border:0; padding:2px 0; background:none; cursor:pointer; }} .legend button[aria-pressed=false] {{ opacity:.4; }} .swatch {{ width:18px; height:3px; display:inline-block; vertical-align:middle; margin-right:5px; }}
   .tooltip {{ position:fixed; pointer-events:none; display:none; background:var(--surface); color:var(--ink); border:1px solid var(--grid); padding:7px 9px; font-size:12px; z-index:5; }}
   .insight {{ border-left:3px solid var(--warn); padding:8px 12px; color:var(--muted); }}
@@ -224,6 +225,7 @@ def render(report: dict, title: str) -> str:
     <svg id="timeline" role="img" aria-label="Synchronized acceleration, swing cadence, and heart rate timeline"></svg>
   </section>
   <section id="rhythm-section"><h2>Set rhythm comparison</h2><p class="note">Each work set is normalized from 0–100%, making cadence drift and pacing differences directly comparable.</p><svg id="rhythm" role="img" aria-label="Normalized swing cadence by set"></svg></section>
+  <section id="smooth-time-section"><h2>Smoothness over time</h2><p class="note">The rolling repeatability score becomes available after four valid motion windows. Work and rest phases are shaded for context.</p><svg id="smooth-time" role="img" aria-label="Smoothness score over time"></svg></section>
   <section><h2>Set consistency</h2><p class="note">Smoothness is a repeatability score from wrist motion; very short sets are flagged and excluded from trend interpretation.</p><svg id="sets" role="img" aria-label="Smoothness and duration by set"></svg></section>
   <section><h2>Within-session signals</h2><p class="note" id="signal-disclaimer"></p><div class="signals" id="signals"></div></section>
   <p class="insight" id="insight"></p>
@@ -271,7 +273,7 @@ function drawTimeline(){{
   const eventGroup=S('g');records.filter(d=>d.swing_event>0).forEach(d=>eventGroup.append(S('line',{{x1:x(d.t),x2:x(d.t),y1:swingBox.b-10,y2:swingBox.b,class:'swing-event'}})));if(hasSwing)svg.append(eventGroup);
   document.querySelector('[data-series="swing"]').style.display=hasSwing?'':'none';
   const crosshair=S('line',{{x1:m.l,x2:m.l,y1:m.t,y2:hrBox.b,class:'crosshair'}});crosshair.style.display='none';svg.append(crosshair);
-  const hit=S('rect',{{x:m.l,y:m.t,width:w-m.l-m.r,height:h-m.t-m.b,fill:'transparent'}});svg.append(hit);hit.addEventListener('pointermove',e=>{{const box=svg.getBoundingClientRect(),px=(e.clientX-box.left)*w/box.width,t=(px-m.l)*(summary.elapsed)/(w-m.l-m.r),d=records.reduce((a,b)=>Math.abs(b.t-t)<Math.abs(a.t-t)?b:a),xx=x(d.t);crosshair.setAttribute('x1',xx);crosshair.setAttribute('x2',xx);crosshair.style.display='';tooltip.style.display='block';tooltip.style.left=`${{Math.min(innerWidth-220,e.clientX+12)}}px`;tooltip.style.top=`${{e.clientY+12}}px`;tooltip.innerHTML=`<b>${{fmt(d.t)}}</b><br>RMS ${{d.rms??'—'}} mg · peak ${{d.peak??'—'}} mg<br>Cadence ${{d.swing_cadence??'—'}} spm · total ${{d.swing_total??'—'}}${{d.swing_event?'<br><b>Swing detected</b>':''}}<br>HR ${{d.hr??'—'}} bpm`;}});hit.addEventListener('pointerleave',()=>{{tooltip.style.display='none';crosshair.style.display='none';}});
+  const hit=S('rect',{{x:m.l,y:m.t,width:w-m.l-m.r,height:h-m.t-m.b,fill:'transparent'}});svg.append(hit);hit.addEventListener('pointermove',e=>{{const box=svg.getBoundingClientRect(),px=(e.clientX-box.left)*w/box.width,t=(px-m.l)*(summary.elapsed)/(w-m.l-m.r),d=records.reduce((a,b)=>Math.abs(b.t-t)<Math.abs(a.t-t)?b:a),xx=x(d.t);crosshair.setAttribute('x1',xx);crosshair.setAttribute('x2',xx);crosshair.style.display='';tooltip.style.display='block';tooltip.style.left=`${{Math.min(innerWidth-220,e.clientX+12)}}px`;tooltip.style.top=`${{e.clientY+12}}px`;tooltip.innerHTML=`<b>${{fmt(d.t)}}</b><br>RMS ${{d.rms??'—'}} mg · peak ${{d.peak??'—'}} mg<br>Cadence ${{d.swing_cadence??'—'}} spm · total ${{d.swing_total??'—'}}${{d.swing_event?'<br><b>Swing detected</b>':''}}<br>Smoothness ${{d.smoothness_score??'—'}}<br>HR ${{d.hr??'—'}} bpm`;}});hit.addEventListener('pointerleave',()=>{{tooltip.style.display='none';crosshair.style.display='none';}});
   document.querySelectorAll('[data-series]').forEach(b=>b.onclick=()=>{{const k=b.dataset.series,on=b.getAttribute('aria-pressed')==='true';b.setAttribute('aria-pressed',String(!on));paths[k].style.display=on?'none':'';}});
 }}
 function drawRhythm(){{
@@ -279,6 +281,12 @@ function drawRhythm(){{
   const svg=document.getElementById('rhythm'),w=Math.max(320,svg.clientWidth||900),h=w<500?280:330,box={{l:64,r:w-24,t:24,b:h-42}},maxCadence=Math.max(60,...records.map(d=>d.swing_cadence||0)),x=scale(0,100,box.l,box.r),y=scale(0,maxCadence,box.b,box.t);svg.replaceChildren();svg.setAttribute('viewBox',`0 0 ${{w}} ${{h}}`);yAxis(svg,box,[0,maxCadence],'Swings / min');
   work.forEach((lap,i)=>{{const data=records.filter(d=>d.t>=lap.start&&d.t<=lap.end&&Number.isFinite(d.swing_cadence)).map(d=>({{...d,t:(d.t-lap.start)*100/Math.max(1,lap.end-lap.start)}})),color=`hsl(${{(i*47)%360}} 55% 48%)`,path=S('path',{{d:linePath(data,x,y,d=>d.swing_cadence),fill:'none',stroke:color,'stroke-width':'1.5',opacity:'.82'}});svg.append(path);const label=S('text',{{x:box.r-4,y:box.t+14+i*14,'text-anchor':'end',fill:color,'font-size':'11'}});label.textContent=`Set ${{lap.set}}`;svg.append(label);}});
   for(let i=0;i<=4;i++){{const label=S('text',{{x:x(i*25),y:h-16,'text-anchor':i===0?'start':i===4?'end':'middle',fill:css('--muted'),'font-size':'12'}});label.textContent=`${{i*25}}%`;svg.append(label);}}
+}}
+function drawSmoothTime(){{
+  const section=document.getElementById('smooth-time-section'),data=records.filter(d=>Number.isFinite(d.smoothness_score)&&d.smoothness_score>0);section.style.display=data.length?'':'none';if(!data.length)return;
+  const svg=document.getElementById('smooth-time'),w=Math.max(320,svg.clientWidth||900),h=w<500?270:310,box={{l:64,r:w-24,t:24,b:h-42}},x=scale(0,summary.elapsed,box.l,box.r),y=scale(0,100,box.b,box.t);svg.replaceChildren();svg.setAttribute('viewBox',`0 0 ${{w}} ${{h}}`);
+  laps.forEach(d=>svg.append(S('rect',{{x:x(d.start),y:box.t,width:Math.max(1,x(d.end)-x(d.start)),height:box.b-box.t,class:d.phase==='work'?'phase-work':'phase-rest'}})));
+  yAxis(svg,box,[0,100],'Smoothness');timeAxis(svg,box);svg.append(S('path',{{d:linePath(data,x,y,d=>d.smoothness_score),class:'line-smooth'}}));
 }}
 function drawSets(){{
   const svg=document.getElementById('sets'),w=Math.max(320,svg.clientWidth||900),h=w<500?280:320,m={{l:64,r:28,t:22,b:42}};svg.replaceChildren();svg.setAttribute('viewBox',`0 0 ${{w}} ${{h}}`);
@@ -289,7 +297,7 @@ function drawSets(){{
 }}
 const first=valid.slice(0,3).map(d=>d.smoothness).filter(Number.isFinite),last=valid.slice(-3).map(d=>d.smoothness).filter(Number.isFinite),avg=a=>a.length?a.reduce((x,y)=>x+y,0)/a.length:null,delta=avg(last)-avg(first),anomalies=work.filter(d=>d.elapsed<10);
 document.getElementById('insight').textContent=!first.length||!last.length?'Not enough comparable smoothness data for a session trend.':anomalies.length?`Set ${{anomalies.map(d=>d.set).join(', ')}} lasted under 10 seconds and is excluded from the smoothness comparison. Across comparable sets, the last three averaged ${{Math.abs(delta).toFixed(1)}} points ${{delta<0?'lower':'higher'}} than the first three.`:`Across comparable sets, the last three averaged ${{Math.abs(delta).toFixed(1)}} points ${{delta<0?'lower':'higher'}} than the first three.`;
-let lastWidth=0;new ResizeObserver(entries=>{{const width=Math.round(entries[0].contentRect.width);if(width===lastWidth)return;lastWidth=width;drawTimeline();drawRhythm();drawSets();}}).observe(document.querySelector('main'));
+let lastWidth=0;new ResizeObserver(entries=>{{const width=Math.round(entries[0].contentRect.width);if(width===lastWidth)return;lastWidth=width;drawTimeline();drawRhythm();drawSmoothTime();drawSets();}}).observe(document.querySelector('main'));
 </script></body></html>"""
 
 

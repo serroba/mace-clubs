@@ -85,9 +85,10 @@ module SyntheticMotion {
                 true
             );
             var swingPoint = swingSeries.addTotal(counter.getCount());
-            result.put(:swingTotal, swingPoint[:total]);
-            result.put(:swingEvent, swingPoint[:event]);
-            result.put(:swingCadence, swingPoint[:cadence]);
+            result.put(:swingTotal, swingPoint[:total] as Number);
+            result.put(:swingEvent, swingPoint[:event] as Number);
+            result.put(:swingCadence, swingPoint[:cadence] as Number);
+            result.put(:smoothnessScore, tracker == null ? -1 : (tracker as Smoothness.Tracker).getScore());
             records.add(result);
             workSeconds += work ? 1 : 0;
             restSeconds += work ? 0 : 1;

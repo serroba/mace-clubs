@@ -67,6 +67,7 @@
     <string id="FitPhase">Phase</string>
     <string id="FitImplement">Implement</string>
     <string id="FitSmoothness">Smoothness</string>
+    <string id="FitSmoothnessChart">Smoothness over time</string>
     <string id="FitSwingCount">Detected swings</string>
     <string id="FitMotionExposure">Motion exposure</string>
     <string id="FitMotionIntensity">Acceleration RMS</string>

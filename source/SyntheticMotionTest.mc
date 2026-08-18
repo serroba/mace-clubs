@@ -22,6 +22,16 @@ function testSyntheticWorkoutDistinguishesSmoothAndIrregularWork(logger as Test.
     Test.assertMessage(smooth >= 90, "stable periodic work remains highly repeatable");
     Test.assertMessage(irregular >= 0, "irregular work produces a score");
     Test.assertMessage(smooth > irregular, "smooth work scores above irregular work");
+    var records = workout[:records] as Array<Dictionary>;
+    var hasLiveSmoothness = false;
+    for (var i = 0; i < records.size(); i++) {
+        var score = records[i][:smoothnessScore] as Number;
+        if (score >= 0) {
+            hasLiveSmoothness = true;
+            Test.assertMessage(score <= 100, "live smoothness remains bounded");
+        }
+    }
+    Test.assertMessage(hasLiveSmoothness, "synthetic workout emits smoothness over time");
     return true;
 }
 

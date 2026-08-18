@@ -50,7 +50,9 @@ tools/.venv/bin/python tools/validate_workout.py ~/Downloads/activity.zip
 
 The resulting HTML stays on your computer and combines motion intensity, heart
 rate, swing cadence, individual swing markers, work/rest phases, normalized set
-rhythm, and per-set smoothness. Motion exposure is a wrist-motion
+rhythm, per-set smoothness, and rolling smoothness where the FIT file contains
+it. Enabling both local smoothness and motion research export records the rolling
+score for Garmin Connect and this report. Motion exposure is a wrist-motion
 measurement, not an estimate of tendon force. The validator reports structural
 errors, missing series, metadata gaps, and a transparent data-quality score; use
 `--json` for automation. Its findings describe recording quality, not injury risk.

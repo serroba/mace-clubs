@@ -93,7 +93,8 @@ class ReportFitTest(unittest.TestCase):
             "record": [
                 Message(timestamp=start + timedelta(seconds=1), heart_rate=70,
                         accel_rms=1200, accel_peak=2100, accel_zc=4,
-                        swing_total=1, swing_event=1, swing_cadence=60),
+                        swing_total=1, swing_event=1, swing_cadence=60,
+                        smoothness_score=82),
             ],
             "activity": [Message(local_timestamp=start + timedelta(days=1))],
         })
@@ -105,6 +106,7 @@ class ReportFitTest(unittest.TestCase):
         self.assertEqual(report["records"][0]["swing_total"], 1)
         self.assertEqual(report["records"][0]["swing_event"], 1)
         self.assertEqual(report["records"][0]["swing_cadence"], 60)
+        self.assertEqual(report["records"][0]["smoothness_score"], 82)
         self.assertEqual(report["summary"]["date"], "17 Aug 2026")
 
     def test_collect_reads_equipment_and_skips_incomplete_samples(self):
@@ -138,7 +140,8 @@ class ReportFitTest(unittest.TestCase):
                       "motion_peak": None, "swings": None}],
             "records": [{"t": 1, "hr": 80, "rms": 1000,
                          "peak": 2000, "zc": 4, "swing_total": 1,
-                         "swing_event": 1, "swing_cadence": 60}],
+                         "swing_event": 1, "swing_cadence": 60,
+                         "smoothness_score": 82}],
         }
         rendered = REPORT_FIT.render(report, "Example <activity>")
         self.assertIn("<!doctype html>", rendered)
@@ -154,6 +157,8 @@ class ReportFitTest(unittest.TestCase):
         self.assertIn('"target":"set-1"', rendered)
         self.assertIn("Within-session signals", rendered)
         self.assertIn("Set rhythm comparison", rendered)
+        self.assertIn("Smoothness over time", rendered)
+        self.assertIn("d.smoothness_score", rendered)
         self.assertIn("Swing detected", rendered)
         self.assertIn("Synchronized acceleration, swing cadence", rendered)
         self.assertIn('"code":"smoothness_drift"', rendered)

@@ -41,6 +41,7 @@ class WorkoutSession {
     const FIELD_ID_RECORD_SWING_TOTAL = 27;
     const FIELD_ID_RECORD_SWING_EVENT = 28;
     const FIELD_ID_SWING_CADENCE = 29;
+    const FIELD_ID_RECORD_SMOOTHNESS = 30;
 
     private var _session as ActivityRecording.Session?;
     private var _setsField as FitContributor.Field?;
@@ -73,6 +74,7 @@ class WorkoutSession {
     private var _recordSwingTotalField as FitContributor.Field?;
     private var _recordSwingEventField as FitContributor.Field?;
     private var _swingCadenceField as FitContributor.Field?;
+    private var _recordSmoothnessField as FitContributor.Field?;
     private var _sets as Number = 0;
     private var _started as Boolean = false;
     private var _startBattery as Float?;
@@ -471,6 +473,14 @@ class WorkoutSession {
                 FitContributor.DATA_TYPE_UINT8,
                 {:mesgType => FitContributor.MESG_TYPE_RECORD, :units => "crossings"}
             );
+            if (_smoothnessEnabled) {
+                _recordSmoothnessField = session.createField(
+                    "smoothness_score",
+                    FIELD_ID_RECORD_SMOOTHNESS,
+                    FitContributor.DATA_TYPE_UINT8,
+                    {:mesgType => FitContributor.MESG_TYPE_RECORD, :units => "score"}
+                );
+            }
         }
         try {
             Sensor.registerSensorDataListener(
@@ -521,6 +531,11 @@ class WorkoutSession {
         if (zc != null) {
             var crossings = f[:zc] as Number;
             zc.setData(crossings > 255 ? 255 : crossings);
+        }
+        var smoothnessField = _recordSmoothnessField;
+        var smoothnessScore = _smoothness.getScore();
+        if (smoothnessField != null && smoothnessScore >= 0) {
+            smoothnessField.setData(smoothnessScore);
         }
         if (_swingCounting) {
             var swingPoint = _swingSeries.addTotal(_swingCounter.getCount());
@@ -1053,6 +1068,7 @@ class WorkoutSession {
         _recordSwingTotalField = null;
         _recordSwingEventField = null;
         _swingCadenceField = null;
+        _recordSmoothnessField = null;
         _sets = 0;
         _blocks = [];
         _started = false;
