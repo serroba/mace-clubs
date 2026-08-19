@@ -21,8 +21,8 @@ jobs:
       - name: Verify tag matches AppVersion.LABEL
         run: |
           tag="${GITHUB_REF_NAME#v}"
-          grep -q "const LABEL = \"$tag\"" source/AppVersion.mc || {
-            echo "::error::AppVersion.LABEL does not match tag $GITHUB_REF_NAME - bump source/AppVersion.mc"; exit 1; }
+          grep -q "const LABEL = \"$tag\"" source/app/AppVersion.mc || {
+            echo "::error::AppVersion.LABEL does not match tag $GITHUB_REF_NAME - bump source/app/AppVersion.mc"; exit 1; }
 
       - name: Restore signing key
         env:
