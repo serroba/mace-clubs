@@ -340,6 +340,13 @@ class MaceClubsView extends WatchUi.View {
         return 0;
     }
 
+    // Seconds spent in the current free-training phase so far. Live, not the
+    // final duration recorded at the phase boundary (see advanceFreeTraining).
+    private function freePhaseElapsedSeconds() as Number {
+        var elapsed = (activityTimerMs() - _freePhaseStartMs) / 1000;
+        return elapsed < 0 ? 0 : elapsed;
+    }
+
     function cycleSummary(direction as Number) as Void {
         var count = workout.getSets();
         if (count == 0) {
@@ -729,13 +736,19 @@ class MaceClubsView extends WatchUi.View {
         }
 
         // Free training: elapsed time front and center, with SELECT advancing
-        // between WORK and REST while FIT recording continues.
+        // between WORK and REST while FIT recording continues. Unlike
+        // Interval, there is no fixed duration to plan around, so both the
+        // whole-session clock (row 1, unchanged position/format across every
+        // mode) and a live this-phase clock (row 2) are always on screen -
+        // "how long have I been resting" was previously unanswerable here.
         var freeResting = freePhase == FreeTraining.PHASE_REST;
         var phaseText = freeResting ? "REST" : "WORK";
-        var mainValue = freeResting ? "REST" : metronome.getBpm().toString();
+        var phaseElapsed = formatSecs(freePhaseElapsedSeconds());
+        var phaseLine = Lang.format("$1$  $2$", [phaseText, phaseElapsed]);
+        var mainValue = freeResting ? phaseElapsed : metronome.getBpm().toString();
         var mainLabel = freeResting ? "SELECT: work" : "bpm";
         if (isRepMode()) {
-            mainValue = freeResting ? "REST" : workout.getCurrentSetSwings().toString();
+            mainValue = freeResting ? phaseElapsed : workout.getCurrentSetSwings().toString();
             mainLabel = freeResting
                 ? "SELECT: next set"
                 : (_repTarget > 0 ? Lang.format("swings / $1$", [_repTarget]) : "swings");
@@ -751,16 +764,20 @@ class MaceClubsView extends WatchUi.View {
             drawSubwindowMetric(dc, circleValue);
             // Like the interval screen, the header sits left of the
             // subwindow cut-out; centered it loses its middle characters
-            // to the circle. The main value starts below the cut-out
-            // (y > 62 on the 45mm) and its label clears the medium font's
-            // 27px height - the old 48%/58% stack drew them overlapping.
+            // to the circle. Row 2 stays in the same left column - the
+            // cut-out only occupies the upper-right quadrant, so a narrow
+            // left-justified line clears it at any height. The main value
+            // starts below the cut-out (y > 62 on the 45mm) and its label
+            // clears the medium font's 27px height - the old 48%/58% stack
+            // drew them overlapping.
             dc.drawText(
                 w * 10 / 100,
                 h * 8 / 100,
                 Graphics.FONT_TINY,
-                Lang.format("$1$  $2$", [phaseText, formatSecs(timerMs / 1000)]),
+                formatSecs(timerMs / 1000),
                 Graphics.TEXT_JUSTIFY_LEFT
             );
+            dc.drawText(w * 10 / 100, h * 20 / 100, Graphics.FONT_TINY, phaseLine, Graphics.TEXT_JUSTIFY_LEFT);
             dc.drawText(cx, h * 36 / 100, Graphics.FONT_MEDIUM, mainValue, Graphics.TEXT_JUSTIFY_CENTER);
             dc.drawText(cx, h * 52 / 100, Graphics.FONT_TINY, mainLabel, Graphics.TEXT_JUSTIFY_CENTER);
             dc.drawText(
@@ -778,10 +795,11 @@ class MaceClubsView extends WatchUi.View {
         dc.drawText(
             cx,
             h * 6 / 100,
-            Graphics.FONT_MEDIUM,
-            Lang.format("$1$  $2$", [phaseText, formatSecs(timerMs / 1000)]),
+            Graphics.FONT_TINY,
+            formatSecs(timerMs / 1000),
             Graphics.TEXT_JUSTIFY_CENTER
         );
+        dc.drawText(cx, h * 18 / 100, Graphics.FONT_SMALL, phaseLine, Graphics.TEXT_JUSTIFY_CENTER);
         dc.drawText(
             cx,
             h * 32 / 100,
