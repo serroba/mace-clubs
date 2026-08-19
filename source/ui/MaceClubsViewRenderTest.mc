@@ -85,6 +85,31 @@ function testFreeTrainingScreensRender(logger as Test.Logger) as Boolean {
 }
 
 (:test)
+function testRestPageCyclesAndResetsWithPhase(logger as Test.Logger) as Boolean {
+    var view = new MaceClubsView();
+    view.workout = new StartedWorkoutStub();
+    view.plan = null;
+    view.freePhase = FreeTraining.PHASE_WORK;
+    view.advanceFreeTraining();
+    Test.assertMessage(view.isFreeResting(), "SELECT advances work into rest");
+    Test.assertEqualMessage(view.getRestPage(), 0, "rest starts on the primary page");
+    view.cycleRestPage(1);
+    Test.assertEqualMessage(view.getRestPage(), 1, "DOWN pages forward during rest");
+    RenderTestSupport.render(view);
+    view.cycleRestPage(1);
+    Test.assertEqualMessage(view.getRestPage(), 2, "DOWN pages forward again");
+    RenderTestSupport.render(view);
+    view.cycleRestPage(1);
+    Test.assertEqualMessage(view.getRestPage(), 0, "paging wraps back to the primary page");
+    view.cycleRestPage(-1);
+    Test.assertEqualMessage(view.getRestPage(), 2, "UP wraps backward past the first page");
+    view.advanceFreeTraining();
+    Test.assertMessage(!view.isFreeResting(), "SELECT advances rest into the next set");
+    Test.assertEqualMessage(view.getRestPage(), 0, "leaving rest resets back to the primary page");
+    return true;
+}
+
+(:test)
 function testComboWorkScreenRenders(logger as Test.Logger) as Boolean {
     var view = new MaceClubsView();
     var workout = new StartedWorkoutStub();

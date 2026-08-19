@@ -14,6 +14,10 @@ import Toybox.WatchUi;
 // round screen's visible chord.
 class MaceClubsView extends WatchUi.View {
     const START_DELAY_MS = 5000;
+    // Free-flow rest repurposes UP/DOWN (otherwise idle mid-rest) to page
+    // through extra info screens: 0 is the normal rest countup, 1 adds
+    // wall-clock time + last-set swings, 2 adds last-set smoothness + load.
+    const REST_PAGE_COUNT = 3;
 
     var metronome as Metronome;
     var workout as WorkoutSession;
@@ -39,6 +43,7 @@ class MaceClubsView extends WatchUi.View {
     private var _repTarget as Number = TrainingMode.DEFAULT_TARGET;
     private var _lastRepCount as Number = 0;
     private var _targetAlerted as Boolean = false;
+    private var _restPage as Number = 0;
 
     function initialize() {
         View.initialize();
@@ -161,6 +166,7 @@ class MaceClubsView extends WatchUi.View {
         freePhase = FreeTraining.PHASE_WORK;
         _lastRepCount = 0;
         _targetAlerted = false;
+        _restPage = 0;
         metronome.resetBeatCount();
         applyMetronomePattern();
         _starting = true;
@@ -248,12 +254,24 @@ class MaceClubsView extends WatchUi.View {
         freePhase = FreeTraining.nextPhase(freePhase);
         _lastRepCount = 0;
         _targetAlerted = false;
+        _restPage = 0;
         playTransitionCue(false);
         WatchUi.requestUpdate();
     }
 
     function isFreeResting() as Boolean {
         return plan == null && freePhase == FreeTraining.PHASE_REST;
+    }
+
+    // UP/DOWN otherwise has nothing to do mid-rest (tempo is meaningless
+    // while the metronome is stopped), so free-flow rest repurposes it to
+    // page through the extra info screens instead.
+    function cycleRestPage(direction as Number) as Void {
+        _restPage = (_restPage + direction + REST_PAGE_COUNT) % REST_PAGE_COUNT;
+    }
+
+    function getRestPage() as Number {
+        return _restPage;
     }
 
     // Throw the session away without saving and reset to the app's initial
@@ -268,6 +286,7 @@ class MaceClubsView extends WatchUi.View {
         _lastSet = 0;
         _warnedSet = 0;
         freePhase = FreeTraining.PHASE_WORK;
+        _restPage = 0;
         metronome.resetBeatCount();
         WatchUi.requestUpdate();
     }
@@ -458,6 +477,16 @@ class MaceClubsView extends WatchUi.View {
 
     private function formatSecs(total as Number) as String {
         return Lang.format("$1$:$2$", [total / 60, (total % 60).format("%02d")]);
+    }
+
+    private function clockTimeLabel() as String {
+        var clock = System.getClockTime();
+        var hour = clock.hour % 12;
+        if (hour == 0) {
+            hour = 12;
+        }
+        var suffix = clock.hour < 12 ? "am" : "pm";
+        return Lang.format("$1$:$2$ $3$", [hour, clock.min.format("%02d"), suffix]);
     }
 
     private function smoothnessText(useCurrent as Boolean) as String {
@@ -760,6 +789,32 @@ class MaceClubsView extends WatchUi.View {
             mainValue = Combo.statusLabel(metronome.getBeatCount(), Combo.beats());
             mainLabel = Lang.format("$1$ bpm", [metronome.getBpm()]);
         }
+        // Rest is otherwise idle for UP/DOWN (tempo doesn't matter with the
+        // metronome stopped), so it repurposes those buttons to page through
+        // extra info; row 2 and the main value swap content per page while
+        // the elapsed clock, the SELECT hint, and the sets/rounds/hr row
+        // underneath all stay put so the athlete never loses their place.
+        var restPageActive = freeResting && _restPage != 0 && workout.getSets() > 0;
+        if (restPageActive) {
+            var lastIndex = workout.getSets() - 1;
+            if (_restPage == 1) {
+                phaseLine = clockTimeLabel();
+                mainValue = summarySwings(lastIndex);
+                if (mainValue.equals("")) {
+                    mainValue = "-- sw";
+                }
+            } else {
+                phaseLine = summarySmoothness(lastIndex);
+                if (phaseLine.equals("")) {
+                    phaseLine = "smooth --";
+                }
+                mainValue = summaryLoad(lastIndex);
+                if (mainValue.equals("")) {
+                    mainValue = "load --";
+                }
+            }
+            mainLabel = "SELECT: work";
+        }
         if (_subwindow) {
             drawSubwindowMetric(dc, circleValue);
             // Like the interval screen, the header sits left of the
@@ -803,8 +858,9 @@ class MaceClubsView extends WatchUi.View {
         dc.drawText(
             cx,
             h * 32 / 100,
-            // Number fonts are digit-sized; combo text needs a text face.
-            comboWorking ? Graphics.FONT_LARGE : Graphics.FONT_NUMBER_HOT,
+            // Number fonts are digit-sized; combo text and rest-page labels
+            // (e.g. "42 sw") need a text face.
+            comboWorking || restPageActive ? Graphics.FONT_LARGE : Graphics.FONT_NUMBER_HOT,
             mainValue,
             Graphics.TEXT_JUSTIFY_CENTER
         );
