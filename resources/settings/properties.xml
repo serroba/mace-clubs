@@ -20,6 +20,7 @@
     <property id="cueMode" type="number">0</property>
     <property id="motionCapture" type="boolean">false</property>
     <property id="swingCounter" type="boolean">false</property>
+    <property id="swingDebugEnabled" type="boolean">false</property>
     <property id="trainingMode" type="number">0</property>
     <property id="repTarget" type="number">50</property>
     <property id="smoothnessEnabled" type="boolean">false</property>

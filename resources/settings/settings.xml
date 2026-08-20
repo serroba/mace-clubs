@@ -79,6 +79,9 @@
     <setting propertyKey="@Properties.motionCapture" title="@Strings.SettingMotionCapture">
         <settingConfig type="boolean"/>
     </setting>
+    <setting propertyKey="@Properties.swingDebugEnabled" title="@Strings.SettingSwingDebug">
+        <settingConfig type="boolean"/>
+    </setting>
     <setting propertyKey="@Properties.smoothnessEnabled" title="@Strings.SettingSmoothnessEnabled">
         <settingConfig type="boolean"/>
     </setting>
