@@ -5,6 +5,7 @@ import Toybox.WatchUi;
 //   SELECT (top right)  - start workout / mark a set / (paused) save & exit
 //   BACK (bottom right) - pause / (paused) resume / (idle) quit
 //   UP / DOWN (left)    - idle: choose workout preset; in workout: tempo +-5 bpm
+//                         (free-flow rest: page through extra info screens instead)
 //   MENU (hold CTRL)    - idle: settings menu; in workout: discard & go home
 class MaceClubsDelegate extends WatchUi.BehaviorDelegate {
     private var _view as MaceClubsView;
@@ -91,6 +92,11 @@ class MaceClubsDelegate extends WatchUi.BehaviorDelegate {
             _view.cycleSummary(-1);
             return true;
         }
+        if (_view.isFreeResting()) {
+            _view.cycleRestPage(-1);
+            WatchUi.requestUpdate();
+            return true;
+        }
         var action = Navigation.previousPageAction(_view.isStarting(), _view.workout.isStarted(), _view.paused);
         if (action == Navigation.PREVIOUS_IGNORE) {
             return true;
@@ -122,6 +128,8 @@ class MaceClubsDelegate extends WatchUi.BehaviorDelegate {
             return true;
         } else if (_view.paused) {
             _view.cycleSummary(1);
+        } else if (_view.isFreeResting()) {
+            _view.cycleRestPage(1);
         } else if (_view.workout.isStarted()) {
             if (_view.isRepMode()) {
                 _view.adjustRepCount(-1);
