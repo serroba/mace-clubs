@@ -18,6 +18,9 @@ class MaceClubsView extends WatchUi.View {
     // through extra info screens: 0 is the normal rest countup, 1 adds
     // wall-clock time + last-set swings, 2 adds last-set smoothness + load.
     const REST_PAGE_COUNT = 3;
+    // How long the post-workout summary waits for a look before the app
+    // exits on its own.
+    const SUMMARY_EXIT_DELAY_MS = 60000;
 
     var metronome as Metronome;
     var workout as WorkoutSession;
@@ -29,6 +32,7 @@ class MaceClubsView extends WatchUi.View {
 
     private var _refreshTimer as Timer.Timer;
     private var _startTimer as Timer.Timer;
+    private var _exitTimer as Timer.Timer;
     private var _starting as Boolean = false;
     private var _startDeadline as Number = 0;
     private var _lastPhase as Number?;
@@ -51,6 +55,7 @@ class MaceClubsView extends WatchUi.View {
         workout = new WorkoutSession();
         _refreshTimer = new Timer.Timer();
         _startTimer = new Timer.Timer();
+        _exitTimer = new Timer.Timer();
         _icon = WatchUi.loadResource(Rez.Drawables.LauncherIcon) as WatchUi.BitmapResource;
         if (System has :SCREEN_SHAPE_SEMI_OCTAGON) {
             _subwindow = System.getDeviceSettings().screenShape == System.SCREEN_SHAPE_SEMI_OCTAGON;
@@ -274,6 +279,20 @@ class MaceClubsView extends WatchUi.View {
         return _restPage;
     }
 
+    // Persists the session, then shows the post-workout summary instead of
+    // exiting immediately. The summary itself calls exitApp() on BACK or
+    // SELECT; this timer is only the backstop for a watch left face-up.
+    function finishWorkout() as Void {
+        workout.save();
+        var summary = new WorkoutSummaryView(workout);
+        WatchUi.pushView(summary, new WorkoutSummaryDelegate(summary), WatchUi.SLIDE_UP);
+        _exitTimer.start(method(:exitApp), SUMMARY_EXIT_DELAY_MS, false);
+    }
+
+    function exitApp() as Void {
+        System.exit();
+    }
+
     // Throw the session away without saving and reset to the app's initial
     // preset screen. Reached via MENU behind a confirmation.
     function discardWorkout() as Void {
@@ -374,77 +393,6 @@ class MaceClubsView extends WatchUi.View {
         }
         _summarySet = (_summarySet + direction + count) % count;
         WatchUi.requestUpdate();
-    }
-
-    // One compact line joining whatever per-set detail exists: detected
-    // swings and the set's smoothness score.
-    private function summaryDetail(index as Number) as String {
-        var swings = summarySwings(index);
-        var smooth = summarySmoothness(index);
-        var load = summaryLoad(index);
-        if (load != "") {
-            // Compact tokens keep all enabled measures visible on 176 px
-            // devices: e.g. "48sw S87 L12.4k".
-            var block = workout.getBlock(index);
-            var swingCount = block == null ? -1 : (block as WorkBlockSummary).getSwings();
-            var compactSwings = swingCount < 0 ? "" : Lang.format("$1$sw", [swingCount]);
-            var smoothScore = index >= workout.getSetSmoothnessCount()
-                ? -1
-                : workout.getSetSmoothnessScore(index);
-            var compactSmooth = smooth == ""
-                ? ""
-                : (smoothScore < 0 ? "smooth --" : Lang.format("S$1$", [smoothScore]));
-            if (compactSwings != "" && compactSmooth != "") {
-                return Lang.format("$1$ $2$ $3$", [compactSwings, compactSmooth, load]);
-            }
-            if (compactSwings != "") {
-                return Lang.format("$1$ $2$", [compactSwings, load]);
-            }
-            if (compactSmooth != "") {
-                return Lang.format("$1$ $2$", [compactSmooth, load]);
-            }
-            return load;
-        }
-        if (swings == "") {
-            return smooth;
-        }
-        if (smooth == "") {
-            return swings;
-        }
-        return Lang.format("$1$  $2$", [swings, smooth]);
-    }
-
-    private function summaryLoad(index as Number) as String {
-        var block = workout.getBlock(index);
-        if (block == null) {
-            return "";
-        }
-        var exposure = (block as WorkBlockSummary).getMotionExposure();
-        // A zero means the sensor saw no active window, not a meaningful
-        // exposure measurement. Keep the readable smoothness label instead.
-        return exposure <= 0 ? "" : LoadExposure.compactLabel(exposure);
-    }
-
-    private function summarySwings(index as Number) as String {
-        var block = workout.getBlock(index);
-        if (block == null) {
-            return "";
-        }
-        var swings = (block as WorkBlockSummary).getSwings();
-        return swings < 0 ? "" : Lang.format("$1$ sw", [swings]);
-    }
-
-    private function summarySide(index as Number) as String {
-        var block = workout.getBlock(index);
-        return block == null ? "" : Movement.sideShortLabel((block as WorkBlockSummary).getWorkingSide());
-    }
-
-    private function summarySmoothness(index as Number) as String {
-        if (index >= workout.getSetSmoothnessCount()) {
-            return "";
-        }
-        var score = workout.getSetSmoothnessScore(index);
-        return score < 0 ? "smooth --" : Lang.format("smooth $1$", [score]);
     }
 
     // Honours the same beep/vibrate toggles as the beat cue, so turning a
@@ -564,7 +512,9 @@ class MaceClubsView extends WatchUi.View {
             var sideCounts = workout.getSideSetCounts();
             var balance = Movement.balanceLabel(sideCounts[0], sideCounts[1]);
             var setsLabel = count == 1 ? "1 set" : Lang.format("$1$ sets", [count]);
-            var headline = balance == ""
+            // .equals(), not ==: Monkey C's == on Strings is reference
+            // equality, not content equality.
+            var headline = balance.equals("")
                 ? Lang.format("$1$  $2$ work", [setsLabel, formatSecs(workout.getTotalWorkSeconds())])
                 : Lang.format("$1$  $2$", [setsLabel, balance]);
             dc.drawText(cx, h * 35 / 100, Graphics.FONT_TINY, headline, Graphics.TEXT_JUSTIFY_CENTER);
@@ -580,7 +530,7 @@ class MaceClubsView extends WatchUi.View {
                     Lang.format(
                         "$1$ $2$/$3$ W$4$ R$5$",
                         [
-                            summarySide(index),
+                            SummaryText.side(workout, index),
                             index + 1,
                             count,
                             formatSecs(workout.getSetWorkSeconds(index)),
@@ -589,8 +539,8 @@ class MaceClubsView extends WatchUi.View {
                     ),
                     Graphics.TEXT_JUSTIFY_CENTER
                 );
-                var detail = summaryDetail(index);
-                if (detail != "") {
+                var detail = SummaryText.detail(workout, index);
+                if (!detail.equals("")) {
                     dc.drawText(cx, h * 56 / 100, Graphics.FONT_TINY, detail, Graphics.TEXT_JUSTIFY_CENTER);
                 }
             }
@@ -799,16 +749,16 @@ class MaceClubsView extends WatchUi.View {
             var lastIndex = workout.getSets() - 1;
             if (_restPage == 1) {
                 phaseLine = clockTimeLabel();
-                mainValue = summarySwings(lastIndex);
+                mainValue = SummaryText.swings(workout, lastIndex);
                 if (mainValue.equals("")) {
                     mainValue = "-- sw";
                 }
             } else {
-                phaseLine = summarySmoothness(lastIndex);
+                phaseLine = SummaryText.smoothness(workout, lastIndex);
                 if (phaseLine.equals("")) {
                     phaseLine = "smooth --";
                 }
-                mainValue = summaryLoad(lastIndex);
+                mainValue = SummaryText.load(workout, lastIndex);
                 if (mainValue.equals("")) {
                     mainValue = "load --";
                 }
