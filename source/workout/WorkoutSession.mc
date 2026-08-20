@@ -401,7 +401,9 @@ class WorkoutSession {
         }
     }
 
-    function saveAndExit() as Void {
+    // Persists the FIT session; the caller decides when the app actually
+    // exits (the post-workout summary shows first).
+    function save() as Void {
         stopMotionCapture();
         var session = _session;
         if (session != null) {
@@ -416,7 +418,6 @@ class WorkoutSession {
             session.save();
             _session = null;
         }
-        System.exit();
     }
 
     function getSmoothnessScore() as Number {
@@ -641,7 +642,7 @@ class WorkoutSession {
     }
 
     // Discard the current FIT session and return this wrapper to its idle
-    // state. Unlike saveAndExit(), this deliberately keeps the app open.
+    // state. Unlike save(), this deliberately keeps the app open.
     function discard() as Void {
         stopMotionCapture();
         var session = _session;
