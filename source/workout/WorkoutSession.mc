@@ -42,9 +42,17 @@ class WorkoutSession {
         _smoothness = new Smoothness.Tracker();
         _loadExposure = new LoadExposure.Tracker();
         _setSmoothness = new SmoothnessSetSummaries();
-        _swingCounter = new SwingCounter.Counter();
+        _swingCounter = newSwingCounter();
         _swingSeries = new SwingSeries.Tracker();
         reloadEquipment();
+    }
+
+    // Mace swings get debounced counting (see SwingCounter.MACE_DEBOUNCE_SAMPLES);
+    // clubs and the bulava keep the original single-sample edge behaviour.
+    private function newSwingCounter() as SwingCounter.Counter {
+        return _equipmentType == Equipment.TYPE_MACE
+            ? SwingCounter.maceCounter()
+            : SwingCounter.defaultCounter();
     }
 
     function isStarted() as Boolean {
@@ -174,6 +182,10 @@ class WorkoutSession {
                     :subSport => Activity.SUB_SPORT_STRENGTH_TRAINING
                 }
             );
+            // Equipment can change while idle (reloadEquipment doesn't touch
+            // the counter), so rebuild it now that the session - and the
+            // equipment it locks in - is final.
+            _swingCounter = newSwingCounter();
             _fit.createCoreFields(session);
             recordSessionSummary();
             _startBattery = System.getSystemStats().battery;
@@ -192,6 +204,7 @@ class WorkoutSession {
     // gyro support on the Instinct is unverified.
     private function startMotionCapture(session as ActivityRecording.Session) as Void {
         var exportEnabled = false;
+        var debugEnabled = false;
         try {
             var mc = Application.Properties.getValue("motionCapture");
             if (mc instanceof Boolean) {
@@ -205,11 +218,22 @@ class WorkoutSession {
             if (load instanceof Boolean) {
                 _loadExposureEnabled = load;
             }
+            // One switch for calibration recordings: the accel_peak trace and
+            // the swing_event trace only line up against each other when both
+            // are captured on the same recording, which is easy to forget
+            // wiring up from the two separate settings below.
+            var debug = Application.Properties.getValue("swingDebugEnabled");
+            if (debug instanceof Boolean) {
+                debugEnabled = debug;
+            }
         } catch (e) {}
+        if (debugEnabled) {
+            exportEnabled = true;
+        }
         // Swing counting shares the same accelerometer stream. Challenge
         // presets force it on (the count is the whole point of the mode);
         // regular sessions opt in via the swingCounter setting.
-        var swingEnabled = _forceSwingCounting;
+        var swingEnabled = _forceSwingCounting || debugEnabled;
         if (!swingEnabled) {
             try {
                 var sc = Application.Properties.getValue("swingCounter");
@@ -663,7 +687,7 @@ class WorkoutSession {
         _smoothness = new Smoothness.Tracker();
         _loadExposure = new LoadExposure.Tracker();
         _setSmoothness = new SmoothnessSetSummaries();
-        _swingCounter = new SwingCounter.Counter();
+        _swingCounter = newSwingCounter();
         _swingSeries = new SwingSeries.Tracker();
         _swingCounting = false;
         _forceSwingCounting = false;

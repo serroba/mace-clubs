@@ -60,7 +60,7 @@ module SyntheticMotion {
         var smooth = new Smoothness.Tracker();
         var irregular = new Smoothness.Tracker();
         var exposure = new LoadExposure.Tracker();
-        var counter = new SwingCounter.Counter();
+        var counter = SwingCounter.defaultCounter();
         var swingSeries = new SwingSeries.Tracker();
         var records = [] as Array<Dictionary>;
         var workSeconds = 0;
