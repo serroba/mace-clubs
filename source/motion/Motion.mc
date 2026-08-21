@@ -9,13 +9,16 @@ import Toybox.Math;
 module Motion {
     // :rms        - RMS of the acceleration magnitude (mg)
     // :peak       - largest magnitude in the window (mg)
+    // :min        - smallest magnitude in the window (mg) - the rep trough,
+    //               relevant to whether a swing detector's re-arm floor
+    //               (LOW_MG) actually gets cleared between reps
     // :zc         - sign changes of the demeaned magnitude (periodicity proxy)
     // :dynamicRms - RMS after subtracting the per-axis window mean (mg)
     // :dynamicPeak- peak after subtracting the per-axis window mean (mg)
     function features(x as Array<Number>, y as Array<Number>, z as Array<Number>) as Dictionary {
         var n = x.size();
         if (n == 0 || y.size() != n || z.size() != n) {
-            return {:rms => 0, :peak => 0, :zc => 0, :dynamicRms => 0, :dynamicPeak => 0};
+            return {:rms => 0, :peak => 0, :min => 0, :zc => 0, :dynamicRms => 0, :dynamicPeak => 0};
         }
 
         var mags = new Array<Float>[n];
@@ -25,6 +28,7 @@ module Motion {
         var sumY = 0.0;
         var sumZ = 0.0;
         var peak = 0.0;
+        var min = -1.0;
         for (var i = 0; i < n; i++) {
             var fx = x[i].toFloat();
             var fy = y[i].toFloat();
@@ -38,6 +42,9 @@ module Motion {
             sumSq += mag * mag;
             if (mag > peak) {
                 peak = mag;
+            }
+            if (min < 0.0 || mag < min) {
+                min = mag;
             }
         }
 
@@ -71,6 +78,7 @@ module Motion {
         return {
             :rms         => Math.sqrt(sumSq / n).toNumber(),
             :peak        => peak.toNumber(),
+            :min         => min.toNumber(),
             :zc          => zc,
             :dynamicRms  => Math.sqrt(dynamicSumSq / n).toNumber(),
             :dynamicPeak => dynamicPeak.toNumber()

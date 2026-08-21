@@ -41,6 +41,7 @@ class FitFields {
     const FIELD_ID_RECORD_SWING_EVENT = 28;
     const FIELD_ID_SWING_CADENCE = 29;
     const FIELD_ID_RECORD_SMOOTHNESS = 30;
+    const FIELD_ID_ACCEL_MIN = 31;
 
     private var _setsField as FitContributor.Field?;
     private var _setNumberField as FitContributor.Field?;
@@ -73,6 +74,7 @@ class FitFields {
     private var _recordSwingEventField as FitContributor.Field?;
     private var _swingCadenceField as FitContributor.Field?;
     private var _recordSmoothnessField as FitContributor.Field?;
+    private var _accelMinField as FitContributor.Field?;
 
     // The session and lap fields every recording carries.
     function createCoreFields(session as ActivityRecording.Session) as Void {
@@ -255,6 +257,18 @@ class FitFields {
         );
     }
 
+    // Calibration-only: the per-second trough, alongside the existing peak.
+    // Whether a swing detector's re-arm floor (LOW_MG) actually gets cleared
+    // between reps is invisible from the peak alone.
+    function createSwingDebugFields(session as ActivityRecording.Session) as Void {
+        _accelMinField = session.createField(
+            "accel_min",
+            FIELD_ID_ACCEL_MIN,
+            FitContributor.DATA_TYPE_UINT16,
+            {:mesgType => FitContributor.MESG_TYPE_RECORD, :units => "mg"}
+        );
+    }
+
     function createMotionExportFields(session as ActivityRecording.Session, includeSmoothness as Boolean) as Void {
         _rmsField = session.createField(
             "accel_rms",
@@ -308,6 +322,13 @@ class FitFields {
         }
         if (zcField != null) {
             zcField.setData(crossings > 255 ? 255 : crossings);
+        }
+    }
+
+    function writeAccelMin(min as Number) as Void {
+        var field = _accelMinField;
+        if (field != null) {
+            field.setData(min);
         }
     }
 
@@ -511,5 +532,6 @@ class FitFields {
         _recordSwingEventField = null;
         _swingCadenceField = null;
         _recordSmoothnessField = null;
+        _accelMinField = null;
     }
 }
