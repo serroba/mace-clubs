@@ -102,7 +102,7 @@ function testSwingCounterManualCorrectionNeverGoesNegative(logger as Test.Logger
 (:test)
 function testMaceCounterIgnoresABriefDipThatDefaultTreatsAsANewSwing(logger as Test.Logger) as Boolean {
     var defaultCounter = SwingCounter.defaultCounter();
-    var maceCounter = SwingCounter.maceCounter();
+    var maceCounter = SwingCounter.maceCounter(SwingCounter.MACE_HIGH_MG);
 
     var swing = new Array<Number>[SwingCounter.SAMPLE_RATE_HZ];
     for (var i = 0; i < swing.size(); i++) {
@@ -134,7 +134,7 @@ function testMaceCounterRefractoryHoldsThroughASameRepDoublet(logger as Test.Log
     // real swings. The 1s legacy refractory (still used by
     // MACE_DEBOUNCE_SAMPLES alone) lets the second cross through; the
     // longer mace refractory should not.
-    var counter = SwingCounter.maceCounter();
+    var counter = SwingCounter.maceCounter(SwingCounter.MACE_HIGH_MG);
     var high = new Array<Number>[SwingCounter.SAMPLE_RATE_HZ];
     for (var i = 0; i < high.size(); i++) {
         high[i] = 2200;
@@ -163,7 +163,7 @@ function testMaceCounterRefractoryHoldsThroughASameRepDoublet(logger as Test.Log
 
 (:test)
 function testMaceCounterStillCountsASustainedReturnToBaseline(logger as Test.Logger) as Boolean {
-    var counter = SwingCounter.maceCounter();
+    var counter = SwingCounter.maceCounter(SwingCounter.MACE_HIGH_MG);
 
     var swing = new Array<Number>[SwingCounter.SAMPLE_RATE_HZ];
     for (var i = 0; i < swing.size(); i++) {
@@ -188,5 +188,28 @@ function testMaceCounterStillCountsASustainedReturnToBaseline(logger as Test.Log
         2,
         "a sustained return to baseline re-arms and the next rise counts"
     );
+    return true;
+}
+
+(:test)
+function testMaceCounterHonorsACustomThreshold(logger as Test.Logger) as Boolean {
+    // A swing that peaks at 1600mg - below the tuned MACE_HIGH_MG default,
+    // but real for someone whose style/strength never reaches that (the
+    // whole reason the swingThresholdMg setting exists).
+    var moderate = new Array<Number>[SwingCounter.SAMPLE_RATE_HZ];
+    for (var i = 0; i < moderate.size(); i++) {
+        moderate[i] = 1600;
+    }
+    var defaultSensitivity = SwingCounter.maceCounter(SwingCounter.MACE_HIGH_MG);
+    defaultSensitivity.addSamples(moderate, swingTestZeros(), swingTestZeros());
+    Test.assertEqualMessage(
+        defaultSensitivity.getCount(),
+        0,
+        "1600mg never reaches the tuned default threshold"
+    );
+
+    var moreSensitive = SwingCounter.maceCounter(1500);
+    moreSensitive.addSamples(moderate, swingTestZeros(), swingTestZeros());
+    Test.assertEqualMessage(moreSensitive.getCount(), 1, "a lower custom threshold counts the same swing");
     return true;
 }

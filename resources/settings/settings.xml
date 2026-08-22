@@ -82,6 +82,9 @@
     <setting propertyKey="@Properties.swingDebugEnabled" title="@Strings.SettingSwingDebug">
         <settingConfig type="boolean"/>
     </setting>
+    <setting propertyKey="@Properties.swingThresholdMg" title="@Strings.SettingSwingThreshold">
+        <settingConfig type="numeric" min="1200" max="3500"/>
+    </setting>
     <setting propertyKey="@Properties.smoothnessEnabled" title="@Strings.SettingSmoothnessEnabled">
         <settingConfig type="boolean"/>
     </setting>

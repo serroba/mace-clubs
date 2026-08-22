@@ -27,7 +27,11 @@ module SwingCounter {
     // sets) with zero false positives during rest, without touching
     // MACE_DEBOUNCE_SAMPLES/MACE_MIN_GAP_SAMPLES. First-pass estimate from
     // two recordings - revisit once metronome-paced recordings give exact
-    // per-rep ground truth instead of per-set totals.
+    // per-rep ground truth instead of per-set totals. Different swing
+    // styles/strengths will likely want different values, so this also
+    // doubles as the default for the user-adjustable swingThresholdMg
+    // setting (see WorkoutSession.newSwingCounter()) rather than a value
+    // baked in for everyone.
     const MACE_HIGH_MG = 1700;
 
     // A mace's full-circle swing dwells through its arc for a couple of
@@ -142,7 +146,11 @@ module SwingCounter {
         return new Counter(HIGH_MG, LOW_MG, MIN_GAP_SAMPLES, DEBOUNCE_SAMPLES);
     }
 
-    function maceCounter() as Counter {
-        return new Counter(MACE_HIGH_MG, LOW_MG, MACE_MIN_GAP_SAMPLES, MACE_DEBOUNCE_SAMPLES);
+    // highMg is caller-supplied (pass MACE_HIGH_MG for the tuned default) so
+    // it can be overridden per user (see the swingThresholdMg setting) -
+    // different swing styles/strengths legitimately need different
+    // sensitivity.
+    function maceCounter(highMg as Number) as Counter {
+        return new Counter(highMg, LOW_MG, MACE_MIN_GAP_SAMPLES, MACE_DEBOUNCE_SAMPLES);
     }
 }
