@@ -44,3 +44,38 @@ function testMotionFeaturesRejectBadBuffers(logger as Test.Logger) as Boolean {
     Test.assertEqualMessage(g[:dynamicRms] as Number, 0, "bad buffers have no dynamic RMS");
     return true;
 }
+
+(:test)
+function testGyroFeaturesOfAHold(logger as Test.Logger) as Boolean {
+    // A still, near-zero rotation rate: an isometric hold, not a swing.
+    var zeros = [0.0, 0.0, 0.0, 0.0] as Array<Float>;
+    var tiny = [2.0, 3.0, 1.0, 2.0] as Array<Float>;
+    var f = Motion.gyroFeatures(zeros, zeros, tiny);
+    Test.assertEqualMessage(f[:peak] as Float, 3.0, "peak is the largest tremor sample");
+    Test.assertEqualMessage(f[:min] as Float, 1.0, "min is the smallest tremor sample");
+    return true;
+}
+
+(:test)
+function testGyroFeaturesOfASwing(logger as Test.Logger) as Boolean {
+    // A real swing rotates hard throughout, unlike a hold's near-zero rate.
+    var zeros = [0.0, 0.0, 0.0, 0.0] as Array<Float>;
+    var swing = [180.0, 420.0, 260.0, 500.0] as Array<Float>;
+    var f = Motion.gyroFeatures(zeros, zeros, swing);
+    Test.assertEqualMessage(f[:peak] as Float, 500.0, "peak is the fastest rotation in the window");
+    Test.assertEqualMessage(f[:min] as Float, 180.0, "min never drops near zero mid-swing");
+    var rms = f[:rms] as Float;
+    Test.assertMessage(rms > 300.0, "rms reflects a sustained fast rotation");
+    return true;
+}
+
+(:test)
+function testGyroFeaturesRejectBadBuffers(logger as Test.Logger) as Boolean {
+    var empty = [] as Array<Float>;
+    var one = [5.0] as Array<Float>;
+    var f = Motion.gyroFeatures(empty, empty, empty);
+    Test.assertEqualMessage(f[:rms] as Float, 0.0, "empty buffer yields zeros");
+    var g = Motion.gyroFeatures(one, empty, one);
+    Test.assertEqualMessage(g[:peak] as Float, 0.0, "mismatched axis lengths yield zeros");
+    return true;
+}

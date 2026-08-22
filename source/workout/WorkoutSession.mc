@@ -201,8 +201,11 @@ class WorkoutSession {
 
     // Phase-1 motion research (opt-in via the motionCapture setting):
     // stream the accelerometer at 25Hz and log per-second features to
-    // the FIT record stream for offline swing analysis. Accel only -
-    // gyro support on the Instinct is unverified.
+    // the FIT record stream for offline swing analysis. Gyroscope capture
+    // rides along, gated behind the calibration setting - not yet used by
+    // any detection logic, just recorded so a real hold-vs-swing rotation
+    // signature can be studied from real recordings. Note: gyro data does
+    // not appear in the Connect IQ simulator, only on a real device.
     private function startMotionCapture(session as ActivityRecording.Session) as Void {
         var exportEnabled = false;
         var debugEnabled = false;
@@ -265,14 +268,28 @@ class WorkoutSession {
         if (_swingDebugEnabled) {
             _fit.createSwingDebugFields(session);
         }
+        var sensorOptions = {:period => 1, :accelerometer => {:enabled => true, :sampleRate => 25}};
+        if (_swingDebugEnabled) {
+            sensorOptions[:gyroscope] = {:enabled => true, :sampleRate => 25};
+        }
         try {
-            Sensor.registerSensorDataListener(
-                method(:onSensorData),
-                {:period => 1, :accelerometer => {:enabled => true, :sampleRate => 25}}
-            );
+            Sensor.registerSensorDataListener(method(:onSensorData), sensorOptions);
             _capturing = true;
             _swingCounting = swingEnabled;
         } catch (e) {
+            // A device without a gyroscope may reject the combined request;
+            // retry accel-only rather than losing motion capture entirely.
+            if (_swingDebugEnabled) {
+                try {
+                    Sensor.registerSensorDataListener(
+                        method(:onSensorData),
+                        {:period => 1, :accelerometer => {:enabled => true, :sampleRate => 25}}
+                    );
+                    _capturing = true;
+                    _swingCounting = swingEnabled;
+                    return;
+                } catch (e2) {}
+            }
             // no high-rate accel on this device; features stay unwritten
             _loadExposureEnabled = false;
             _fit.clearLoadExposureFields();
@@ -304,6 +321,15 @@ class WorkoutSession {
         if (_swingDebugEnabled) {
             _fit.writeAccelMin(f[:min] as Number);
             _fit.writeCountingState(_workOpen, _swingCounting);
+            var gyro = data.gyroscopeData;
+            if (gyro != null) {
+                var g = Motion.gyroFeatures(
+                    gyro.x as Array<Float>,
+                    gyro.y as Array<Float>,
+                    gyro.z as Array<Float>
+                );
+                _fit.writeGyroFeatures(g[:rms] as Float, g[:peak] as Float, g[:min] as Float);
+            }
         }
         if (_swingCounting) {
             var swingPoint = _swingSeries.addTotal(_swingCounter.getCount());
