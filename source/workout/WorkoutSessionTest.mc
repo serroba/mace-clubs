@@ -1,9 +1,14 @@
+import Toybox.Application;
 import Toybox.Lang;
 import Toybox.Test;
 
-// WorkoutSession tests cover the pre-recording state and pure logic.
-// start()/save() need a live FIT session and System.exit(), so the
-// recording lifecycle itself is verified in the simulator instead.
+// WorkoutSession tests mostly cover the pre-recording state and pure logic;
+// save() needs System.exit() and stays simulator-only. start() itself gets
+// one live smoke test below - a real ActivityRecording.Session plus every
+// FitContributor field creation, run for real. It's cheap insurance: a
+// createField() call with a bad option (e.g. a units string over the FIT
+// SDK's actual length limit) throws at runtime with no compile-time warning
+// and no other test in this suite would ever call it.
 
 (:test)
 function testWorkoutSessionStartsIdle(logger as Test.Logger) as Boolean {
@@ -204,6 +209,23 @@ function testBlocksWithoutSwingCounterCarryNoCount(logger as Test.Logger) as Boo
         -1,
         "a block without the counter records -1, not a fake zero"
     );
+    return true;
+}
+
+// Caught a real bug: counting_state's units string ("bit0=workOpen
+// bit1=swingCounting", 33 chars) exceeded FIT's actual limit and threw at
+// runtime inside createSwingDebugFields(), crashing every workout start
+// once "Swing calibration logging" was on - invisible to every other test
+// here since none of them call the real start(). Forcing the setting on
+// covers every debug field (accel_min/counting_state/gyro_*/accel_mag_*),
+// not just whichever one a user happens to have enabled.
+(:test)
+function testStartWithDebugLoggingDoesNotThrow(logger as Test.Logger) as Boolean {
+    Application.Properties.setValue("swingDebugEnabled", true);
+    var session = new WorkoutSession();
+    session.start();
+    Test.assertMessage(session.isStarted(), "start() completed without throwing");
+    Application.Properties.setValue("swingDebugEnabled", false);
     return true;
 }
 

@@ -292,7 +292,7 @@ class FitFields {
             "counting_state",
             FIELD_ID_COUNTING_STATE,
             FitContributor.DATA_TYPE_UINT8,
-            {:mesgType => FitContributor.MESG_TYPE_RECORD, :units => "bit0=workOpen bit1=swingCounting"}
+            {:mesgType => FitContributor.MESG_TYPE_RECORD, :units => "bits"}
         );
         // Not wired into detection yet - just recording it. A real swing
         // should show high rotation throughout; an isometric hold should
