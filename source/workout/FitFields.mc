@@ -43,16 +43,25 @@ class FitFields {
     const FIELD_ID_RECORD_SMOOTHNESS = 30;
     const FIELD_ID_ACCEL_MIN = 31;
     const FIELD_ID_COUNTING_STATE = 32;
-    const FIELD_ID_GYRO_RMS = 33;
+    // 33 and 35 (gyro_rms/gyro_min) are retired - this device caps developer
+    // fields at 16 per RECORD message (see createSwingDebugFields), and their
+    // signal is derivable offline from the raw per-axis capture below. Their
+    // ids stay reserved, never reused.
     const FIELD_ID_GYRO_PEAK = 34;
-    const FIELD_ID_GYRO_MIN = 35;
     const FIELD_ID_ACCEL_MAG_A = 36;
     const FIELD_ID_ACCEL_MAG_B = 37;
     const FIELD_ID_WORK_PHASE = 38;
-    // A UINT16 array field caps at 16 elements (32 bytes); one raw 25Hz
-    // second needs two fields to carry every sample.
+    const FIELD_ID_GYRO_X = 39;
+    const FIELD_ID_GYRO_Y = 40;
+    const FIELD_ID_GYRO_Z = 41;
+    // A UINT16/SINT16 array field caps at 16 elements (32 bytes); one raw
+    // 25Hz second needs two fields to carry every sample at full rate.
     const RAW_MAG_SPLIT_A = 13;
     const RAW_MAG_SPLIT_B = 12;
+    // Per-axis gyro capture is downsampled (every 2nd sample - see the
+    // stride passed to Motion.decimatedAxisValues in WorkoutSession) instead,
+    // so one axis fits a single array field.
+    const GYRO_AXIS_SAMPLE_COUNT = 13;
 
     private var _setsField as FitContributor.Field?;
     private var _setNumberField as FitContributor.Field?;
@@ -87,12 +96,13 @@ class FitFields {
     private var _recordSmoothnessField as FitContributor.Field?;
     private var _accelMinField as FitContributor.Field?;
     private var _countingStateField as FitContributor.Field?;
-    private var _gyroRmsField as FitContributor.Field?;
     private var _gyroPeakField as FitContributor.Field?;
-    private var _gyroMinField as FitContributor.Field?;
     private var _accelMagAField as FitContributor.Field?;
     private var _accelMagBField as FitContributor.Field?;
     private var _workPhaseField as FitContributor.Field?;
+    private var _gyroXField as FitContributor.Field?;
+    private var _gyroYField as FitContributor.Field?;
+    private var _gyroZField as FitContributor.Field?;
 
     // The session and lap fields every recording carries.
     function createCoreFields(session as ActivityRecording.Session) as Void {
@@ -305,29 +315,6 @@ class FitFields {
                 {:mesgType => FitContributor.MESG_TYPE_RECORD, :units => "bits"}
             );
         } catch (e) {}
-        // Not wired into detection yet - just recording it. A real swing
-        // should show high rotation throughout; an isometric hold should
-        // read near zero even if wrist tremor keeps accel elevated.
-        try {
-            _gyroRmsField = session.createField(
-                "gyro_rms",
-                FIELD_ID_GYRO_RMS,
-                FitContributor.DATA_TYPE_FLOAT,
-                {:mesgType => FitContributor.MESG_TYPE_RECORD, :units => "deg/s"}
-            );
-            _gyroPeakField = session.createField(
-                "gyro_peak",
-                FIELD_ID_GYRO_PEAK,
-                FitContributor.DATA_TYPE_FLOAT,
-                {:mesgType => FitContributor.MESG_TYPE_RECORD, :units => "deg/s"}
-            );
-            _gyroMinField = session.createField(
-                "gyro_min",
-                FIELD_ID_GYRO_MIN,
-                FitContributor.DATA_TYPE_FLOAT,
-                {:mesgType => FitContributor.MESG_TYPE_RECORD, :units => "deg/s"}
-            );
-        } catch (e) {}
         // Every per-second field above is an aggregate (min/max/rms) - none
         // of them can show the actual waveform shape within that second.
         // These two carry the raw 25Hz magnitude samples themselves, split
@@ -346,6 +333,50 @@ class FitFields {
                 FIELD_ID_ACCEL_MAG_B,
                 FitContributor.DATA_TYPE_UINT16,
                 {:mesgType => FitContributor.MESG_TYPE_RECORD, :count => RAW_MAG_SPLIT_B, :units => "mg"}
+            );
+        } catch (e) {}
+        // Raw per-axis gyroscope (x/y/z, for offline XY/YZ/XZ rotation-plane
+        // plotting - a combined magnitude, like accel_mag_a/b, would throw
+        // away exactly which plane a swing rotates in). This device caps
+        // developer fields at 16 per RECORD message, confirmed empirically
+        // by this very createSwingDebugFields()/testStartWithDebugLoggingDoesNotThrow
+        // pairing: a field beyond the 16th throws "Failed invoking <symbol>"
+        // uncatchably (the same failure class the counting_state crash was,
+        // but this time not stoppable by wrapping createField() in try/catch).
+        // Full 25Hz per axis would need 6 fields (two per axis, same split as
+        // accel_mag_a/b); gyro_rms/gyro_min were retired to make room instead
+        // - their signal is derivable offline from this raw stream - and each
+        // axis is downsampled (Motion.decimatedAxisValues) to fit one field.
+        try {
+            _gyroXField = session.createField(
+                "gyro_x",
+                FIELD_ID_GYRO_X,
+                FitContributor.DATA_TYPE_SINT16,
+                {
+                    :mesgType => FitContributor.MESG_TYPE_RECORD,
+                    :count    => GYRO_AXIS_SAMPLE_COUNT,
+                    :units    => "deg/s"
+                }
+            );
+            _gyroYField = session.createField(
+                "gyro_y",
+                FIELD_ID_GYRO_Y,
+                FitContributor.DATA_TYPE_SINT16,
+                {
+                    :mesgType => FitContributor.MESG_TYPE_RECORD,
+                    :count    => GYRO_AXIS_SAMPLE_COUNT,
+                    :units    => "deg/s"
+                }
+            );
+            _gyroZField = session.createField(
+                "gyro_z",
+                FIELD_ID_GYRO_Z,
+                FitContributor.DATA_TYPE_SINT16,
+                {
+                    :mesgType => FitContributor.MESG_TYPE_RECORD,
+                    :count    => GYRO_AXIS_SAMPLE_COUNT,
+                    :units    => "deg/s"
+                }
             );
         } catch (e) {}
     }
@@ -377,6 +408,19 @@ class FitFields {
                 {:mesgType => FitContributor.MESG_TYPE_RECORD, :units => "score"}
             );
         }
+        // Charted for every motion-export user, not just calibration
+        // recordings: a real swing should show high rotation throughout,
+        // while an isometric hold should read near zero even if wrist
+        // tremor keeps accel elevated - a useful signal on its own, next to
+        // the acceleration charts.
+        try {
+            _gyroPeakField = session.createField(
+                "gyro_peak",
+                FIELD_ID_GYRO_PEAK,
+                FitContributor.DATA_TYPE_FLOAT,
+                {:mesgType => FitContributor.MESG_TYPE_RECORD, :units => "deg/s"}
+            );
+        } catch (e) {}
         // Garmin Connect does not overlay this app's lap boundaries on a
         // Strength Training activity's charts, even though real laps are
         // recorded. This per-second band is the workaround: charted
@@ -442,27 +486,48 @@ class FitFields {
         }
     }
 
-    function writeGyroFeatures(rms as Float, peak as Float, min as Float) as Void {
-        var rmsField = _gyroRmsField;
+    function writeGyroPeak(peak as Float) as Void {
         var peakField = _gyroPeakField;
-        var minField = _gyroMinField;
-        if (rmsField != null) {
-            rmsField.setData(rms);
-        }
         if (peakField != null) {
             peakField.setData(peak);
         }
-        if (minField != null) {
-            minField.setData(min);
+    }
+
+    // x/y/z are one axis each (deg/s, signed, downsampled - see
+    // Motion.decimatedAxisValues) for this second. Debug-only: see
+    // createSwingDebugFields for why these stay off the live charts.
+    function writeRawGyroAxes(x as Array<Number>, y as Array<Number>, z as Array<Number>) as Void {
+        writeGyroAxis(x, _gyroXField);
+        writeGyroAxis(y, _gyroYField);
+        writeGyroAxis(z, _gyroZField);
+    }
+
+    private function writeGyroAxis(values as Array<Number>, field as FitContributor.Field?) as Void {
+        if (field == null) {
+            return;
         }
+        var out = new Array<Number>[GYRO_AXIS_SAMPLE_COUNT];
+        for (var i = 0; i < GYRO_AXIS_SAMPLE_COUNT; i++) {
+            out[i] = i < values.size() ? values[i] : 0;
+        }
+        field.setData(out);
     }
 
     // mags is the raw per-sample magnitude for this second (mg), up to 25
     // entries at the sensor's configured rate. Missing samples pad with 0
     // rather than leaving the declared array field short.
     function writeRawMagnitudes(mags as Array<Number>) as Void {
-        var fieldA = _accelMagAField;
-        var fieldB = _accelMagBField;
+        writeSplitMagnitudes(mags, _accelMagAField, _accelMagBField);
+    }
+
+    // Shared by accel_mag_a/b: one raw 25Hz second split across two
+    // fixed-size UINT16 arrays, zero-padded rather than left short if fewer
+    // samples arrived.
+    private function writeSplitMagnitudes(
+        mags as Array<Number>,
+        fieldA as FitContributor.Field?,
+        fieldB as FitContributor.Field?
+    ) as Void {
         if (fieldA == null && fieldB == null) {
             return;
         }
@@ -685,11 +750,12 @@ class FitFields {
         _recordSmoothnessField = null;
         _accelMinField = null;
         _countingStateField = null;
-        _gyroRmsField = null;
         _gyroPeakField = null;
-        _gyroMinField = null;
         _accelMagAField = null;
         _accelMagBField = null;
         _workPhaseField = null;
+        _gyroXField = null;
+        _gyroYField = null;
+        _gyroZField = null;
     }
 }

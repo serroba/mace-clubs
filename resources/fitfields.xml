@@ -16,6 +16,7 @@
         <fitField id="29" displayInChart="true" sortOrder="33" chartTitle="@Strings.FitSwingCadenceChart" dataLabel="@Strings.FitSwingCadence" unitLabel="@Strings.FitCadenceUnit" fillColor="4D7CA8" />
         <fitField id="30" displayInChart="true" sortOrder="34" chartTitle="@Strings.FitSmoothnessChart" dataLabel="@Strings.FitSmoothness" unitLabel="@Strings.FitScoreUnit" fillColor="397A68" />
         <fitField id="38" displayInChart="true" sortOrder="35" chartTitle="@Strings.FitWorkPhaseChart" dataLabel="@Strings.FitWorkPhase" unitLabel="@Strings.FitPhaseUnit" fillColor="8B8B8B" />
+        <fitField id="34" displayInChart="true" sortOrder="36" chartTitle="@Strings.FitGyroPeakChart" dataLabel="@Strings.FitGyroPeak" unitLabel="@Strings.FitRotationUnit" fillColor="7B4FA0" />
 
         <fitField id="8" displayInActivityLaps="true" sortOrder="10" dataLabel="@Strings.FitSetNumber" unitLabel="@Strings.FitSetsUnit" />
         <fitField id="25" displayInActivityLaps="true" sortOrder="11" dataLabel="@Strings.FitPhase" unitLabel="@Strings.FitNoUnit" />

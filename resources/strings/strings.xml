@@ -71,6 +71,8 @@
     <string id="FitSmoothnessChart">Smoothness over time</string>
     <string id="FitWorkPhase">Work phase</string>
     <string id="FitWorkPhaseChart">Work / rest</string>
+    <string id="FitGyroPeak">Gyro peak</string>
+    <string id="FitGyroPeakChart">Peak rotation rate</string>
     <string id="FitSwingCount">Detected swings</string>
     <string id="FitMotionExposure">Motion exposure</string>
     <string id="FitMotionIntensity">Acceleration RMS</string>
@@ -96,5 +98,6 @@
     <string id="FitPeakUnit">mg</string>
     <string id="FitVolumeUnit">kg-swings</string>
     <string id="FitPhaseUnit">phase</string>
+    <string id="FitRotationUnit">deg/s</string>
     <string id="FitNoUnit"></string>
 </strings>
