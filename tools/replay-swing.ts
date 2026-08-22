@@ -44,7 +44,9 @@ import { type Report } from "./report-types.ts";
 
 const ACCEL_SAMPLE_RATE_HZ = 25;
 const GYRO_STRIDE = 2;
-const MACE_HIGH_MG = 1800;
+// Mirrors SwingCounter.mc's constants - keep these in sync with that file,
+// or the replay stops reflecting what the watch actually does.
+const MACE_HIGH_MG = 1700;
 const MACE_LOW_MG = 1300;
 const MACE_MIN_GAP_SAMPLES = 63;
 const MACE_DEBOUNCE_SAMPLES = 4;
