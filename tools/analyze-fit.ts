@@ -281,6 +281,59 @@ function analyzeCountingState(fit: DecodedFit): void {
     });
 }
 
+// Gyroscope companion to the accel_peak/accel_min sweeps above (needs
+// swingDebugEnabled, and a real device - gyro data does not appear in the
+// Connect IQ simulator). Not used by any detection logic yet; this is purely
+// to see whether rotation rate cleanly separates swings from holds.
+function analyzeGyro(fit: DecodedFit): void {
+    const windows = lapWindows(fit);
+    const peaks: Record<"work" | "rest", number[]> = { work: [], rest: [] };
+    const troughs: Record<"work" | "rest", number[]> = { work: [], rest: [] };
+    for (const record of messagesOf(fit, "recordMesgs")) {
+        const peak = numberField(fit, record, "gyro_peak");
+        const min = numberField(fit, record, "gyro_min");
+        const at = timestampSeconds(dateField(fit, record, "timestamp"));
+        if (peak === null || at === null) {
+            continue;
+        }
+        let bucket: "work" | "rest" = "rest";
+        for (const [start, end, isWork] of windows) {
+            if (start <= at && at <= end) {
+                bucket = isWork ? "work" : "rest";
+                break;
+            }
+        }
+        peaks[bucket].push(peak);
+        if (min !== null) {
+            troughs[bucket].push(min);
+        }
+    }
+    if (peaks.work.length === 0 && peaks.rest.length === 0) {
+        return;
+    }
+    console.log("\n== Gyroscope (per-second deg/s; needs swingDebugEnabled) ==");
+    for (const bucket of ["work", "rest"] as const) {
+        const peakValues = [...peaks[bucket]].sort((a, b) => a - b);
+        const minValues = [...troughs[bucket]].sort((a, b) => a - b);
+        if (peakValues.length === 0) {
+            console.log(`  ${bucket}: no samples`);
+            continue;
+        }
+        const at = (values: number[], index: number): number => values[index] ?? 0;
+        const median = (values: number[]): number => at(values, Math.floor(values.length / 2));
+        const max = at(peakValues, peakValues.length - 1);
+        console.log(
+            `  ${bucket}: peak median=${median(peakValues).toFixed(0)} max=${max.toFixed(0)}`
+            + (minValues.length > 0
+                ? ` | min median=${median(minValues).toFixed(0)} p90=${at(minValues, Math.trunc(minValues.length * 0.9)).toFixed(0)}`
+                : ""));
+    }
+    console.log(
+        "  If a hold's gyro_min stays near 0 while a swing's gyro_peak runs\n"
+        + "  high throughout, rotation rate cleanly separates the two - accel\n"
+        + "  magnitude alone could not.");
+}
+
 export function main(paths: readonly string[] = process.argv.slice(2)): number {
     if (paths.length === 0) {
         console.error("usage: analyze-fit.ts activity.fit [more.fit ...]");
@@ -293,6 +346,7 @@ export function main(paths: readonly string[] = process.argv.slice(2)): number {
         printLaps(fit);
         analyzeMotion(fit);
         analyzeCountingState(fit);
+        analyzeGyro(fit);
     }
     return 0;
 }

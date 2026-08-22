@@ -43,6 +43,9 @@ class FitFields {
     const FIELD_ID_RECORD_SMOOTHNESS = 30;
     const FIELD_ID_ACCEL_MIN = 31;
     const FIELD_ID_COUNTING_STATE = 32;
+    const FIELD_ID_GYRO_RMS = 33;
+    const FIELD_ID_GYRO_PEAK = 34;
+    const FIELD_ID_GYRO_MIN = 35;
 
     private var _setsField as FitContributor.Field?;
     private var _setNumberField as FitContributor.Field?;
@@ -77,6 +80,9 @@ class FitFields {
     private var _recordSmoothnessField as FitContributor.Field?;
     private var _accelMinField as FitContributor.Field?;
     private var _countingStateField as FitContributor.Field?;
+    private var _gyroRmsField as FitContributor.Field?;
+    private var _gyroPeakField as FitContributor.Field?;
+    private var _gyroMinField as FitContributor.Field?;
 
     // The session and lap fields every recording carries.
     function createCoreFields(session as ActivityRecording.Session) as Void {
@@ -280,6 +286,27 @@ class FitFields {
             FitContributor.DATA_TYPE_UINT8,
             {:mesgType => FitContributor.MESG_TYPE_RECORD, :units => "bit0=workOpen bit1=swingCounting"}
         );
+        // Not wired into detection yet - just recording it. A real swing
+        // should show high rotation throughout; an isometric hold should
+        // read near zero even if wrist tremor keeps accel elevated.
+        _gyroRmsField = session.createField(
+            "gyro_rms",
+            FIELD_ID_GYRO_RMS,
+            FitContributor.DATA_TYPE_FLOAT,
+            {:mesgType => FitContributor.MESG_TYPE_RECORD, :units => "deg/s"}
+        );
+        _gyroPeakField = session.createField(
+            "gyro_peak",
+            FIELD_ID_GYRO_PEAK,
+            FitContributor.DATA_TYPE_FLOAT,
+            {:mesgType => FitContributor.MESG_TYPE_RECORD, :units => "deg/s"}
+        );
+        _gyroMinField = session.createField(
+            "gyro_min",
+            FIELD_ID_GYRO_MIN,
+            FitContributor.DATA_TYPE_FLOAT,
+            {:mesgType => FitContributor.MESG_TYPE_RECORD, :units => "deg/s"}
+        );
     }
 
     function createMotionExportFields(session as ActivityRecording.Session, includeSmoothness as Boolean) as Void {
@@ -350,6 +377,21 @@ class FitFields {
         if (field != null) {
             var state = (workOpen ? 0x1 : 0x0) | (swingCounting ? 0x2 : 0x0);
             field.setData(state);
+        }
+    }
+
+    function writeGyroFeatures(rms as Float, peak as Float, min as Float) as Void {
+        var rmsField = _gyroRmsField;
+        var peakField = _gyroPeakField;
+        var minField = _gyroMinField;
+        if (rmsField != null) {
+            rmsField.setData(rms);
+        }
+        if (peakField != null) {
+            peakField.setData(peak);
+        }
+        if (minField != null) {
+            minField.setData(min);
         }
     }
 
@@ -555,5 +597,8 @@ class FitFields {
         _recordSmoothnessField = null;
         _accelMinField = null;
         _countingStateField = null;
+        _gyroRmsField = null;
+        _gyroPeakField = null;
+        _gyroMinField = null;
     }
 }

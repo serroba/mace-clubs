@@ -85,6 +85,39 @@ module Motion {
         };
     }
 
+    // Gyroscope companion to features(): same rms/peak/min shape, but over
+    // angular velocity magnitude (deg/s) instead of acceleration magnitude.
+    // Exploratory - a real swing should show high rotation throughout, while
+    // an isometric hold should read near zero even if wrist tremor keeps
+    // accelerometer magnitude elevated. Not yet wired into any detection
+    // logic; this only records the data so that question can be answered
+    // from real recordings.
+    function gyroFeatures(x as Array<Float>, y as Array<Float>, z as Array<Float>) as Dictionary {
+        var n = x.size();
+        if (n == 0 || y.size() != n || z.size() != n) {
+            return {:rms => 0.0, :peak => 0.0, :min => 0.0};
+        }
+
+        var sumSq = 0.0;
+        var peak = 0.0;
+        var min = -1.0;
+        for (var i = 0; i < n; i++) {
+            var fx = x[i];
+            var fy = y[i];
+            var fz = z[i];
+            var mag = Math.sqrt(fx * fx + fy * fy + fz * fz).toFloat();
+            sumSq += mag * mag;
+            if (mag > peak) {
+                peak = mag;
+            }
+            if (min < 0.0 || mag < min) {
+                min = mag;
+            }
+        }
+
+        return {:rms => Math.sqrt(sumSq / n).toFloat(), :peak => peak, :min => min};
+    }
+
     // Shared production seam between the hardware listener and deterministic
     // tests. The caller owns phase state; this function guarantees that every
     // source (real sensor or synthetic) traverses the same feature, smoothness,
