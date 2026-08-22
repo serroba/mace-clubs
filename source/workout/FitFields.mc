@@ -273,66 +273,79 @@ class FitFields {
         );
     }
 
-    // Calibration-only: the per-second trough, alongside the existing peak.
-    // Whether a swing detector's re-arm floor (LOW_MG) actually gets cleared
-    // between reps is invisible from the peak alone.
+    // Calibration-only fields. Each is created independently and defensively:
+    // a createField() call can throw at runtime for reasons invisible at
+    // compile time (a units string over FIT's actual length limit already
+    // crashed every workout start once - see git history), and there is no
+    // guarantee every option (e.g. the :count array fields below) is
+    // supported the same way across every device API level this app ships
+    // to. Losing one debug field to an incompatibility should never cost
+    // the workout itself.
     function createSwingDebugFields(session as ActivityRecording.Session) as Void {
-        _accelMinField = session.createField(
-            "accel_min",
-            FIELD_ID_ACCEL_MIN,
-            FitContributor.DATA_TYPE_UINT16,
-            {:mesgType => FitContributor.MESG_TYPE_RECORD, :units => "mg"}
-        );
+        try {
+            _accelMinField = session.createField(
+                "accel_min",
+                FIELD_ID_ACCEL_MIN,
+                FitContributor.DATA_TYPE_UINT16,
+                {:mesgType => FitContributor.MESG_TYPE_RECORD, :units => "mg"}
+            );
+        } catch (e) {}
         // bit0 = workOpen, bit1 = swingCounting. A recording where a whole
         // work lap counts zero swings despite a clean accelerometer trace
         // could be a gating bug (these bits false when they should be true)
         // rather than a detection-threshold problem - invisible from the
         // motion features alone.
-        _countingStateField = session.createField(
-            "counting_state",
-            FIELD_ID_COUNTING_STATE,
-            FitContributor.DATA_TYPE_UINT8,
-            {:mesgType => FitContributor.MESG_TYPE_RECORD, :units => "bit0=workOpen bit1=swingCounting"}
-        );
+        try {
+            _countingStateField = session.createField(
+                "counting_state",
+                FIELD_ID_COUNTING_STATE,
+                FitContributor.DATA_TYPE_UINT8,
+                {:mesgType => FitContributor.MESG_TYPE_RECORD, :units => "bits"}
+            );
+        } catch (e) {}
         // Not wired into detection yet - just recording it. A real swing
         // should show high rotation throughout; an isometric hold should
         // read near zero even if wrist tremor keeps accel elevated.
-        _gyroRmsField = session.createField(
-            "gyro_rms",
-            FIELD_ID_GYRO_RMS,
-            FitContributor.DATA_TYPE_FLOAT,
-            {:mesgType => FitContributor.MESG_TYPE_RECORD, :units => "deg/s"}
-        );
-        _gyroPeakField = session.createField(
-            "gyro_peak",
-            FIELD_ID_GYRO_PEAK,
-            FitContributor.DATA_TYPE_FLOAT,
-            {:mesgType => FitContributor.MESG_TYPE_RECORD, :units => "deg/s"}
-        );
-        _gyroMinField = session.createField(
-            "gyro_min",
-            FIELD_ID_GYRO_MIN,
-            FitContributor.DATA_TYPE_FLOAT,
-            {:mesgType => FitContributor.MESG_TYPE_RECORD, :units => "deg/s"}
-        );
+        try {
+            _gyroRmsField = session.createField(
+                "gyro_rms",
+                FIELD_ID_GYRO_RMS,
+                FitContributor.DATA_TYPE_FLOAT,
+                {:mesgType => FitContributor.MESG_TYPE_RECORD, :units => "deg/s"}
+            );
+            _gyroPeakField = session.createField(
+                "gyro_peak",
+                FIELD_ID_GYRO_PEAK,
+                FitContributor.DATA_TYPE_FLOAT,
+                {:mesgType => FitContributor.MESG_TYPE_RECORD, :units => "deg/s"}
+            );
+            _gyroMinField = session.createField(
+                "gyro_min",
+                FIELD_ID_GYRO_MIN,
+                FitContributor.DATA_TYPE_FLOAT,
+                {:mesgType => FitContributor.MESG_TYPE_RECORD, :units => "deg/s"}
+            );
+        } catch (e) {}
         // Every per-second field above is an aggregate (min/max/rms) - none
         // of them can show the actual waveform shape within that second.
         // These two carry the raw 25Hz magnitude samples themselves, split
         // across two arrays since a UINT16 array field caps at 16 elements,
         // for offline peak-detection prototyping (e.g. scipy.find_peaks)
         // against a real recording instead of against another guess.
-        _accelMagAField = session.createField(
-            "accel_mag_a",
-            FIELD_ID_ACCEL_MAG_A,
-            FitContributor.DATA_TYPE_UINT16,
-            {:mesgType => FitContributor.MESG_TYPE_RECORD, :count => RAW_MAG_SPLIT_A, :units => "mg"}
-        );
-        _accelMagBField = session.createField(
-            "accel_mag_b",
-            FIELD_ID_ACCEL_MAG_B,
-            FitContributor.DATA_TYPE_UINT16,
-            {:mesgType => FitContributor.MESG_TYPE_RECORD, :count => RAW_MAG_SPLIT_B, :units => "mg"}
-        );
+        try {
+            _accelMagAField = session.createField(
+                "accel_mag_a",
+                FIELD_ID_ACCEL_MAG_A,
+                FitContributor.DATA_TYPE_UINT16,
+                {:mesgType => FitContributor.MESG_TYPE_RECORD, :count => RAW_MAG_SPLIT_A, :units => "mg"}
+            );
+            _accelMagBField = session.createField(
+                "accel_mag_b",
+                FIELD_ID_ACCEL_MAG_B,
+                FitContributor.DATA_TYPE_UINT16,
+                {:mesgType => FitContributor.MESG_TYPE_RECORD, :count => RAW_MAG_SPLIT_B, :units => "mg"}
+            );
+        } catch (e) {}
     }
 
     function createMotionExportFields(session as ActivityRecording.Session, includeSmoothness as Boolean) as Void {
