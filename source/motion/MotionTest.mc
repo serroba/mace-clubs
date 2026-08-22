@@ -79,3 +79,32 @@ function testGyroFeaturesRejectBadBuffers(logger as Test.Logger) as Boolean {
     Test.assertEqualMessage(g[:peak] as Float, 0.0, "mismatched axis lengths yield zeros");
     return true;
 }
+
+(:test)
+function testRawMagnitudesPreservesEverySample(logger as Test.Logger) as Boolean {
+    var zeros = [0, 0, 0] as Array<Number>;
+    var swing = [1000, 3000, 1800] as Array<Number>;
+    var mags = Motion.rawMagnitudes(zeros, zeros, swing);
+    Test.assertEqualMessage(mags.size(), 3, "one magnitude per raw sample, not one per second");
+    Test.assertEqualMessage(mags[0] as Number, 1000, "first sample is preserved exactly");
+    Test.assertEqualMessage(mags[1] as Number, 3000, "the peak sample is not collapsed into an aggregate");
+    Test.assertEqualMessage(mags[2] as Number, 1800, "the last sample is preserved exactly");
+    return true;
+}
+
+(:test)
+function testRawMagnitudesRejectBadBuffers(logger as Test.Logger) as Boolean {
+    var empty = [] as Array<Number>;
+    var one = [500] as Array<Number>;
+    Test.assertEqualMessage(
+        Motion.rawMagnitudes(empty, empty, empty).size(),
+        0,
+        "empty buffer yields no samples"
+    );
+    Test.assertEqualMessage(
+        Motion.rawMagnitudes(one, empty, one).size(),
+        0,
+        "mismatched axis lengths yield no samples"
+    );
+    return true;
+}

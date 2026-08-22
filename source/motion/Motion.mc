@@ -118,6 +118,26 @@ module Motion {
         return {:rms => Math.sqrt(sumSq / n).toFloat(), :peak => peak, :min => min};
     }
 
+    // Every aggregate above (peak/min/rms) necessarily throws away the
+    // actual waveform shape within its one-second window. This keeps the
+    // raw per-sample magnitude (mg) instead, for offline peak-detection
+    // prototyping against a real recording (e.g. Python's
+    // scipy.signal.find_peaks) rather than guessing at Counter constants.
+    function rawMagnitudes(x as Array<Number>, y as Array<Number>, z as Array<Number>) as Array<Number> {
+        var n = x.size();
+        if (n == 0 || y.size() != n || z.size() != n) {
+            return [] as Array<Number>;
+        }
+        var mags = new Array<Number>[n];
+        for (var i = 0; i < n; i++) {
+            var fx = x[i].toFloat();
+            var fy = y[i].toFloat();
+            var fz = z[i].toFloat();
+            mags[i] = Math.sqrt(fx * fx + fy * fy + fz * fz).toNumber();
+        }
+        return mags;
+    }
+
     // Shared production seam between the hardware listener and deterministic
     // tests. The caller owns phase state; this function guarantees that every
     // source (real sensor or synthetic) traverses the same feature, smoothness,
