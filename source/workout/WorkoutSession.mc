@@ -321,6 +321,13 @@ class WorkoutSession {
         if (_swingDebugEnabled) {
             _fit.writeAccelMin(f[:min] as Number);
             _fit.writeCountingState(_workOpen, _swingCounting);
+            _fit.writeRawMagnitudes(
+                Motion.rawMagnitudes(
+                    accel.x as Array<Number>,
+                    accel.y as Array<Number>,
+                    accel.z as Array<Number>
+                )
+            );
             var gyro = data.gyroscopeData;
             if (gyro != null) {
                 var g = Motion.gyroFeatures(

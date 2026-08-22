@@ -46,6 +46,12 @@ class FitFields {
     const FIELD_ID_GYRO_RMS = 33;
     const FIELD_ID_GYRO_PEAK = 34;
     const FIELD_ID_GYRO_MIN = 35;
+    const FIELD_ID_ACCEL_MAG_A = 36;
+    const FIELD_ID_ACCEL_MAG_B = 37;
+    // A UINT16 array field caps at 16 elements (32 bytes); one raw 25Hz
+    // second needs two fields to carry every sample.
+    const RAW_MAG_SPLIT_A = 13;
+    const RAW_MAG_SPLIT_B = 12;
 
     private var _setsField as FitContributor.Field?;
     private var _setNumberField as FitContributor.Field?;
@@ -83,6 +89,8 @@ class FitFields {
     private var _gyroRmsField as FitContributor.Field?;
     private var _gyroPeakField as FitContributor.Field?;
     private var _gyroMinField as FitContributor.Field?;
+    private var _accelMagAField as FitContributor.Field?;
+    private var _accelMagBField as FitContributor.Field?;
 
     // The session and lap fields every recording carries.
     function createCoreFields(session as ActivityRecording.Session) as Void {
@@ -307,6 +315,24 @@ class FitFields {
             FitContributor.DATA_TYPE_FLOAT,
             {:mesgType => FitContributor.MESG_TYPE_RECORD, :units => "deg/s"}
         );
+        // Every per-second field above is an aggregate (min/max/rms) - none
+        // of them can show the actual waveform shape within that second.
+        // These two carry the raw 25Hz magnitude samples themselves, split
+        // across two arrays since a UINT16 array field caps at 16 elements,
+        // for offline peak-detection prototyping (e.g. scipy.find_peaks)
+        // against a real recording instead of against another guess.
+        _accelMagAField = session.createField(
+            "accel_mag_a",
+            FIELD_ID_ACCEL_MAG_A,
+            FitContributor.DATA_TYPE_UINT16,
+            {:mesgType => FitContributor.MESG_TYPE_RECORD, :count => RAW_MAG_SPLIT_A, :units => "mg"}
+        );
+        _accelMagBField = session.createField(
+            "accel_mag_b",
+            FIELD_ID_ACCEL_MAG_B,
+            FitContributor.DATA_TYPE_UINT16,
+            {:mesgType => FitContributor.MESG_TYPE_RECORD, :count => RAW_MAG_SPLIT_B, :units => "mg"}
+        );
     }
 
     function createMotionExportFields(session as ActivityRecording.Session, includeSmoothness as Boolean) as Void {
@@ -392,6 +418,32 @@ class FitFields {
         }
         if (minField != null) {
             minField.setData(min);
+        }
+    }
+
+    // mags is the raw per-sample magnitude for this second (mg), up to 25
+    // entries at the sensor's configured rate. Missing samples pad with 0
+    // rather than leaving the declared array field short.
+    function writeRawMagnitudes(mags as Array<Number>) as Void {
+        var fieldA = _accelMagAField;
+        var fieldB = _accelMagBField;
+        if (fieldA == null && fieldB == null) {
+            return;
+        }
+        var a = new Array<Number>[RAW_MAG_SPLIT_A];
+        for (var i = 0; i < RAW_MAG_SPLIT_A; i++) {
+            a[i] = i < mags.size() ? mags[i] : 0;
+        }
+        var b = new Array<Number>[RAW_MAG_SPLIT_B];
+        for (var j = 0; j < RAW_MAG_SPLIT_B; j++) {
+            var idx = RAW_MAG_SPLIT_A + j;
+            b[j] = idx < mags.size() ? mags[idx] : 0;
+        }
+        if (fieldA != null) {
+            fieldA.setData(a);
+        }
+        if (fieldB != null) {
+            fieldB.setData(b);
         }
     }
 
@@ -600,5 +652,7 @@ class FitFields {
         _gyroRmsField = null;
         _gyroPeakField = null;
         _gyroMinField = null;
+        _accelMagAField = null;
+        _accelMagBField = null;
     }
 }
