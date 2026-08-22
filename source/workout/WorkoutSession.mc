@@ -18,6 +18,7 @@ class WorkoutSession {
     private var _capturing as Boolean = false;
     private var _smoothnessEnabled as Boolean = false;
     private var _loadExposureEnabled as Boolean = false;
+    private var _swingDebugEnabled as Boolean = false;
     private var _smoothness as Smoothness.Tracker;
     private var _loadExposure as LoadExposure.Tracker;
     private var _setSmoothness as SmoothnessSetSummaries;
@@ -230,6 +231,7 @@ class WorkoutSession {
         if (debugEnabled) {
             exportEnabled = true;
         }
+        _swingDebugEnabled = debugEnabled;
         // Swing counting shares the same accelerometer stream. Challenge
         // presets force it on (the count is the whole point of the mode);
         // regular sessions opt in via the swingCounter setting.
@@ -259,6 +261,9 @@ class WorkoutSession {
         // setting remains the explicit opt-in path for exporting summaries.
         if (exportEnabled) {
             _fit.createMotionExportFields(session, _smoothnessEnabled);
+        }
+        if (_swingDebugEnabled) {
+            _fit.createSwingDebugFields(session);
         }
         try {
             Sensor.registerSensorDataListener(
@@ -296,6 +301,9 @@ class WorkoutSession {
         );
         _fit.writeMotionFeatures(f[:rms] as Number, f[:peak] as Number, f[:zc] as Number);
         _fit.writeRecordSmoothness(_smoothness.getScore());
+        if (_swingDebugEnabled) {
+            _fit.writeAccelMin(f[:min] as Number);
+        }
         if (_swingCounting) {
             var swingPoint = _swingSeries.addTotal(_swingCounter.getCount());
             _fit.writeSwingPoint(
@@ -684,6 +692,7 @@ class WorkoutSession {
         _startBattery = null;
         _smoothnessEnabled = false;
         _loadExposureEnabled = false;
+        _swingDebugEnabled = false;
         _smoothness = new Smoothness.Tracker();
         _loadExposure = new LoadExposure.Tracker();
         _setSmoothness = new SmoothnessSetSummaries();

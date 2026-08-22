@@ -147,8 +147,10 @@ function printLaps(fit: DecodedFit): void {
 function analyzeMotion(fit: DecodedFit): void {
     const windows = lapWindows(fit);
     const peaks: Record<"work" | "rest", number[]> = { work: [], rest: [] };
+    const troughs: Record<"work" | "rest", number[]> = { work: [], rest: [] };
     for (const record of messagesOf(fit, "recordMesgs")) {
         const peak = numberField(fit, record, "accel_peak");
+        const min = numberField(fit, record, "accel_min");
         const at = timestampSeconds(dateField(fit, record, "timestamp"));
         if (peak === null || at === null) {
             continue;
@@ -161,6 +163,9 @@ function analyzeMotion(fit: DecodedFit): void {
             }
         }
         peaks[bucket].push(peak);
+        if (min !== null) {
+            troughs[bucket].push(min);
+        }
     }
 
     if (peaks.work.length === 0 && peaks.rest.length === 0) {
@@ -202,6 +207,42 @@ function analyzeMotion(fit: DecodedFit): void {
     console.log(
         "  A good HIGH_MG keeps the work column near your real swing cadence\n"
         + "  (one crossing per swing-second) while the rest column stays ~0.");
+
+    if (troughs.work.length === 0 && troughs.rest.length === 0) {
+        return;
+    }
+    console.log("\n== Motion trough (per-second accel_min, mg; needs swingDebugEnabled) ==");
+    for (const bucket of ["work", "rest"] as const) {
+        const values = [...troughs[bucket]].sort((a, b) => a - b);
+        const mid = values[Math.floor(values.length / 2)];
+        const p10 = values[Math.trunc(values.length * 0.1)];
+        const first = values[0];
+        const last = values[values.length - 1];
+        if (first === undefined || last === undefined || mid === undefined || p10 === undefined) {
+            console.log(`  ${bucket}: no samples`);
+            continue;
+        }
+        console.log(
+            `  ${bucket}: n=${String(values.length)} min=${String(first)} p10=${String(p10)} `
+            + `median=${String(mid)} max=${String(last)}`);
+    }
+    console.log("  re-arm sweep (% of seconds whose trough clears the floor, i.e. min <= threshold):");
+    console.log(`  ${"mg".padStart(9)} ${"work".padStart(7)} ${"rest".padStart(7)}`);
+    for (const threshold of SWEEP_MG) {
+        const share = (bucket: "work" | "rest"): number => {
+            const values = troughs[bucket];
+            return values.length > 0
+                ? (100 * values.filter((value) => value <= threshold).length) / values.length
+                : 0;
+        };
+        const marker = threshold === 1300 ? " <- shipped LOW_MG" : "";
+        console.log(
+            `  ${String(threshold).padStart(9)} ${share("work").toFixed(1).padStart(6)}% `
+            + `${share("rest").toFixed(1).padStart(6)}%${marker}`);
+    }
+    console.log(
+        "  A low share in the work column means most seconds never dip below\n"
+        + "  LOW_MG - the counter can get stuck unarmed until a lucky deep dip.");
 }
 
 export function main(paths: readonly string[] = process.argv.slice(2)): number {
