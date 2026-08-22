@@ -303,6 +303,7 @@ class WorkoutSession {
         _fit.writeRecordSmoothness(_smoothness.getScore());
         if (_swingDebugEnabled) {
             _fit.writeAccelMin(f[:min] as Number);
+            _fit.writeCountingState(_workOpen, _swingCounting);
         }
         if (_swingCounting) {
             var swingPoint = _swingSeries.addTotal(_swingCounter.getCount());

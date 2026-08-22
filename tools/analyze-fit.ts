@@ -245,6 +245,42 @@ function analyzeMotion(fit: DecodedFit): void {
         + "  LOW_MG - the counter can get stuck unarmed until a lucky deep dip.");
 }
 
+// Per-lap share of seconds where the app's own workOpen/swingCounting gates
+// were actually true (needs swingDebugEnabled). A work lap with a low share
+// here is a gating bug - counting was off - not a detection-threshold miss,
+// which looks identical from accel_peak/accel_min alone.
+function analyzeCountingState(fit: DecodedFit): void {
+    const windows = lapWindows(fit);
+    if (windows.length === 0) {
+        return;
+    }
+    const records = messagesOf(fit, "recordMesgs");
+    const states: { at: number; state: number }[] = [];
+    for (const r of records) {
+        const at = timestampSeconds(dateField(fit, r, "timestamp"));
+        const state = numberField(fit, r, "counting_state");
+        if (at !== null && state !== null) {
+            states.push({ at, state });
+        }
+    }
+    if (states.length === 0) {
+        return;
+    }
+    console.log("\n== Counting state per lap (needs swingDebugEnabled) ==");
+    console.log(`  ${"lap".padStart(3)} ${"phase".padStart(5)} ${"n".padStart(4)} ${"workOpen".padStart(9)} ${"counting".padStart(9)}`);
+    windows.forEach(([start, end, isWork], index) => {
+        const inLap = states.filter((s) => s.at >= start && s.at <= end);
+        if (inLap.length === 0) {
+            return;
+        }
+        const share = (bit: number): number =>
+            (100 * inLap.filter((s) => ((s.state >> bit) & 1) === 1).length) / inLap.length;
+        console.log(
+            `  ${String(index + 1).padStart(3)} ${(isWork ? "work" : "rest").padStart(5)} `
+            + `${String(inLap.length).padStart(4)} ${share(0).toFixed(0).padStart(8)}% ${share(1).toFixed(0).padStart(8)}%`);
+    });
+}
+
 export function main(paths: readonly string[] = process.argv.slice(2)): number {
     if (paths.length === 0) {
         console.error("usage: analyze-fit.ts activity.fit [more.fit ...]");
@@ -256,6 +292,7 @@ export function main(paths: readonly string[] = process.argv.slice(2)): number {
         printSession(fit);
         printLaps(fit);
         analyzeMotion(fit);
+        analyzeCountingState(fit);
     }
     return 0;
 }

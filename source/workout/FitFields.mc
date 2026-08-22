@@ -42,6 +42,7 @@ class FitFields {
     const FIELD_ID_SWING_CADENCE = 29;
     const FIELD_ID_RECORD_SMOOTHNESS = 30;
     const FIELD_ID_ACCEL_MIN = 31;
+    const FIELD_ID_COUNTING_STATE = 32;
 
     private var _setsField as FitContributor.Field?;
     private var _setNumberField as FitContributor.Field?;
@@ -75,6 +76,7 @@ class FitFields {
     private var _swingCadenceField as FitContributor.Field?;
     private var _recordSmoothnessField as FitContributor.Field?;
     private var _accelMinField as FitContributor.Field?;
+    private var _countingStateField as FitContributor.Field?;
 
     // The session and lap fields every recording carries.
     function createCoreFields(session as ActivityRecording.Session) as Void {
@@ -267,6 +269,17 @@ class FitFields {
             FitContributor.DATA_TYPE_UINT16,
             {:mesgType => FitContributor.MESG_TYPE_RECORD, :units => "mg"}
         );
+        // bit0 = workOpen, bit1 = swingCounting. A recording where a whole
+        // work lap counts zero swings despite a clean accelerometer trace
+        // could be a gating bug (these bits false when they should be true)
+        // rather than a detection-threshold problem - invisible from the
+        // motion features alone.
+        _countingStateField = session.createField(
+            "counting_state",
+            FIELD_ID_COUNTING_STATE,
+            FitContributor.DATA_TYPE_UINT8,
+            {:mesgType => FitContributor.MESG_TYPE_RECORD, :units => "bit0=workOpen bit1=swingCounting"}
+        );
     }
 
     function createMotionExportFields(session as ActivityRecording.Session, includeSmoothness as Boolean) as Void {
@@ -329,6 +342,14 @@ class FitFields {
         var field = _accelMinField;
         if (field != null) {
             field.setData(min);
+        }
+    }
+
+    function writeCountingState(workOpen as Boolean, swingCounting as Boolean) as Void {
+        var field = _countingStateField;
+        if (field != null) {
+            var state = (workOpen ? 0x1 : 0x0) | (swingCounting ? 0x2 : 0x0);
+            field.setData(state);
         }
     }
 
@@ -533,5 +554,6 @@ class FitFields {
         _swingCadenceField = null;
         _recordSmoothnessField = null;
         _accelMinField = null;
+        _countingStateField = null;
     }
 }
