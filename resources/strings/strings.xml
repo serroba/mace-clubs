@@ -69,6 +69,8 @@
     <string id="FitImplement">Implement</string>
     <string id="FitSmoothness">Smoothness</string>
     <string id="FitSmoothnessChart">Smoothness over time</string>
+    <string id="FitWorkPhase">Work phase</string>
+    <string id="FitWorkPhaseChart">Work / rest</string>
     <string id="FitSwingCount">Detected swings</string>
     <string id="FitMotionExposure">Motion exposure</string>
     <string id="FitMotionIntensity">Acceleration RMS</string>
@@ -93,5 +95,6 @@
     <string id="FitExposureUnit">mg-s</string>
     <string id="FitPeakUnit">mg</string>
     <string id="FitVolumeUnit">kg-swings</string>
+    <string id="FitPhaseUnit">phase</string>
     <string id="FitNoUnit"></string>
 </strings>
