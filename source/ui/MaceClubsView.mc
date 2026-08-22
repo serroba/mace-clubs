@@ -626,11 +626,20 @@ class MaceClubsView extends WatchUi.View {
         // With the swing counter running, detected swings replace metronome
         // rounds everywhere rounds would show: the count is the real reps.
         var counting = workout.isSwingCounting();
-        var rounds = counting ? workout.getTotalSwings().toString() : metronome.getRounds().toString();
-        var roundsLabel = counting ? "swng" : "rnds";
-        var circleValue = _circleRounds ? rounds : hr;
-        var otherValue = _circleRounds ? hr : rounds;
-        var otherLabel = _circleRounds ? "hr" : roundsLabel;
+        var setSwings = counting ? workout.getCurrentSetSwings().toString() : metronome.getRounds().toString();
+        var setSwingsLabel = counting ? "swng" : "rnds";
+        var totalSwings = workout.getTotalSwings().toString();
+        // The subwindow circle - the watch's literal top-right corner - always
+        // shows the live, per-set count once counting is running, so it reads
+        // zero right after every rest -> resume instead of a stale session
+        // total; heart rate takes the corner the rest of the time.
+        var circleValue = counting ? setSwings : (_circleRounds ? setSwings : hr);
+        var otherValue = counting ? hr : (_circleRounds ? hr : setSwings);
+        var otherLabel = counting ? "hr" : (_circleRounds ? "hr" : setSwingsLabel);
+        // BPM is a fixed setting for the whole activity, rarely worth a slot
+        // once swing counting is running - the session total takes its place.
+        var bpmSlotValue = counting ? totalSwings : metronome.getBpm().toString();
+        var bpmSlotLabel = counting ? "total" : "bpm";
 
         var p = plan;
         if (p != null) {
@@ -679,10 +688,16 @@ class MaceClubsView extends WatchUi.View {
                     cx - 35,
                     h * 72 / 100,
                     Graphics.FONT_MEDIUM,
-                    metronome.getBpm().toString(),
+                    bpmSlotValue,
                     Graphics.TEXT_JUSTIFY_CENTER
                 );
-                dc.drawText(cx - 35, h * 87 / 100, Graphics.FONT_TINY, "bpm", Graphics.TEXT_JUSTIFY_CENTER);
+                dc.drawText(
+                    cx - 35,
+                    h * 87 / 100,
+                    Graphics.FONT_TINY,
+                    bpmSlotLabel,
+                    Graphics.TEXT_JUSTIFY_CENTER
+                );
                 dc.drawText(
                     cx + 35,
                     h * 72 / 100,
@@ -702,12 +717,18 @@ class MaceClubsView extends WatchUi.View {
                     cx - 50,
                     h * 72 / 100,
                     Graphics.FONT_MEDIUM,
-                    metronome.getBpm().toString(),
+                    bpmSlotValue,
                     Graphics.TEXT_JUSTIFY_CENTER
                 );
-                dc.drawText(cx - 50, h * 87 / 100, Graphics.FONT_TINY, "bpm", Graphics.TEXT_JUSTIFY_CENTER);
-                dc.drawText(cx, h * 72 / 100, Graphics.FONT_MEDIUM, rounds, Graphics.TEXT_JUSTIFY_CENTER);
-                dc.drawText(cx, h * 87 / 100, Graphics.FONT_TINY, roundsLabel, Graphics.TEXT_JUSTIFY_CENTER);
+                dc.drawText(
+                    cx - 50,
+                    h * 87 / 100,
+                    Graphics.FONT_TINY,
+                    bpmSlotLabel,
+                    Graphics.TEXT_JUSTIFY_CENTER
+                );
+                dc.drawText(cx, h * 72 / 100, Graphics.FONT_MEDIUM, setSwings, Graphics.TEXT_JUSTIFY_CENTER);
+                dc.drawText(cx, h * 87 / 100, Graphics.FONT_TINY, setSwingsLabel, Graphics.TEXT_JUSTIFY_CENTER);
                 dc.drawText(cx + 50, h * 72 / 100, Graphics.FONT_MEDIUM, hr, Graphics.TEXT_JUSTIFY_CENTER);
                 dc.drawText(cx + 50, h * 87 / 100, Graphics.FONT_TINY, "hr", Graphics.TEXT_JUSTIFY_CENTER);
             }
@@ -724,8 +745,8 @@ class MaceClubsView extends WatchUi.View {
         var phaseText = freeResting ? "REST" : "WORK";
         var phaseElapsed = formatSecs(freePhaseElapsedSeconds());
         var phaseLine = Lang.format("$1$  $2$", [phaseText, phaseElapsed]);
-        var mainValue = freeResting ? phaseElapsed : metronome.getBpm().toString();
-        var mainLabel = freeResting ? "SELECT: work" : "bpm";
+        var mainValue = freeResting ? phaseElapsed : bpmSlotValue;
+        var mainLabel = freeResting ? "SELECT: work" : bpmSlotLabel;
         if (isRepMode()) {
             mainValue = freeResting ? phaseElapsed : workout.getCurrentSetSwings().toString();
             mainLabel = freeResting
@@ -823,8 +844,8 @@ class MaceClubsView extends WatchUi.View {
             Graphics.TEXT_JUSTIFY_CENTER
         );
         dc.drawText(cx - 50, h * 84 / 100, Graphics.FONT_TINY, "sets", Graphics.TEXT_JUSTIFY_CENTER);
-        dc.drawText(cx, h * 68 / 100, Graphics.FONT_MEDIUM, rounds, Graphics.TEXT_JUSTIFY_CENTER);
-        dc.drawText(cx, h * 84 / 100, Graphics.FONT_TINY, roundsLabel, Graphics.TEXT_JUSTIFY_CENTER);
+        dc.drawText(cx, h * 68 / 100, Graphics.FONT_MEDIUM, setSwings, Graphics.TEXT_JUSTIFY_CENTER);
+        dc.drawText(cx, h * 84 / 100, Graphics.FONT_TINY, setSwingsLabel, Graphics.TEXT_JUSTIFY_CENTER);
         dc.drawText(cx + 50, h * 68 / 100, Graphics.FONT_MEDIUM, hr, Graphics.TEXT_JUSTIFY_CENTER);
         dc.drawText(cx + 50, h * 84 / 100, Graphics.FONT_TINY, "hr", Graphics.TEXT_JUSTIFY_CENTER);
     }
