@@ -5,5 +5,5 @@ import Toybox.Lang;
 // this constant is the only way the watch can say what it runs. The
 // release workflow refuses to build a tag that does not match it.
 module AppVersion {
-    const LABEL = "0.13.1";
+    const LABEL = "0.13.2";
 }
