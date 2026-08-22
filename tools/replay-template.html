@@ -1,0 +1,240 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>__TITLE__</title>
+<style>
+  :root { color-scheme: light dark; --bg:#f7f5f1; --surface:#fff; --ink:#24211d; --muted:#6f6961; --grid:#d9d4cc; --work:#e66b38; --rest:#4d7ca8; --accel:#bd3e14; --counted:#397a68; --debounce:#e4a02b; --refractory:#ad561f; --ondevice:#4d7ca8; --face:#397a68; }
+  @media (prefers-color-scheme:dark) { :root { --bg:#171614; --surface:#211f1c; --ink:#f3eee7; --muted:#b8afa4; --grid:#49443e; --work:#f1814f; --rest:#6c9ccc; --accel:#ff7848; --counted:#67c4a9; --debounce:#ffc052; --refractory:#ff9a55; --ondevice:#6c9ccc; --face:#67c4a9; } }
+  * { box-sizing:border-box; } body { margin:0; background:var(--bg); color:var(--ink); font:15px/1.45 system-ui,-apple-system,sans-serif; }
+  main { max-width:1120px; margin:auto; padding:28px 24px 56px; } h1 { margin:0 0 4px; font-size:clamp(22px,4vw,32px); font-weight:600; }
+  .subtitle { color:var(--muted); margin-bottom:8px; } .note { color:var(--muted); font-size:13px; margin:0 0 16px; }
+  section { margin:26px 0; } h2 { font-size:16px; font-weight:600; margin:0 0 6px; }
+  .controls { display:flex; align-items:center; gap:12px; flex-wrap:wrap; margin-bottom:12px; }
+  button { font:inherit; background:var(--surface); color:var(--ink); border:1px solid var(--grid); border-radius:6px; padding:6px 14px; cursor:pointer; }
+  button:hover { border-color:var(--muted); }
+  select { font:inherit; background:var(--surface); color:var(--ink); border:1px solid var(--grid); border-radius:6px; padding:5px 8px; }
+  input[type=range] { flex:1; min-width:160px; }
+  .time-readout { font-variant-numeric:tabular-nums; color:var(--muted); min-width:5.5em; }
+  .legend { display:flex; flex-wrap:wrap; gap:14px; margin:0 0 8px; color:var(--muted); font-size:12px; }
+  .legend span { display:inline-flex; align-items:center; gap:5px; }
+  .swatch { width:10px; height:10px; border-radius:50%; display:inline-block; }
+  svg { display:block; width:100%; height:auto; background:var(--surface); border:1px solid var(--grid); }
+  .phase-work { fill:var(--work); opacity:.10; } .phase-rest { fill:var(--rest); opacity:.07; }
+  .accel-area { fill:var(--accel); opacity:.28; } .accel-line { fill:none; stroke:var(--accel); stroke-width:1; opacity:.85; }
+  .playhead { stroke:var(--ink); stroke-width:1.5; opacity:.7; }
+  .axis text { fill:var(--muted); font-size:11px; }
+  .layout { display:grid; grid-template-columns:minmax(0,1fr) 220px; gap:20px; align-items:start; }
+  .stage-wrap { border:1px solid var(--grid); background:var(--surface); padding:16px; text-align:center; }
+  .stage { perspective:700px; width:100%; height:180px; display:flex; align-items:center; justify-content:center; }
+  .watch-face { width:110px; height:110px; border-radius:20px; background:var(--face); opacity:.85; position:relative; transform-style:preserve-3d; box-shadow:0 0 0 2px var(--grid) inset; }
+  .watch-face::after { content:''; position:absolute; top:6px; left:50%; width:8px; height:8px; margin-left:-4px; border-radius:50%; background:var(--bg); }
+  .readouts { margin-top:10px; font-size:12px; color:var(--muted); text-align:left; }
+  .readouts div { display:flex; justify-content:space-between; padding:2px 0; border-top:1px solid var(--grid); }
+  .readouts div:first-child { border-top:none; }
+  .disclaimer { color:var(--muted); font-size:12px; margin-top:8px; }
+  @media (max-width:820px) { .layout { grid-template-columns:1fr; } }
+</style>
+</head>
+<body><main>
+  <h1>Swing replay</h1>
+  <div class="subtitle" id="subtitle"></div>
+  <p class="note">Replays the raw accel magnitude and per-axis gyro streams from a calibration recording, with the exact on-device counting logic (threshold, debounce, refractory) rerun against the real waveform.</p>
+  <section>
+    <div class="controls">
+      <button id="playBtn">Play</button>
+      <input type="range" id="scrub" min="0" max="1000" value="0">
+      <span class="time-readout" id="timeReadout">0:00 / 0:00</span>
+      <select id="speed">
+        <option value="0.25">0.25x</option>
+        <option value="0.5">0.5x</option>
+        <option value="1" selected>1x</option>
+        <option value="2">2x</option>
+        <option value="4">4x</option>
+      </select>
+    </div>
+    <div class="legend">
+      <span><i class="swatch" style="background:var(--counted)"></i>Counted</span>
+      <span><i class="swatch" style="background:var(--debounce)"></i>Rejected: too brief (debounce)</span>
+      <span><i class="swatch" style="background:var(--refractory)"></i>Rejected: too soon (refractory)</span>
+      <span><i class="swatch" style="background:var(--ondevice)"></i>On-device swing_event</span>
+      <span><i class="swatch" style="background:var(--work);opacity:.4;border-radius:2px"></i>Work</span>
+      <span><i class="swatch" style="background:var(--rest);opacity:.35;border-radius:2px"></i>Rest</span>
+    </div>
+    <div class="layout">
+      <div>
+        <svg id="timeline" role="img" aria-label="Accel magnitude with swing counter replay markers"></svg>
+      </div>
+      <div class="stage-wrap">
+        <div class="stage"><div class="watch-face" id="watchFace"></div></div>
+        <div class="readouts">
+          <div><span>Accel</span><strong id="accelReadout">-</strong></div>
+          <div><span>Gyro rate</span><strong id="gyroReadout">-</strong></div>
+        </div>
+        <p class="disclaimer">Orientation is integrated from raw gyro with no drift correction - a visual reference for rotation, not a precise pose.</p>
+      </div>
+    </div>
+  </section>
+</main>
+<script>
+const data = __PAYLOAD__;
+const root = document.documentElement;
+const css = (name) => getComputedStyle(root).getPropertyValue(name).trim();
+document.getElementById('subtitle').textContent = data.subtitle;
+
+const ns = 'http://www.w3.org/2000/svg';
+const S = (tag, attrs = {}) => {
+  const el = document.createElementNS(ns, tag);
+  for (const [k, v] of Object.entries(attrs)) el.setAttribute(k, v);
+  return el;
+};
+
+const svg = document.getElementById('timeline');
+const WIDTH = 880, HEIGHT = 240, MARGIN = { l: 40, r: 12, t: 10, b: 24 };
+svg.setAttribute('viewBox', `0 0 ${WIDTH} ${HEIGHT}`);
+const box = { l: MARGIN.l, r: WIDTH - MARGIN.r, t: MARGIN.t, b: HEIGHT - MARGIN.b };
+const duration = data.duration || (data.accel.at(-1)?.[0] ?? 1);
+const xScale = (t) => box.l + (t / duration) * (box.r - box.l);
+const maxMg = Math.max(1, ...data.accel.map((p) => p[1]));
+const yScale = (mg) => box.b - (mg / maxMg) * (box.b - box.t);
+
+for (const lap of data.laps) {
+  const rect = S('rect', {
+    x: xScale(lap.start), y: box.t,
+    width: Math.max(0, xScale(lap.end) - xScale(lap.start)), height: box.b - box.t,
+    class: lap.phase === 'work' ? 'phase-work' : 'phase-rest',
+  });
+  svg.append(rect);
+}
+
+if (data.accel.length > 1) {
+  let areaPath = `M${xScale(data.accel[0][0]).toFixed(1)},${box.b}`;
+  let linePath = `M${xScale(data.accel[0][0]).toFixed(1)},${yScale(data.accel[0][1]).toFixed(1)}`;
+  for (const [t, mg] of data.accel) {
+    const x = xScale(t).toFixed(1), y = yScale(mg).toFixed(1);
+    areaPath += ` L${x},${y}`;
+    linePath += ` L${x},${y}`;
+  }
+  areaPath += ` L${xScale(data.accel.at(-1)[0]).toFixed(1)},${box.b} Z`;
+  svg.append(S('path', { d: areaPath, class: 'accel-area' }));
+  svg.append(S('path', { d: linePath, class: 'accel-line' }));
+}
+
+function markers(times, color, y, radius) {
+  for (const t of times) {
+    svg.append(S('circle', { cx: xScale(t).toFixed(1), cy: y, r: radius, fill: color, opacity: .85 }));
+  }
+}
+markers(data.onDeviceEvents, css('--ondevice'), box.t + 6, 3);
+markers(data.counted, css('--counted'), box.b - 6, 4);
+markers(data.rejected.filter((e) => e.reason === 'debounce').map((e) => e.t), css('--debounce'), box.b - 6, 2.5);
+markers(data.rejected.filter((e) => e.reason === 'refractory').map((e) => e.t), css('--refractory'), box.b - 6, 2.5);
+
+for (let i = 0; i <= 3; i++) {
+  const yy = box.t + (box.b - box.t) * i / 3;
+  const val = Math.round(maxMg - (maxMg * i) / 3);
+  svg.append(S('line', { x1: box.l, x2: box.r, y1: yy, y2: yy, stroke: css('--grid'), opacity: .5 }));
+  const label = S('text', { x: box.l - 6, y: yy + 3, 'text-anchor': 'end', class: 'axis' });
+  label.textContent = val;
+  svg.append(label);
+}
+const ticks = 5;
+for (let i = 0; i <= ticks; i++) {
+  const t = (duration * i) / ticks;
+  const x = xScale(t);
+  const label = S('text', { x, y: box.b + 16, 'text-anchor': i === 0 ? 'start' : i === ticks ? 'end' : 'middle', class: 'axis' });
+  label.textContent = fmt(t);
+  svg.append(label);
+}
+const playhead = S('line', { x1: box.l, x2: box.l, y1: box.t, y2: box.b, class: 'playhead' });
+svg.append(playhead);
+
+function fmt(seconds) {
+  const s = Math.max(0, Math.round(seconds));
+  return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`;
+}
+
+function findNearest(series, t, key) {
+  if (series.length === 0) return null;
+  let lo = 0, hi = series.length - 1;
+  while (lo < hi) {
+    const mid = (lo + hi) >> 1;
+    if (series[mid][0] < t) lo = mid + 1; else hi = mid;
+  }
+  return series[lo];
+}
+
+const scrub = document.getElementById('scrub');
+const playBtn = document.getElementById('playBtn');
+const speedSelect = document.getElementById('speed');
+const timeReadout = document.getElementById('timeReadout');
+const watchFace = document.getElementById('watchFace');
+const accelReadout = document.getElementById('accelReadout');
+const gyroReadout = document.getElementById('gyroReadout');
+
+const SCRUB_RESOLUTION = 1000;
+scrub.max = String(SCRUB_RESOLUTION);
+let currentTime = 0;
+let playing = false;
+let lastFrame = null;
+
+function render(t) {
+  currentTime = Math.min(duration, Math.max(0, t));
+  playhead.setAttribute('x1', xScale(currentTime).toFixed(1));
+  playhead.setAttribute('x2', xScale(currentTime).toFixed(1));
+  scrub.value = String(Math.round((currentTime / duration) * SCRUB_RESOLUTION));
+  timeReadout.textContent = `${fmt(currentTime)} / ${fmt(duration)}`;
+
+  const accelPoint = findNearest(data.accel, currentTime);
+  accelReadout.textContent = accelPoint ? `${Math.round(accelPoint[1])} mg` : '-';
+
+  const orientationPoint = findNearest(data.orientation, currentTime);
+  if (orientationPoint) {
+    const [, roll, pitch, yaw] = orientationPoint;
+    watchFace.style.transform = `rotateX(${pitch.toFixed(1)}deg) rotateY(${yaw.toFixed(1)}deg) rotateZ(${roll.toFixed(1)}deg)`;
+  }
+  const gyroPoint = findNearest(data.gyro, currentTime);
+  if (gyroPoint) {
+    const [, gx, gy, gz] = gyroPoint;
+    const mag = Math.sqrt(gx * gx + gy * gy + gz * gz);
+    gyroReadout.textContent = `${Math.round(mag)} deg/s`;
+  }
+}
+
+function step(now) {
+  if (!playing) return;
+  if (lastFrame !== null) {
+    const speed = Number(speedSelect.value);
+    const dt = ((now - lastFrame) / 1000) * speed;
+    if (currentTime + dt >= duration) {
+      render(duration);
+      playing = false;
+      playBtn.textContent = 'Play';
+      lastFrame = null;
+      return;
+    }
+    render(currentTime + dt);
+  }
+  lastFrame = now;
+  requestAnimationFrame(step);
+}
+
+playBtn.addEventListener('click', () => {
+  playing = !playing;
+  playBtn.textContent = playing ? 'Pause' : 'Play';
+  if (playing) {
+    lastFrame = null;
+    requestAnimationFrame(step);
+  }
+});
+scrub.addEventListener('input', () => {
+  playing = false;
+  playBtn.textContent = 'Play';
+  render((Number(scrub.value) / SCRUB_RESOLUTION) * duration);
+});
+
+render(0);
+</script>
+</body>
+</html>

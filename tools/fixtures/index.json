@@ -1,0 +1,33 @@
+{
+    "$schema": "Real recordings kept for swing-detection modelling. Each entry's realSwingsPerSet is ground truth from the person who recorded it, not something derivable from the FIT file - add it by hand whenever a new fixture is added.",
+    "fixtures": [
+        {
+            "id": "recA",
+            "file": "24068257868_ACTIVITY.fit",
+            "recordedAt": "2026-08-22T16:46:11+10:00",
+            "appVersion": "0.13.5",
+            "equipment": "mace",
+            "equipmentWeightGrams": 8000,
+            "movement": "360",
+            "swingDebugEnabled": false,
+            "description": "4 work sets: 5 singles, 5 singles, 10 doubles, 10 doubles.",
+            "realSwingsPerSet": [5, 5, 10, 10],
+            "onDeviceDetectedPerSet": [5, 5, 6, 9],
+            "notes": "First real 25Hz raw-magnitude recording. Predates the gyro-capture work entirely - no gyro_x/y/z fields, no gyro_peak. Singles came in exact on-device; doubles were undercounted."
+        },
+        {
+            "id": "recB",
+            "file": "24071684170_ACTIVITY.fit",
+            "recordedAt": "2026-08-22T21:43:18+10:00",
+            "appVersion": "0.14.0",
+            "equipment": "mace",
+            "equipmentWeightGrams": 8000,
+            "movement": "360",
+            "swingDebugEnabled": true,
+            "description": "4 work sets: 5 singles, 5 singles, 10 doubles, 10 doubles.",
+            "realSwingsPerSet": [5, 5, 10, 10],
+            "onDeviceDetectedPerSet": [2, 3, 8, 7],
+            "notes": "First recording with per-axis gyro capture (gyro_x/y/z) and raw accel magnitude together. Opposite failure pattern from recA: singles badly undercounted, doubles closer. Set 2's true count includes ~2 extra events from picking the mace up / putting it down at the set boundary (user-confirmed real behaviour, not a detection bug) - accepted as counting toward the total for now, so onDeviceDetectedPerSet is graded against realSwingsPerSet as given, not adjusted for that."
+        }
+    ]
+}

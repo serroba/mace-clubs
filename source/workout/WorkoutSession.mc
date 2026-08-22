@@ -50,9 +50,13 @@ class WorkoutSession {
 
     // Mace swings get debounced counting (see SwingCounter.MACE_DEBOUNCE_SAMPLES);
     // clubs and the bulava keep the original single-sample edge behaviour.
+    // The mace threshold is user-adjustable (swingThresholdMg): different
+    // swing styles and strengths genuinely need different sensitivity, and
+    // this is the one constant we have real evidence varies recording to
+    // recording (see SwingCounter.MACE_HIGH_MG).
     private function newSwingCounter() as SwingCounter.Counter {
         return _equipmentType == Equipment.TYPE_MACE
-            ? SwingCounter.maceCounter()
+            ? SwingCounter.maceCounter(Equipment.numberProperty("swingThresholdMg", SwingCounter.MACE_HIGH_MG))
             : SwingCounter.defaultCounter();
     }
 

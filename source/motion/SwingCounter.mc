@@ -16,6 +16,24 @@ module SwingCounter {
     // Legacy behaviour: a single sample past threshold flips the state.
     const DEBOUNCE_SAMPLES = 1;
 
+    // Two real recordings (both nominally 5/5/10/10 singles-then-doubles)
+    // replayed against HIGH_MG=1800 gave opposite failure patterns - one
+    // undercounted the doubles sets, the other badly undercounted the
+    // singles sets - showing plenty of real swings peak well under 1800mg
+    // and were never the "one clean sharp pass" the original threshold
+    // assumed. A grid search across both recordings' raw waveforms (see
+    // tools/replay-swing.ts) found HIGH_MG=1700 roughly halves total count
+    // error across both (15 -> 7 swings off, summed over all 8 real work
+    // sets) with zero false positives during rest, without touching
+    // MACE_DEBOUNCE_SAMPLES/MACE_MIN_GAP_SAMPLES. First-pass estimate from
+    // two recordings - revisit once metronome-paced recordings give exact
+    // per-rep ground truth instead of per-set totals. Different swing
+    // styles/strengths will likely want different values, so this also
+    // doubles as the default for the user-adjustable swingThresholdMg
+    // setting (see WorkoutSession.newSwingCounter()) rather than a value
+    // baked in for everyone.
+    const MACE_HIGH_MG = 1700;
+
     // A mace's full-circle swing dwells through its arc for a couple of
     // seconds rather than whipping through one sharp pass, which leaves
     // room for in-swing noise to bounce back across HIGH_MG/LOW_MG inside
@@ -128,7 +146,11 @@ module SwingCounter {
         return new Counter(HIGH_MG, LOW_MG, MIN_GAP_SAMPLES, DEBOUNCE_SAMPLES);
     }
 
-    function maceCounter() as Counter {
-        return new Counter(HIGH_MG, LOW_MG, MACE_MIN_GAP_SAMPLES, MACE_DEBOUNCE_SAMPLES);
+    // highMg is caller-supplied (pass MACE_HIGH_MG for the tuned default) so
+    // it can be overridden per user (see the swingThresholdMg setting) -
+    // different swing styles/strengths legitimately need different
+    // sensitivity.
+    function maceCounter(highMg as Number) as Counter {
+        return new Counter(highMg, LOW_MG, MACE_MIN_GAP_SAMPLES, MACE_DEBOUNCE_SAMPLES);
     }
 }
