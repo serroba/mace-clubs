@@ -318,6 +318,7 @@ class WorkoutSession {
         );
         _fit.writeMotionFeatures(f[:rms] as Number, f[:peak] as Number, f[:zc] as Number);
         _fit.writeRecordSmoothness(_smoothness.getScore());
+        _fit.writeWorkPhase(_workOpen);
         if (_swingDebugEnabled) {
             _fit.writeAccelMin(f[:min] as Number);
             _fit.writeCountingState(_workOpen, _swingCounting);

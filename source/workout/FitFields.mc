@@ -48,6 +48,7 @@ class FitFields {
     const FIELD_ID_GYRO_MIN = 35;
     const FIELD_ID_ACCEL_MAG_A = 36;
     const FIELD_ID_ACCEL_MAG_B = 37;
+    const FIELD_ID_WORK_PHASE = 38;
     // A UINT16 array field caps at 16 elements (32 bytes); one raw 25Hz
     // second needs two fields to carry every sample.
     const RAW_MAG_SPLIT_A = 13;
@@ -91,6 +92,7 @@ class FitFields {
     private var _gyroMinField as FitContributor.Field?;
     private var _accelMagAField as FitContributor.Field?;
     private var _accelMagBField as FitContributor.Field?;
+    private var _workPhaseField as FitContributor.Field?;
 
     // The session and lap fields every recording carries.
     function createCoreFields(session as ActivityRecording.Session) as Void {
@@ -375,6 +377,20 @@ class FitFields {
                 {:mesgType => FitContributor.MESG_TYPE_RECORD, :units => "score"}
             );
         }
+        // Garmin Connect does not overlay this app's lap boundaries on a
+        // Strength Training activity's charts, even though real laps are
+        // recorded. This per-second band is the workaround: charted
+        // alongside accel_peak/etc, it shows exactly when each set and rest
+        // started on the same timeline, for every export-enabled user, not
+        // just calibration recordings.
+        try {
+            _workPhaseField = session.createField(
+                "work_phase",
+                FIELD_ID_WORK_PHASE,
+                FitContributor.DATA_TYPE_UINT8,
+                {:mesgType => FitContributor.MESG_TYPE_RECORD, :units => "0=rest 1=work"}
+            );
+        } catch (e) {}
     }
 
     // True once the lap fields exist, i.e. a recording session was created.
@@ -401,6 +417,13 @@ class FitFields {
         }
         if (zcField != null) {
             zcField.setData(crossings > 255 ? 255 : crossings);
+        }
+    }
+
+    function writeWorkPhase(workOpen as Boolean) as Void {
+        var field = _workPhaseField;
+        if (field != null) {
+            field.setData(workOpen ? 1 : 0);
         }
     }
 
@@ -667,5 +690,6 @@ class FitFields {
         _gyroMinField = null;
         _accelMagAField = null;
         _accelMagBField = null;
+        _workPhaseField = null;
     }
 }
