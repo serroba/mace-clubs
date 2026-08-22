@@ -8,6 +8,7 @@ developer_key*
 .DS_Store
 dist/
 *.fit
+!tools/fixtures/*.fit
 build/
 node_modules/
 __pycache__/

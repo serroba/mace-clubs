@@ -45,11 +45,16 @@ import { type Report } from "./report-types.ts";
 const ACCEL_SAMPLE_RATE_HZ = 25;
 const GYRO_STRIDE = 2;
 // Mirrors SwingCounter.mc's constants - keep these in sync with that file,
-// or the replay stops reflecting what the watch actually does.
+// or the replay stops reflecting what the watch actually does. This is the
+// tuned default (SwingCounter.MACE_HIGH_MG); the real on-watch threshold is
+// user-adjustable (swingThresholdMg), which a replay from a real recording
+// has no way to know - see decodeReplay's mace note.
 const MACE_HIGH_MG = 1700;
 const MACE_LOW_MG = 1300;
 const MACE_MIN_GAP_SAMPLES = 63;
 const MACE_DEBOUNCE_SAMPLES = 4;
+const DEFAULT_HIGH_MG = 1800;
+const DEFAULT_LOW_MG = 1300;
 const DEFAULT_MIN_GAP_SAMPLES = 25;
 const DEFAULT_DEBOUNCE_SAMPLES = 1;
 
@@ -105,7 +110,7 @@ function arrayField(fit: DecodedFit, mesg: Parameters<typeof fieldValue>[1], nam
 
 // Matches collect()'s own origin exactly (min of every lap start and record
 // timestamp), so the raw streams built here line up with report.laps.
-function computeOrigin(fit: DecodedFit): number {
+export function computeOrigin(fit: DecodedFit): number {
     const lapStarts = messagesOf(fit, "lapMesgs")
         .map((lap) => timestampSeconds(dateField(fit, lap, "start_time")))
         .filter((value): value is number => value !== null);
@@ -116,7 +121,7 @@ function computeOrigin(fit: DecodedFit): number {
     return all.length > 0 ? Math.min(...all) : 0;
 }
 
-function extractAccel(fit: DecodedFit, origin: number): [number, number][] {
+export function extractAccel(fit: DecodedFit, origin: number): [number, number][] {
     const out: [number, number][] = [];
     for (const record of messagesOf(fit, "recordMesgs")) {
         const at = timestampSeconds(dateField(fit, record, "timestamp"));
@@ -171,8 +176,10 @@ function integrateOrientation(gyro: readonly [number, number, number, number][])
     return out;
 }
 
-function replayCounter(
+export function replayCounter(
     accel: readonly [number, number][],
+    highMg: number,
+    lowMg: number,
     minGapSamples: number,
     debounceSamples: number,
 ): { counted: number[]; rejected: ReplayEvent[] } {
@@ -187,7 +194,7 @@ function replayCounter(
             sinceLast++;
         }
         if (armed) {
-            if (mg >= MACE_HIGH_MG) {
+            if (mg >= highMg) {
                 aboveStreak++;
                 if (sinceLast >= minGapSamples && aboveStreak >= debounceSamples) {
                     counted.push(t);
@@ -204,7 +211,7 @@ function replayCounter(
                 }
                 aboveStreak = 0;
             }
-        } else if (mg <= MACE_LOW_MG) {
+        } else if (mg <= lowMg) {
             belowStreak++;
             if (belowStreak >= debounceSamples) {
                 armed = true;
@@ -225,6 +232,8 @@ export function buildPayload(fit: DecodedFit, report: Report): ReplayPayload {
     const isMace = (report.summary.equipment ?? "").toLowerCase().includes("mace");
     const { counted, rejected } = replayCounter(
         accel,
+        isMace ? MACE_HIGH_MG : DEFAULT_HIGH_MG,
+        isMace ? MACE_LOW_MG : DEFAULT_LOW_MG,
         isMace ? MACE_MIN_GAP_SAMPLES : DEFAULT_MIN_GAP_SAMPLES,
         isMace ? MACE_DEBOUNCE_SAMPLES : DEFAULT_DEBOUNCE_SAMPLES,
     );
