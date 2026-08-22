@@ -202,10 +202,10 @@ class WorkoutSession {
     // Phase-1 motion research (opt-in via the motionCapture setting):
     // stream the accelerometer at 25Hz and log per-second features to
     // the FIT record stream for offline swing analysis. Gyroscope capture
-    // rides along, gated behind the calibration setting - not yet used by
-    // any detection logic, just recorded so a real hold-vs-swing rotation
-    // signature can be studied from real recordings. Note: gyro data does
-    // not appear in the Connect IQ simulator, only on a real device.
+    // rides along whenever export or calibration logging is on - gyro_peak
+    // is charted for every export-enabled user (see createMotionExportFields),
+    // while the raw per-axis samples stay calibration-only. Note: gyro data
+    // does not appear in the Connect IQ simulator, only on a real device.
     private function startMotionCapture(session as ActivityRecording.Session) as Void {
         var exportEnabled = false;
         var debugEnabled = false;
@@ -269,7 +269,8 @@ class WorkoutSession {
             _fit.createSwingDebugFields(session);
         }
         var sensorOptions = {:period => 1, :accelerometer => {:enabled => true, :sampleRate => 25}};
-        if (_swingDebugEnabled) {
+        var gyroRequested = exportEnabled || _swingDebugEnabled;
+        if (gyroRequested) {
             sensorOptions[:gyroscope] = {:enabled => true, :sampleRate => 25};
         }
         try {
@@ -279,7 +280,7 @@ class WorkoutSession {
         } catch (e) {
             // A device without a gyroscope may reject the combined request;
             // retry accel-only rather than losing motion capture entirely.
-            if (_swingDebugEnabled) {
+            if (gyroRequested) {
                 try {
                     Sensor.registerSensorDataListener(
                         method(:onSensorData),
@@ -329,14 +330,26 @@ class WorkoutSession {
                     accel.z as Array<Number>
                 )
             );
-            var gyro = data.gyroscopeData;
-            if (gyro != null) {
-                var g = Motion.gyroFeatures(
-                    gyro.x as Array<Float>,
-                    gyro.y as Array<Float>,
-                    gyro.z as Array<Float>
+        }
+        // gyro_peak is charted for every export-enabled user, not just
+        // calibration recordings (see createMotionExportFields), so this
+        // runs whenever gyro data exists at all.
+        var gyro = data.gyroscopeData;
+        if (gyro != null) {
+            var gyroX = gyro.x as Array<Float>;
+            var gyroY = gyro.y as Array<Float>;
+            var gyroZ = gyro.z as Array<Float>;
+            var g = Motion.gyroFeatures(gyroX, gyroY, gyroZ);
+            _fit.writeGyroPeak(g[:peak] as Float);
+            if (_swingDebugEnabled) {
+                // Stride must match FitFields.GYRO_AXIS_SAMPLE_COUNT, which
+                // sizes the gyro_x/y/z fields this feeds.
+                var gyroAxisStride = 2;
+                _fit.writeRawGyroAxes(
+                    Motion.decimatedAxisValues(gyroX, gyroAxisStride),
+                    Motion.decimatedAxisValues(gyroY, gyroAxisStride),
+                    Motion.decimatedAxisValues(gyroZ, gyroAxisStride)
                 );
-                _fit.writeGyroFeatures(g[:rms] as Float, g[:peak] as Float, g[:min] as Float);
             }
         }
         if (_swingCounting) {

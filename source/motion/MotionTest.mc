@@ -108,3 +108,27 @@ function testRawMagnitudesRejectBadBuffers(logger as Test.Logger) as Boolean {
     );
     return true;
 }
+
+(:test)
+function testDecimatedAxisValuesKeepsEveryStrideSample(logger as Test.Logger) as Boolean {
+    var axis = [10.0, -20.0, 30.0, -480.0, 50.0] as Array<Float>;
+    var out = Motion.decimatedAxisValues(axis, 2);
+    Test.assertEqualMessage(out.size(), 3, "ceil(5/2) samples are kept");
+    Test.assertEqualMessage(out[0] as Number, 10, "first sample is preserved exactly");
+    Test.assertEqualMessage(
+        out[1] as Number,
+        30,
+        "the second kept sample is the third raw sample, not the second"
+    );
+    Test.assertEqualMessage(out[2] as Number, 50, "the last kept sample stays signed and exact");
+    return true;
+}
+
+(:test)
+function testDecimatedAxisValuesRejectsEmptyOrBadStride(logger as Test.Logger) as Boolean {
+    var axis = [1.0, 2.0, 3.0] as Array<Float>;
+    var empty = [] as Array<Float>;
+    Test.assertEqualMessage(Motion.decimatedAxisValues(empty, 2).size(), 0, "empty buffer yields no samples");
+    Test.assertEqualMessage(Motion.decimatedAxisValues(axis, 0).size(), 0, "a zero stride yields no samples");
+    return true;
+}

@@ -138,6 +138,33 @@ module Motion {
         return mags;
     }
 
+    // Combined magnitude collapses the gyroscope's 3 axes into one number,
+    // which cannot show which rotation plane (XY/YZ/XZ) actually drives a
+    // swing. This keeps one raw axis (deg/s, rounded to the nearest whole
+    // unit) instead, so any planar combination can be reconstructed offline
+    // for plotting - reused for x, y and z alike.
+    //
+    // Downsampled (every `stride`-th sample) rather than kept at full rate:
+    // a real 25Hz second split across two array fields per axis (the same
+    // scheme accel_mag_a/b uses) would need 6 fields for 3 axes, and this
+    // device enforces a hard cap of 16 developer fields per FIT RECORD
+    // message that the existing debug fields already fill. Halving the
+    // rate (stride 2) lets one axis fit a single 16-element array field
+    // instead of two - coarser timing, still plenty for tracing a rotation
+    // plane's shape, just not fine peak-to-peak timing.
+    function decimatedAxisValues(values as Array<Float>, stride as Number) as Array<Number> {
+        var n = values.size();
+        if (stride <= 0 || n == 0) {
+            return [] as Array<Number>;
+        }
+        var count = (n + stride - 1) / stride;
+        var out = new Array<Number>[count];
+        for (var i = 0; i < count; i++) {
+            out[i] = values[i * stride].toNumber();
+        }
+        return out;
+    }
+
     // Shared production seam between the hardware listener and deterministic
     // tests. The caller owns phase state; this function guarantees that every
     // source (real sensor or synthetic) traverses the same feature, smoothness,
