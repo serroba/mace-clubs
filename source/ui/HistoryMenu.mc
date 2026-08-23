@@ -16,6 +16,20 @@ module HistoryMenu {
             menu.addItem(new WatchUi.MenuItem("No sessions yet", null, "none", null));
             return menu;
         }
+        // Recent-vs-baseline load trend, not any one session's detail - shown
+        // once at the top rather than per row. Only worth showing once there
+        // is enough history for the chronic baseline to mean anything.
+        var ratio = TrainingLoad.acuteChronicRatio(log, Time.now().value());
+        if (ratio != null) {
+            menu.addItem(
+                new WatchUi.MenuItem(
+                    Lang.format("Load: $1$x $2$", [(ratio as Float).format("%.1f"), TrainingLoad.label(ratio)]),
+                    null,
+                    "loadRatio",
+                    null
+                )
+            );
+        }
         for (var i = log.size() - 1; i >= 0; i--) {
             var rec = log[i] as Array<Storage.ValueType>;
             var score = SmoothnessLog.scoreOf(rec);
