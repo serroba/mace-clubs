@@ -24,8 +24,16 @@ import {
     readFit,
     timestampSeconds,
 } from "./fit-io.ts";
+import { computeOrigin, extractGyro } from "./replay-swing.ts";
 import { type Report, type ReportLap, type ReportPoint } from "./report-types.ts";
 import { validate } from "./validate-workout.ts";
+
+// [t, x, y, z] deg/s - only present for calibration recordings (swingDebugEnabled).
+export type GyroSample = [number, number, number, number];
+
+export interface FullReport extends Report {
+    gyro?: GyroSample[];
+}
 
 const MOVEMENTS: Readonly<Record<number, string>> = {
     0: "360",
@@ -182,8 +190,8 @@ export function collect(fit: DecodedFit): Report {
 
 const TEMPLATE_PATH = fileURLToPath(new URL("report-template.html", import.meta.url));
 
-export function render(report: Report, title: string): string {
-    const enriched: Report = {
+export function render(report: FullReport, title: string): string {
+    const enriched: FullReport = {
         ...report,
         quality: report.quality ?? validate(report),
         analysis: report.analysis ?? analyze(report),
@@ -217,10 +225,13 @@ function parseArgs(argv: readonly string[]): CliArgs {
     return { source, output };
 }
 
-export function decodeSource(source: string): Report {
+export function decodeSource(source: string): FullReport {
     const temporary = mkdtempSync(join(tmpdir(), "mace-clubs-fit-"));
     try {
-        return collect(readFit(readFileSync(fitPath(source, temporary))));
+        const fit = readFit(readFileSync(fitPath(source, temporary)));
+        const report = collect(fit);
+        const gyro = extractGyro(fit, computeOrigin(fit));
+        return gyro.length > 0 ? { ...report, gyro } : report;
     } finally {
         rmSync(temporary, { recursive: true, force: true });
     }
@@ -228,7 +239,7 @@ export function decodeSource(source: string): Report {
 
 export function main(
     argv: readonly string[] = process.argv.slice(2),
-    loader: (source: string) => Report = decodeSource,
+    loader: (source: string) => FullReport = decodeSource,
 ): number {
     const args = parseArgs(argv);
     const stem = basename(args.source, extname(args.source));

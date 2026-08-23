@@ -137,7 +137,7 @@ export function extractAccel(fit: DecodedFit, origin: number): [number, number][
     return out;
 }
 
-function extractGyro(fit: DecodedFit, origin: number): [number, number, number, number][] {
+export function extractGyro(fit: DecodedFit, origin: number): [number, number, number, number][] {
     const out: [number, number, number, number][] = [];
     for (const record of messagesOf(fit, "recordMesgs")) {
         const at = timestampSeconds(dateField(fit, record, "timestamp"));
