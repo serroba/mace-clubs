@@ -1,0 +1,8 @@
+# Derived from videos/ - regenerate with scripts/, not worth tracking.
+frames/
+audio/
+
+# Source clips stay local-only: this repo's pre-commit hook hard-blocks any
+# file over 1 MiB (tools/pre_commit.sh), and these will routinely exceed
+# that. Not backed up via git - keep your own copy elsewhere.
+videos/
