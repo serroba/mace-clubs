@@ -17,6 +17,9 @@
   .line-rms { fill:none; stroke:var(--rms); stroke-width:1.5; } .line-peak { fill:none; stroke:var(--peak); stroke-width:1.1; opacity:.72; } .line-hr { fill:none; stroke:var(--hr); stroke-width:1.4; } .line-swing { fill:none; stroke:var(--swing); stroke-width:1.8; } .swing-event { stroke:var(--swing); stroke-width:1.2; opacity:.8; } .reference { stroke:var(--muted); stroke-width:1; stroke-dasharray:5 4; opacity:.8; } .crosshair { stroke:var(--ink); stroke-width:1; opacity:.45; pointer-events:none; }
   .smooth-bar { fill:var(--smooth); } .line-smooth { fill:none; stroke:var(--smooth); stroke-width:2; } .duration-mark { fill:var(--work); } .anomaly { fill:var(--warn); } .legend { display:flex; flex-wrap:wrap; gap:14px; margin:6px 0 10px; color:var(--muted); font-size:13px; }
   .legend button { color:inherit; border:0; padding:2px 0; background:none; cursor:pointer; } .legend button[aria-pressed=false] { opacity:.4; } .swatch { width:18px; height:3px; display:inline-block; vertical-align:middle; margin-right:5px; }
+  .gyro-planes { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:12px; } .gyro-planes svg { aspect-ratio:1/1; height:auto; }
+  .gyro-dot { fill:var(--rms); opacity:.16; } .gyro-crosshair { stroke:var(--grid); stroke-width:1; }
+  @media (max-width:700px) { .gyro-planes { grid-template-columns:1fr; } }
   .tooltip { position:fixed; pointer-events:none; display:none; background:var(--surface); color:var(--ink); border:1px solid var(--grid); padding:7px 9px; font-size:12px; z-index:5; }
   .insight { border-left:3px solid var(--warn); padding:8px 12px; color:var(--muted); }
   .quality { display:grid; grid-template-columns:minmax(140px,170px) minmax(0,1fr); gap:18px; padding:18px; border:1px solid var(--grid); background:var(--surface); }
@@ -42,6 +45,7 @@
   </section>
   <section id="rhythm-section"><h2>Set rhythm comparison</h2><p class="note">Each work set is normalized from 0–100%, making cadence drift and pacing differences directly comparable.</p><svg id="rhythm" role="img" aria-label="Normalized swing cadence by set"></svg></section>
   <section id="smooth-time-section"><h2>Smoothness over time</h2><p class="note">The rolling repeatability score becomes available after four valid motion windows. Work and rest phases are shaded for context.</p><svg id="smooth-time" role="img" aria-label="Smoothness score over time"></svg></section>
+  <section id="gyro-planes-section"><h2>Rotation plane</h2><p class="note">Each dot is one raw gyroscope sample during a work set, projected onto a plane (deg/s on each axis). A tight ring or elongated blob off-center from zero shows a consistent, dominant rotation plane; a diffuse scatter near the origin shows little rotation in that plane. Calibration recordings only ("Swing calibration logging").</p><div class="gyro-planes" id="gyro-planes"></div></section>
   <section><h2>Set consistency</h2><p class="note">Smoothness is a repeatability score from wrist motion; very short sets are flagged and excluded from trend interpretation.</p><svg id="sets" role="img" aria-label="Smoothness and duration by set"></svg></section>
   <section><h2>Within-session signals</h2><p class="note" id="signal-disclaimer"></p><div class="signals" id="signals"></div></section>
   <p class="insight" id="insight"></p>
@@ -104,6 +108,24 @@ function drawSmoothTime(){
   laps.forEach(d=>svg.append(S('rect',{x:x(d.start),y:box.t,width:Math.max(1,x(d.end)-x(d.start)),height:box.b-box.t,class:d.phase==='work'?'phase-work':'phase-rest'})));
   yAxis(svg,box,[0,100],'Smoothness');timeAxis(svg,box);svg.append(S('path',{d:linePath(data,x,y,d=>d.smoothness_score),class:'line-smooth'}));
 }
+function drawGyroPlanes(){
+  const container=document.getElementById('gyro-planes'),section=document.getElementById('gyro-planes-section'),gyro=report.gyro;
+  section.style.display=(gyro&&gyro.length)?'':'none';if(!gyro||!gyro.length)return;
+  const workSamples=gyro.filter(([t])=>laps.some(l=>l.phase==='work'&&t>=l.start&&t<=l.end));
+  if(!workSamples.length){section.style.display='none';return;}
+  const MAX_POINTS=4000,stride=Math.max(1,Math.floor(workSamples.length/MAX_POINTS)),points=workSamples.filter((_,i)=>i%stride===0);
+  const maxAbs=Math.max(10,...points.flatMap(p=>[Math.abs(p[1]),Math.abs(p[2]),Math.abs(p[3])]));
+  container.replaceChildren();
+  for(const [labelA,labelB,ia,ib] of [['X','Y',1,2],['Y','Z',2,3],['X','Z',1,3]]){
+    const size=280,pad=24,box={l:pad,r:size-pad,t:pad,b:size-pad},sx=scale(-maxAbs,maxAbs,box.l,box.r),sy=scale(-maxAbs,maxAbs,box.b,box.t);
+    const svg=S('svg',{viewBox:`0 0 ${size} ${size}`,role:'img','aria-label':`Gyro ${labelA}${labelB} plane`});
+    svg.append(S('line',{x1:box.l,x2:box.r,y1:sy(0),y2:sy(0),class:'gyro-crosshair'}));
+    svg.append(S('line',{x1:sx(0),x2:sx(0),y1:box.t,y2:box.b,class:'gyro-crosshair'}));
+    const dots=S('g');points.forEach(p=>dots.append(S('circle',{cx:sx(p[ia]),cy:sy(p[ib]),r:1.6,class:'gyro-dot'})));svg.append(dots);
+    const title=S('text',{x:size/2,y:16,'text-anchor':'middle',fill:css('--muted'),'font-size':'11'});title.textContent=`${labelA}${labelB} (±${Math.round(maxAbs)} deg/s)`;svg.append(title);
+    container.append(svg);
+  }
+}
 function drawSets(){
   const svg=document.getElementById('sets'),w=Math.max(320,svg.clientWidth||900),h=w<500?280:320,m={l:64,r:28,t:22,b:42};svg.replaceChildren();svg.setAttribute('viewBox',`0 0 ${w} ${h}`);
   const scores=valid.map(d=>d.smoothness).filter(v=>Number.isFinite(v)&&v>=0),domain=scores.length?[Math.max(0,Math.min(...scores)-8),Math.min(100,Math.max(...scores)+8)]:[0,100],box={l:m.l,r:w-m.r,t:m.t,b:h-m.b},x=scale(.5,Math.max(1.5,work.length+.5),box.l,box.r),y=scale(domain[0],domain[1],box.b,box.t);
@@ -113,5 +135,5 @@ function drawSets(){
 }
 const first=valid.slice(0,3).map(d=>d.smoothness).filter(Number.isFinite),last=valid.slice(-3).map(d=>d.smoothness).filter(Number.isFinite),avg=a=>a.length?a.reduce((x,y)=>x+y,0)/a.length:null,delta=avg(last)-avg(first),anomalies=work.filter(d=>d.elapsed<10);
 document.getElementById('insight').textContent=!first.length||!last.length?'Not enough comparable smoothness data for a session trend.':anomalies.length?`Set ${anomalies.map(d=>d.set).join(', ')} lasted under 10 seconds and is excluded from the smoothness comparison. Across comparable sets, the last three averaged ${Math.abs(delta).toFixed(1)} points ${delta<0?'lower':'higher'} than the first three.`:`Across comparable sets, the last three averaged ${Math.abs(delta).toFixed(1)} points ${delta<0?'lower':'higher'} than the first three.`;
-let lastWidth=0;new ResizeObserver(entries=>{const width=Math.round(entries[0].contentRect.width);if(width===lastWidth)return;lastWidth=width;drawTimeline();drawRhythm();drawSmoothTime();drawSets();}).observe(document.querySelector('main'));
+let lastWidth=0;new ResizeObserver(entries=>{const width=Math.round(entries[0].contentRect.width);if(width===lastWidth)return;lastWidth=width;drawTimeline();drawRhythm();drawSmoothTime();drawGyroPlanes();drawSets();}).observe(document.querySelector('main'));
 </script></body></html>
