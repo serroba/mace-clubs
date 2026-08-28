@@ -744,7 +744,11 @@ class MaceClubsView extends WatchUi.View {
         var freeResting = freePhase == FreeTraining.PHASE_REST;
         var phaseText = freeResting ? "REST" : "WORK";
         var phaseElapsed = formatSecs(freePhaseElapsedSeconds());
-        var phaseLine = Lang.format("$1$  $2$", [phaseText, phaseElapsed]);
+        // Resting already shows the rest countdown as the main value below,
+        // so row 2 would otherwise repeat that same number - swap in the
+        // wall clock there instead, which is otherwise only reachable by
+        // paging (see restPageActive/_restPage == 1 below).
+        var phaseLine = Lang.format("$1$  $2$", [phaseText, freeResting ? clockTimeLabel() : phaseElapsed]);
         var mainValue = freeResting ? phaseElapsed : bpmSlotValue;
         var mainLabel = freeResting ? "SELECT: work" : bpmSlotLabel;
         if (isRepMode()) {
