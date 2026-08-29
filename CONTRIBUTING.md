@@ -48,10 +48,12 @@ This is the most direct path if you're comfortable with git — no waiting on au
 ### Option B: open a "Calibration recording" issue
 
 If you'd rather not touch git, [open a Calibration recording
-issue](https://github.com/serroba/mace-clubs/issues/new?template=calibration-recording.yml)
-and attach your FIT file by dragging it into the form. A bot
-(`.github/workflows/calibration-intake.yml`, running `tools/process-calibration-issue.ts`)
-validates it within a few minutes and comments back:
+issue](https://github.com/serroba/mace-clubs/issues/new?template=calibration-recording.yml).
+All that's actually required: attach your FIT file, say how many swings you really did per
+set, and check the two consent boxes — equipment, movement, and weight are read straight out
+of the file, so you only need to fill those in if the automated detection gets something
+wrong. A bot (`.github/workflows/calibration-intake.yml`, running
+`tools/process-calibration-issue.ts`) validates it within a few minutes and comments back:
 
 - **On a problem** (missing consent, no attachment, GPS data detected, unparseable FIT),
   it explains what to fix — edit the issue and it re-checks automatically.

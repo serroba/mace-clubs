@@ -29,6 +29,7 @@ import { fileURLToPath } from "node:url";
 import { renderCalibrationPreviewSvg, renderCalibrationPreviewTable } from "./calibration-preview-svg.ts";
 import { fitPath, messagesOf, numberField, readFit } from "./fit-io.ts";
 import { collect, render } from "./report-fit.ts";
+import { computeOrigin, extractGyro } from "./replay-swing.ts";
 import { validate } from "./validate-workout.ts";
 
 const FIXTURES_DIR = fileURLToPath(new URL("fixtures", import.meta.url));
@@ -37,7 +38,6 @@ const MAX_DOWNLOAD_BYTES = 5 * 1024 * 1024;
 const EQUIPMENT_LABEL = "Equipment";
 const WEIGHT_LABEL = "Equipment weight (grams, per implement)";
 const MOVEMENT_LABEL = "Movement";
-const DEBUG_LABEL = 'Was "Swing calibration logging" enabled for this recording?';
 const COUNTS_LABEL = "Real per-set swing counts";
 const NOTES_LABEL = "Anything else?";
 const CONSENT_LABEL = "Before you submit";
@@ -48,7 +48,6 @@ interface Fields {
     equipment: string | null;
     equipmentWeightGrams: number | null;
     movement: string | null;
-    swingDebugEnabled: boolean | null;
     claimedRealSwingsPerSet: number[] | null;
     notes: string;
     consentNoLocation: boolean;
@@ -83,22 +82,25 @@ function parseNumberList(text: string): number[] | null {
     return numbers;
 }
 
+// GitHub renders an unanswered optional form field as this literal text.
+const NO_RESPONSE = "_No response_";
+
+function optionalField(sections: Map<string, string>, label: string): string | null {
+    const value = sections.get(label);
+    return value === undefined || value === "" || value === NO_RESPONSE ? null : value;
+}
+
 function parseFields(body: string): Fields {
     const sections = parseSections(body);
-    const weightText = sections.get(WEIGHT_LABEL);
-    const debugText = sections.get(DEBUG_LABEL);
+    const weightText = optionalField(sections, WEIGHT_LABEL);
     const countsText = sections.get(COUNTS_LABEL);
     const consentSection = sections.get(CONSENT_LABEL) ?? "";
     return {
-        equipment: sections.get(EQUIPMENT_LABEL) ?? null,
-        equipmentWeightGrams:
-            weightText !== undefined && weightText !== "" && Number.isFinite(Number(weightText))
-                ? Number(weightText)
-                : null,
-        movement: sections.get(MOVEMENT_LABEL) ?? null,
-        swingDebugEnabled: debugText === undefined ? null : debugText.toLowerCase().startsWith("yes"),
+        equipment: optionalField(sections, EQUIPMENT_LABEL),
+        equipmentWeightGrams: weightText !== null && Number.isFinite(Number(weightText)) ? Number(weightText) : null,
+        movement: optionalField(sections, MOVEMENT_LABEL),
         claimedRealSwingsPerSet: countsText !== undefined ? parseNumberList(countsText) : null,
-        notes: sections.get(NOTES_LABEL) ?? "",
+        notes: optionalField(sections, NOTES_LABEL) ?? "",
         consentNoLocation: isChecked(consentSection, CONSENT_NO_LOCATION),
         consentPublish: isChecked(consentSection, CONSENT_PUBLISH),
     };
@@ -172,12 +174,12 @@ async function main(): Promise<void> {
     const fields = parseFields(body);
     const reasons: string[] = [];
 
-    if (fields.equipment === null || fields.equipment === "") {
-        reasons.push("Equipment field is missing.");
-    }
-    if (fields.movement === null || fields.movement === "") {
-        reasons.push("Movement field is missing.");
-    }
+    // Equipment/movement/weight/swingDebugEnabled are NOT required here -
+    // they're auto-detected from the FIT file itself below (it already
+    // carries them; see WorkoutSession/FitFields.mc). The form fields are
+    // just an override for when detection is wrong or the recording predates
+    // a field. Only what the file genuinely can't know is required from the
+    // human: the real count, and consent.
     if (fields.claimedRealSwingsPerSet === null) {
         reasons.push('"Real per-set swing counts" must be a comma or newline separated list of non-negative whole numbers.');
     }
@@ -233,9 +235,32 @@ async function main(): Promise<void> {
 
         const report = collect(fit);
         const quality = validate(report);
-        const onDeviceDetectedPerSet = report.laps
-            .filter((lap) => lap.phase === "work" && (lap.set ?? 0) > 0)
-            .map((lap) => lap.swings ?? 0);
+        const workLaps = report.laps.filter((lap) => lap.phase === "work" && (lap.set ?? 0) > 0);
+        const onDeviceDetectedPerSet = workLaps.map((lap) => lap.swings ?? 0);
+
+        // The FIT file already carries equipment/movement/weight (the app
+        // writes them - see WorkoutSession/FitFields.mc), and whether gyro
+        // debug data was captured is directly observable, so none of this
+        // needs to come from the human - the form fields are an override,
+        // not the source of truth.
+        const detectedGyro = extractGyro(fit, computeOrigin(fit));
+        // report.summary.equipment is whatever raw string collect() happened
+        // to sniff out of the session (e.g. "Mace: 8 kg") - normalize to the
+        // short form the rest of index.json uses (collect() itself matches
+        // on "club", singular, but every existing fixture entry says "clubs").
+        const rawEquipment = report.summary.equipment?.toLowerCase() ?? "";
+        const detectedEquipment = rawEquipment.includes("mace")
+            ? "mace"
+            : rawEquipment.includes("club")
+              ? "clubs"
+              : rawEquipment.includes("bulava")
+                ? "bulava"
+                : null;
+        const equipment = fields.equipment ?? detectedEquipment;
+        const movement = fields.movement ?? report.summary.movement ?? null;
+        const equipmentWeightGrams =
+            fields.equipmentWeightGrams ?? workLaps.find((lap) => lap.weight != null)?.weight ?? null;
+        const swingDebugEnabled = detectedGyro.length > 0;
 
         // A strict "invalid" validate() status alone isn't disqualifying -
         // one of this repo's own trusted tuning fixtures (recC) trips the
@@ -285,10 +310,10 @@ async function main(): Promise<void> {
         index.unlabelledFixtures.push({
             id: fixtureId,
             file: fixtureFileName,
-            equipment: fields.equipment,
-            equipmentWeightGrams: fields.equipmentWeightGrams,
-            movement: fields.movement,
-            swingDebugEnabled: fields.swingDebugEnabled,
+            equipment,
+            equipmentWeightGrams,
+            movement,
+            swingDebugEnabled,
             onDeviceDetectedPerSet,
             contributorClaimedRealSwingsPerSet: fields.claimedRealSwingsPerSet,
             sourceIssue: args.issueUrl,
@@ -308,6 +333,8 @@ async function main(): Promise<void> {
                 previewSvgPath: `tools/fixtures/${fixtureId}-preview.svg`,
                 reportHtmlPath: `tools/fixtures/${fixtureId}-report.html`,
                 previewTable,
+                equipment,
+                movement,
                 onDeviceDetectedPerSet,
                 claimedRealSwingsPerSet: fields.claimedRealSwingsPerSet,
                 validationStatus: quality.status,
