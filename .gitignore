@@ -17,3 +17,6 @@ tmp/
 # Dev-local, regenerate on demand (tools/export-replay-fixture.ts --resample25hz):
 # too large to commit, only feeds SwingTuningSearch.mc's `make tuning-search`.
 source/motion/RecordedFixture*Tuning.mc
+# e2e screenshot-diff artifacts (see docs/e2e-testing.md) - baselines under
+# tools/e2e/baselines/ ARE committed, just not these failure-debugging diffs.
+tools/e2e/.diffs/

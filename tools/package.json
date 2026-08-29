@@ -13,7 +13,10 @@
   "devDependencies": {
     "@eslint/js": "^10.0.1",
     "@types/node": "^26.2.0",
+    "@types/pngjs": "^6.0.5",
     "eslint": "^10.8.1",
+    "pixelmatch": "^7.2.0",
+    "pngjs": "^7.0.0",
     "typescript": "^6.0.3",
     "typescript-eslint": "^8.67.0"
   },
@@ -21,6 +24,7 @@
     "typecheck": "tsc -p tsconfig.json",
     "lint": "eslint .",
     "test": "node --experimental-strip-types --disable-warning=ExperimentalWarning --test *.test.ts",
-    "check": "npm run typecheck && npm run lint && npm run test"
+    "check": "npm run typecheck && npm run lint && npm run test",
+    "test:e2e": "node --experimental-strip-types --disable-warning=ExperimentalWarning e2e/run-e2e.ts"
   }
 }
