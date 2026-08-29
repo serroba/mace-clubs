@@ -246,6 +246,9 @@ The exercise-aware load fields and their interpretation are documented in
 [docs/load-exposure.md](docs/load-exposure.md). The gyro-primary mace swing
 detector, its tuning evidence, and how to replay-test a change against real
 recordings are documented in [docs/swing-counting.md](docs/swing-counting.md).
+A BDD-style e2e framework drives the real simulator on macOS and asserts on
+what's on screen (OCR + screenshot baselines) - see
+[docs/e2e-testing.md](docs/e2e-testing.md).
 
 - Small, focused PRs — one feature or concern per PR, stacked when they depend on each other.
 - TDD where the code is testable: unit tests (`(:test)` functions) accompany or precede the
