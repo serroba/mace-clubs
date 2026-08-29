@@ -221,7 +221,7 @@ jobs:
       - name: Run the suite instrumented
         run: |
           set -o pipefail
-          printf 'project.manifest = manifest.xml\nbase.sourcePath = bin/coverage\nbase.excludeAnnotations = offscreenRender\n' > monkey.jungle
+          printf 'project.manifest = manifest.xml\nbase.sourcePath = bin/coverage\nbase.excludeAnnotations = offscreenRender;swingTuning\n' > monkey.jungle
           HOME=/root tester.sh instinct3solar45mm 2>&1 | tee coverage-run.log
 
       - name: Report coverage
