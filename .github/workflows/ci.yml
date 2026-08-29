@@ -139,7 +139,7 @@ jobs:
               echo "::error::build failed for $d"
               cat "/tmp/sweep/$d.log"
             fi
-          done < <(grep -o 'product id="[^"]*"' manifest.xml | cut -d'"' -f2)
+          done < <(awk '/<!--/{comment=1} !comment{print} /-->/{comment=0}' manifest.xml | grep -o 'product id="[^"]*"' | cut -d'"' -f2)
           echo "Shard $((SHARD+1))/$SHARD_COUNT: $((total-fails))/$total devices build clean"
           test "$fails" -eq 0
 
