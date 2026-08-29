@@ -26,7 +26,7 @@
 import { execFile, execFileSync, spawn, spawnSync, type ChildProcess } from "node:child_process";
 import { readFile, rm, writeFile } from "node:fs/promises";
 import { homedir } from "node:os";
-import { join } from "node:path";
+import { isAbsolute, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { promisify } from "node:util";
 
@@ -34,10 +34,25 @@ import { resolve as resolveTool } from "../resolve-tool.ts";
 import { screensDiffer } from "./pixel-diff.ts";
 
 const OCR_SCRIPT = fileURLToPath(new URL("ocr.swift", import.meta.url));
+// tools/e2e/ -> tools/ -> repo root. `prgPath` is resolved against this,
+// not process.cwd(), so a caller's working directory never matters -
+// run-e2e.ts spawns each test file with cwd set to this directory, which
+// would otherwise silently resolve a relative "bin/mace-clubs.prg" to
+// tools/e2e/bin/mace-clubs.prg (nonexistent) instead of the real one at the
+// repo root.
+const REPO_ROOT = fileURLToPath(new URL("../..", import.meta.url));
 
 const DEFAULT_DEVICE = "instinct3solar45mm";
 const TITLE_BAR_POINTS = 28;
-// From this device's simulator.json: display.location.
+// From DEFAULT_DEVICE's own simulator.json: display.location. This geometry
+// (and EXPECTED_WINDOW_SIZE below) is specific to that one device's skin -
+// other devices' simulator.json report entirely different location/size
+// values (confirmed: fenix7 is {x:77,y:146,w:260,h:260}, venu3 is
+// {x:91,y:206,w:454,h:454}), and the window-size constant below isn't a
+// pure function of the device image size either (there's undocumented
+// extra chrome height on top of it), so it can't be derived generically -
+// see the launch() guard that fails fast rather than silently cropping the
+// wrong region for any other device.
 const SCREEN_OFFSET = { x: 101, y: 158 } as const;
 const SCREEN_SIZE = { width: 176, height: 176 } as const;
 // The device.png skin's native size (381x496) plus the app's own status
@@ -70,6 +85,15 @@ const execFileAsync = promisify(execFile);
 
 function isSimulatorProcessRunning(): boolean {
     return spawnSync("pgrep", ["-f", "ConnectIQ.app/Contents/MacOS/simulator"]).status === 0;
+}
+
+/** connectiq is launched `detached` (its own process group), so a Ctrl-C
+ * during a hung test run won't reach it via the terminal's SIGINT - it'd be
+ * orphaned, silently costing memory, until the next launch()'s pre-kill.
+ * Exported so run-e2e.ts's signal handlers can call the same cleanup
+ * Simulator.close() uses instead of duplicating the pkill. */
+export function killSimulatorProcess(): void {
+    spawnSync("pkill", ["-9", "-f", "ConnectIQ.app/Contents/MacOS/simulator"]);
 }
 
 async function sleep(ms: number): Promise<void> {
@@ -119,52 +143,76 @@ export class Simulator {
      * that has actually proven reliable. */
     static async launch(options: SimulatorOptions): Promise<Simulator> {
         const device = options.device ?? DEFAULT_DEVICE;
+        if (device !== DEFAULT_DEVICE) {
+            // SCREEN_OFFSET/SCREEN_SIZE/EXPECTED_WINDOW_SIZE above are only
+            // valid for DEFAULT_DEVICE's skin - silently using them for any
+            // other device would crop screenshots to the wrong region
+            // rather than failing loudly. Support for another device means
+            // finding and adding its own constants, not just passing an id.
+            throw new Error(
+                `Simulator only supports device "${DEFAULT_DEVICE}" today - screenshot geometry is ` +
+                    `hardcoded to its skin. Passing "${device}" would silently crop the wrong region.`,
+            );
+        }
+        const prgPath = isAbsolute(options.prgPath) ? options.prgPath : join(REPO_ROOT, options.prgPath);
         const connectiqBin = resolveTool("connectiq", homedir(), process.env["PATH"] ?? "");
         const monkeydoBin = resolveTool("monkeydo", homedir(), process.env["PATH"] ?? "");
 
         if (isSimulatorProcessRunning()) {
-            spawnSync("pkill", ["-9", "-f", "ConnectIQ.app/Contents/MacOS/simulator"]);
+            killSimulatorProcess();
             await waitFor(() => !isSimulatorProcessRunning(), 10_000, "the previous simulator process to exit");
         }
 
         spawn(connectiqBin, [], { detached: true, stdio: "ignore" }).unref();
-        await waitFor(() => isSimulatorProcessRunning(), 20_000, "the simulator process to start");
-        await sleep(3000); // the simulator needs time to finish booting its own UI
-
         const sim = new Simulator(options.settleMs ?? 1500);
-        await sim.loadApp(monkeydoBin, options.prgPath, device);
+        try {
+            await waitFor(() => isSimulatorProcessRunning(), 20_000, "the simulator process to start");
+            await sleep(3000); // the simulator needs time to finish booting its own UI
 
-        await waitFor(() => sim.windowExists(), 30_000, "the simulator window to appear");
-        // The window is a normal resizable macOS window - a previous
-        // session (or the user dragging it) can leave it at any size, which
-        // would break the fixed SCREEN_OFFSET/SCREEN_SIZE math below. Force
-        // it back to the size that math assumes rather than hoping for it.
-        sim.setWindowSize(EXPECTED_WINDOW_SIZE.width, EXPECTED_WINDOW_SIZE.height);
-        await waitFor(
-            () => {
-                const bounds = sim.windowBounds();
-                return bounds.width === EXPECTED_WINDOW_SIZE.width && bounds.height === EXPECTED_WINDOW_SIZE.height;
-            },
-            5000,
-            "the simulator window to resize",
-        );
-        // Immediately after a resize the window can briefly render blank
-        // before the app repaints - two consecutive blank frames look
-        // "stable" to waitForStable() even though nothing real has drawn
-        // yet, which would make the very first press() below look like it
-        // navigated somewhere when it actually just revealed the launcher
-        // screen for the first time. Wait for real (OCR-readable) content
-        // instead of just pixel stability.
-        // A cold simulator can take a good while to actually boot the
-        // device and render its first frame after monkeydo connects -
-        // observed up to ~25s on this machine. This is a one-time cost per
-        // launch(), not per test, so it's worth being generous here.
-        await waitFor(async () => (await sim.readText()).length > 0, 45_000, "the launcher screen to render");
-        // The launcher screen still has a brief reveal animation on top of
-        // that first paint; wait it out so the first real interaction
-        // doesn't land mid-transition.
-        await sim.waitForStable(4000, 300);
-        return sim;
+            await sim.loadApp(monkeydoBin, prgPath, device);
+
+            await waitFor(() => sim.windowExists(), 30_000, "the simulator window to appear");
+            // The window is a normal resizable macOS window - a previous
+            // session (or the user dragging it) can leave it at any size, which
+            // would break the fixed SCREEN_OFFSET/SCREEN_SIZE math below. Force
+            // it back to the size that math assumes rather than hoping for it.
+            sim.setWindowSize(EXPECTED_WINDOW_SIZE.width, EXPECTED_WINDOW_SIZE.height);
+            await waitFor(
+                () => {
+                    const bounds = sim.windowBounds();
+                    return (
+                        bounds.width === EXPECTED_WINDOW_SIZE.width && bounds.height === EXPECTED_WINDOW_SIZE.height
+                    );
+                },
+                5000,
+                "the simulator window to resize",
+            );
+            // Immediately after a resize the window can briefly render blank
+            // before the app repaints - two consecutive blank frames look
+            // "stable" to waitForStable() even though nothing real has drawn
+            // yet, which would make the very first press() below look like it
+            // navigated somewhere when it actually just revealed the launcher
+            // screen for the first time. Wait for real (OCR-readable) content
+            // instead of just pixel stability.
+            // A cold simulator can take a good while to actually boot the
+            // device and render its first frame after monkeydo connects -
+            // observed up to ~25s on this machine. This is a one-time cost per
+            // launch(), not per test, so it's worth being generous here.
+            await waitFor(async () => (await sim.readText()).length > 0, 45_000, "the launcher screen to render");
+            // The launcher screen still has a brief reveal animation on top of
+            // that first paint; wait it out so the first real interaction
+            // doesn't land mid-transition.
+            await sim.waitForStable(4000, 300);
+            return sim;
+        } catch (error) {
+            // A failed launch still leaves a real simulator (and possibly
+            // monkeydo) process running - left alone, it just sits there
+            // consuming memory until the next launch()'s pre-kill, which
+            // compounds exactly the kind of system memory pressure that
+            // causes launches to fail in the first place. Clean up now.
+            sim.close();
+            throw error;
+        }
     }
 
     /** monkeydo refuses to queue a load and just prints "Unable to connect"
@@ -347,6 +395,6 @@ export class Simulator {
 
     close(): void {
         this.monkeydoProcess?.kill();
-        spawnSync("pkill", ["-9", "-f", "ConnectIQ.app/Contents/MacOS/simulator"]);
+        killSimulatorProcess();
     }
 }

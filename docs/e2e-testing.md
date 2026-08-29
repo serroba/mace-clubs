@@ -91,6 +91,32 @@ void describe("Some screen", () => {
   compare against it. Delete the baseline (or set `UPDATE_BASELINES=1`) to
   intentionally recapture it after a real UI change.
 
+## Running in CI
+
+Not wired up, deliberately - it needs more than a workflow file:
+
+- **A logged-in macOS GUI session.** The driver controls windows and sends
+  key events via AppleScript's `System Events`, which needs a real
+  WindowServer session, not a headless SSH-style shell.
+- **Screen Recording + Accessibility permission, pre-granted.** These are
+  per-machine TCC grants with no supported non-interactive way to approve
+  them - no profile or `tccutil` incantation grants them on a fresh,
+  ephemeral runner. A GitHub-hosted `macos-*` runner is torn down after
+  every job, so there's never a persistent grant to build on.
+- **The Connect IQ SDK and device files installed.** Unlike the Linux CI
+  jobs above, there's no prebuilt macOS image with these preinstalled
+  (`ghcr.io/matco/connectiq-tester` is Linux-only); the SDK Manager would
+  need to be scripted fresh, and slowly, on every run.
+
+The realistic path is a **self-hosted macOS runner** - a real, persistently
+logged-in Mac added to the repo's Actions runners - where Screen Recording
+and Accessibility are granted once by hand and then persist across runs the
+same way they do for local development. That's a standing piece of
+infrastructure to own (a dedicated always-on machine), not a config change,
+so it's out of scope until there's an actual need for it; this suite stays a
+local, pre-merge/manual-verification tool for now, same as
+`tools/visual_check.sh`.
+
 ## Known flakiness
 
 The Connect IQ simulator is a real (JVM-backed) GUI app with no automation
@@ -101,3 +127,8 @@ launch well past that). If a run hangs or times out waiting for the
 simulator process/window, check `top`/`memory_pressure` before assuming the
 framework itself regressed; `pkill -9 -f "ConnectIQ.app/Contents/MacOS/simulator"`
 and a retry after freeing memory is the fastest way to confirm.
+
+`run-e2e.ts` cleans up the simulator process on a Ctrl-C, a failed
+`Simulator.launch()`, and normal completion, so it shouldn't need that
+manual `pkill` in practice - it's there as the fallback for anything that
+slips past those (a `kill -9` on the runner itself, for instance).

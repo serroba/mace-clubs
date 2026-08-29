@@ -13,7 +13,22 @@ import { spawn } from "node:child_process";
 import { readdir } from "node:fs/promises";
 import { fileURLToPath } from "node:url";
 
+import { killSimulatorProcess } from "./simulator.ts";
+
 const E2E_DIR = fileURLToPath(new URL(".", import.meta.url));
+
+// connectiq is launched detached (its own process group) so it survives a
+// child test process exiting between presses - but that also means a
+// Ctrl-C here, which only signals this process's own group, would orphan
+// it rather than clean it up. Catch that case explicitly instead of
+// leaving a JVM process to silently sit on memory until some later run's
+// pre-kill notices it.
+for (const signal of ["SIGINT", "SIGTERM"] as const) {
+    process.on(signal, () => {
+        killSimulatorProcess();
+        process.exit(signal === "SIGINT" ? 130 : 143);
+    });
+}
 
 async function runFile(fileName: string): Promise<number> {
     return await new Promise((resolve) => {
