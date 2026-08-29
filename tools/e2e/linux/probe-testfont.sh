@@ -44,10 +44,26 @@ for i in $(seq 1 20); do
     sleep 2
 done
 echo "window=$window"
+
+if [ -z "$window" ]; then
+    echo "=== NO SIMULATOR WINDOW FOUND - dumping logs and bailing out ==="
+    echo "--- xvfb.log ---"; cat /tmp/xvfb.log 2>&1
+    echo "--- openbox.log ---"; cat /tmp/openbox.log 2>&1
+    echo "--- sim.log ---"; cat /tmp/sim.log 2>&1
+    echo "--- monkeydo.log ---"; cat /tmp/monkeydo.log 2>&1
+    echo "--- xdotool search (no filter) ---"; xdotool search --name "" 2>&1
+    exit 1
+fi
 sleep 8
 
+# `import -window ""` blocks forever waiting for an interactive click if
+# ever called with no window id - timeout guards against silently hanging
+# the whole CI job instead of failing loudly.
 ocr_screen() {
-    import -window "$window" /tmp/raw.png
+    timeout 15 import -window "$window" /tmp/raw.png || {
+        echo "import timed out/failed for window=$window"
+        return 1
+    }
     convert /tmp/raw.png -crop 176x176+102+189 /tmp/crop.png
     cp /tmp/crop.png "tools/e2e/linux/shot-$1.png"
     tesseract /tmp/crop.png - 2>/dev/null
