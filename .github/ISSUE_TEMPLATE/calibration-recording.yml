@@ -1,0 +1,91 @@
+name: Calibration recording
+description: Contribute a real FIT recording to help tune and validate swing counting
+labels: [calibration-recording]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for helping improve swing counting! See
+        [CONTRIBUTING.md](https://github.com/serroba/mace-clubs/blob/main/CONTRIBUTING.md#calibration-recordings)
+        for how this is used and reviewed. All that's actually required: attach
+        your recording, tell us how many swings you really did, and check the two
+        boxes at the bottom - equipment, movement, and weight are read straight out
+        of the file, so you only need to touch those if the automated detection
+        gets something wrong.
+
+        - This becomes part of the public repo - please only submit your own recording.
+        - **Don't record with GPS/location enabled.** A bot automatically checks for
+          location data and rejects anything that has it.
+        - A bot will validate this automatically and comment with the result within
+          a few minutes, usually opening a draft pull request for a maintainer to
+          review. Nothing is merged automatically.
+  - type: textarea
+    id: attachment
+    attributes:
+      label: Attach your recording
+      description: >-
+        Drag your FIT file into this box. If GitHub's uploader rejects the `.fit`
+        extension, zip it first and attach the `.zip` instead - the automated
+        check handles both.
+    validations:
+      required: true
+  - type: textarea
+    id: real-counts
+    attributes:
+      label: Real per-set swing counts
+      description: >-
+        The number of swings you actually did, per work set, in order - as
+        accurately as you can (e.g. counted live, or reviewed a video). Comma or
+        newline separated.
+      placeholder: "5, 5, 10, 10"
+    validations:
+      required: true
+  - type: checkboxes
+    id: consent
+    attributes:
+      label: Before you submit
+      options:
+        - label: This recording contains no GPS/location data (recorded indoors, or with location tracking off)
+          required: true
+        - label: I'm okay with this recording being published in this public repo under its license
+          required: true
+  - type: markdown
+    attributes:
+      value: |
+        ---
+        Everything below is optional - only fill it in if the automated detection
+        (from the FIT file itself) gets something wrong or you want to be explicit.
+  - type: dropdown
+    id: equipment
+    attributes:
+      label: Equipment
+      description: Auto-detected from the file if left blank.
+      options:
+        - mace
+        - clubs
+        - bulava
+  - type: input
+    id: equipment-weight
+    attributes:
+      label: Equipment weight (grams, per implement)
+      description: Auto-detected from the file if left blank.
+      placeholder: "8000"
+  - type: dropdown
+    id: movement
+    attributes:
+      label: Movement
+      description: Auto-detected from the file if left blank.
+      options:
+        - "360"
+        - 10-to-2
+        - mill
+        - shield-cast
+        - reverse-mill
+        - bullwhip
+        - combo
+        - flow-other
+  - type: textarea
+    id: notes
+    attributes:
+      label: Anything else?
+      description: Recording caveats, how you counted, or anything else worth knowing.

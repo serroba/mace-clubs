@@ -239,7 +239,8 @@ git tag v0.1.0 && git push origin v0.1.0
 
 ## Workflow
 
-The smoothness model, privacy boundary, equations, assumptions, and validation
+See [CONTRIBUTING.md](CONTRIBUTING.md) for PR conventions and how to contribute a
+calibration recording. The smoothness model, privacy boundary, equations, assumptions, and validation
 plan are documented in [docs/smoothness-physics.md](docs/smoothness-physics.md).
 The exercise-aware load fields and their interpretation are documented in
 [docs/load-exposure.md](docs/load-exposure.md). The gyro-primary mace swing
