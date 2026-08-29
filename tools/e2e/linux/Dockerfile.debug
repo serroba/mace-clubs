@@ -1,0 +1,6 @@
+FROM mace-clubs-e2e-linux:local
+RUN apt-get update && apt-get install -y --no-install-recommends \
+        gdb \
+        binutils \
+        file \
+    && rm -rf /var/lib/apt/lists/*

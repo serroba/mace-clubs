@@ -65,3 +65,28 @@ mount needed if the SDK Manager was installed on the same machine. Note
 the base image's own `ENTRYPOINT` is `tester.sh` - `--entrypoint bash` is
 required or your script's path gets swallowed as `tester.sh`'s device-id
 argument instead of being executed.)
+
+## Debugging a crash
+
+`probe-debug.sh` is what root-caused the `Menu2`+custom-font segfault
+documented in `tools/e2e/testfont/README.md` - it captures a real core
+dump and pulls a `gdb` backtrace instead of guessing from log output.
+
+```sh
+docker build -t mace-clubs-e2e-linux-debug:local -f tools/e2e/linux/Dockerfile.debug .
+
+docker run --rm --privileged --entrypoint bash \
+  -v "$(pwd):/workspace" -w /workspace \
+  mace-clubs-e2e-linux-debug:local /workspace/tools/e2e/linux/probe-debug.sh
+```
+
+Cores land in `.debug-cores/` on the bind mount (not `/tmp`) so they
+survive the container being torn down by `--rm`. Two core files show up
+per crash - **use the `qemu_<prog>_<timestamp>_<pid>.core` one, not the
+plain `core`**: under local QEMU (this repo's dev machines are arm64,
+the image is amd64-only), the kernel's own core dump captures QEMU's ARM64
+*host* process, not the emulated x86_64 guest, and `gdb` can't make sense
+of it (`malformed note`, garbled registers). QEMU's own core dump is the
+real x86_64 guest state and loads cleanly against the actual `simulator`
+binary. `--privileged` is required for core dumps to write successfully
+inside the container.

@@ -34,7 +34,7 @@ Writes `resources-testfont/fonts/testfont.fnt` + `testfont_0.png`, and a
 at *runtime* with a native, stack-trace-free "Invalid Font Specified"
 crash - Garmin's custom-font format is single-channel only).
 
-## Status: blocked on a Linux simulator segfault (unresolved)
+## Status: blocked on a Linux simulator segfault (root-caused, unresolved)
 
 A single fixed-size bitmap font can't replicate the actual per-size
 layout of `Graphics.FONT_LARGE`/`FONT_TINY`/etc., so `AppFont.get()`
@@ -51,8 +51,21 @@ solved for a screen that never transitions.
 **What's still broken:** the moment the app transitions from the idle
 screen to the equipment-picker `Menu2`, the simulator's native binary
 segfaults (not a catchable Monkey C exception - the whole process dies).
-Confirmed via `tools/e2e/linux/probe-testfont.sh`:
+Root-caused via `tools/e2e/linux/probe-debug.sh` (a `gdb`-enabled fork of
+the base image, `Dockerfile.debug`-style layer adding `gdb`/`binutils`) by
+capturing a real core dump and disassembling the crash site:
 
+- **The kernel's own core dump is useless here** - under local QEMU
+  (arm64 host emulating this amd64 image), the kernel captures QEMU's own
+  ARM64 host process, not the emulated x86_64 guest state, and gdb can't
+  make sense of it (`malformed note`, garbled register state). **QEMU's
+  own core dump** (`qemu_<prog>_<timestamp>_<pid>.core`, written
+  alongside the kernel one) is the real x86_64 guest state and loads
+  cleanly against the actual `simulator` binary.
+- **The crashing instruction**: `movzwl 0x0(%rbp),%esi` with `rbp = 0x0`
+  - a null-pointer read of a UTF-16 code unit. Reproduces at the exact
+    same instruction address across every variant tried below, so it's
+    one fixed bug, not several.
 - **Reproduces identically on real x86_64 hardware**, not just local
   QEMU/arm64 emulation (verified via `.github/workflows/e2e-testfont-probe.yml`,
   a scratch branch-scoped workflow - ruled out emulation as the cause).
@@ -64,18 +77,35 @@ Confirmed via `tools/e2e/linux/probe-testfont.sh`:
 - **Independent of load timing**: reproduces whether the font resource is
   lazily loaded on first draw or pre-warmed in `MaceClubsApp.onStart()`
   before any rendering happens.
-- **Requires the outgoing view to have actually drawn with the custom
-  font**: bypassing `AppFont.get()` on the idle screen (reverting it to
-  the real, missing device font) does NOT segfault - it instead crashes
-  immediately and catchably with the original "Invalid Font Specified"
-  Monkey C exception, before ever reaching a Menu2 push. So the trigger
-  isn't merely "a custom FontResource is loaded somewhere" - it's tied to
-  the outgoing view having actually rendered pixels with it right before
-  a `Menu2` push replaces it.
+- **Independent of drawn content**: reproduces identically (same crash
+  address) whether the idle screen's text uses `Lang.format()` or plain
+  string concatenation - initially looked like it might be
+  `Lang.format()`-placeholder-scanning code (the following instructions
+  compare the loaded character against `0x24`/`'$'` and `0x40`/`'@'`),
+  but changing the string content changes nothing.
+- **Independent of whether the font is ever drawn with at all**: the
+  decisive test - skip every `dc.drawText()` call on the idle screen
+  entirely (icon only, pre-warmed font resource sitting unused in memory)
+  - still segfaults, identically, on the next `Menu2` push. This
+    supersedes an earlier, incorrect read of a messier experiment that
+    seemed to show the crash needed the outgoing view to have drawn with
+    the font; it doesn't.
 
-Current best explanation: a genuine bug/limitation in the Linux build of
-Garmin's simulator when a loaded custom `FontResource` has been drawn
-with and a `Menu2` is then pushed - not something fixable by adjusting
-the font itself. A real fix would likely mean avoiding `Menu2` entirely
-in this build variant (app-drawn menus instead), which is a materially
-larger change than this font substitution.
+**Root cause, fully isolated:** merely having a custom `FontResource`
+loaded via `WatchUi.loadResource()` anywhere in the app - never mind
+whether it's ever drawn with - crashes the Linux simulator natively on
+the very next `Menu2` push. Not fixable by adjusting the font (size,
+format, timing) or the drawn content; this is a bug/limitation in
+Garmin's simulator binary itself.
+
+**Why this kills the current approach:** the app's navigation requires
+two `Menu2` pushes (equipment picker, movement picker) before reaching
+any app-drawn screen, and further `Menu2`/`Confirmation` pushes happen
+throughout a real session (settings, rest options, discard confirmation).
+There is no point in the app's flow where the font could be loaded that
+isn't followed by another such push - so this isn't a matter of finding
+the right place to load it. A real fix would mean avoiding `Menu2`
+(and `WatchUi.Confirmation`, likely the same native-widget class of bug)
+entirely in this build variant - app-drawn menus and confirmations
+instead of Garmin's system ones - which is a materially larger rewrite
+than a font substitution, and hasn't been attempted.
