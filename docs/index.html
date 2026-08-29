@@ -163,6 +163,8 @@
   .build { display: grid; grid-template-columns: .72fr 1.28fr; gap: 80px; }
   .build h2 { margin: 0; font-size: clamp(2.8rem, 5vw, 4.5rem); line-height: .95; }
   .build p { margin: 0 0 24px; color: rgba(255,250,240,.68); }
+  .build p a { color: var(--ember); text-decoration: underline; text-underline-offset: 3px; }
+  .build p a:hover { color: #f0714a; }
   pre { margin: 0; padding: 24px; overflow-x: auto; border: 1px solid rgba(255,255,255,.2); border-radius: 4px; background: #14251e; color: #dbe2d7; font: .78rem/1.75 var(--mono); }
 
   footer { padding: 38px 0; background: var(--ink); color: rgba(255,250,240,.62); font-size: .78rem; }
@@ -304,7 +306,7 @@
     <div class="shell build">
       <div><p class="eyebrow">Open source</p><h2>Build it.<br>Shape it.<br>Swing it.</h2></div>
       <div>
-        <p>Mace &amp; Clubs is MIT-licensed and built in the open. Download v0.15.0 or compile it with the Garmin Connect IQ SDK for the Instinct 3 Solar 45 mm.</p>
+        <p>Mace &amp; Clubs is MIT-licensed and built in the open. <a href="https://github.com/serroba/mace-clubs/releases/latest">Download the latest release</a> or compile it with the Garmin Connect IQ SDK — it runs on 120+ Connect IQ watches.</p>
         <pre>git clone https://github.com/serroba/mace-clubs.git
 cd mace-clubs
 
@@ -312,6 +314,7 @@ make build
 
 # with the Connect IQ simulator running
 monkeydo bin/mace-clubs.prg instinct3solar45mm</pre>
+        <p>Don't own the right watch, or don't code? You can still help tune swing counting — <a href="https://github.com/serroba/mace-clubs/issues/new?template=calibration-recording.yml">contribute a recording</a> of your own workout and a bot validates it automatically. See <a href="https://github.com/serroba/mace-clubs/blob/main/CONTRIBUTING.md">CONTRIBUTING.md</a> for the details.</p>
       </div>
     </div>
   </section>
