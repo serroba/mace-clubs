@@ -28,6 +28,20 @@
             "realSwingsPerSet": [5, 5, 10, 10],
             "onDeviceDetectedPerSet": [2, 3, 8, 7],
             "notes": "First recording with per-axis gyro capture (gyro_x/y/z) and raw accel magnitude together. Opposite failure pattern from recA: singles badly undercounted, doubles closer. Set 2's true count includes ~2 extra events from picking the mace up / putting it down at the set boundary (user-confirmed real behaviour, not a detection bug) - accepted as counting toward the total for now, so onDeviceDetectedPerSet is graded against realSwingsPerSet as given, not adjusted for that."
+        },
+        {
+            "id": "recC",
+            "file": "24142167505_ACTIVITY.fit",
+            "recordedAt": "2026-08-28T08:31:09+10:00",
+            "appVersion": "0.14.1",
+            "equipment": "mace",
+            "equipmentWeightGrams": 8000,
+            "movement": "10-to-2",
+            "swingDebugEnabled": true,
+            "description": "2 long work sets of 60 two-handed 10-to-2 swings each.",
+            "realSwingsPerSet": [60, 60],
+            "onDeviceDetectedPerSet": [17, 18],
+            "notes": "User-confirmed exact 60/60 ground truth. The accelerometer-only on-device counter captured only 28-30%, making this the primary slow-heavy-mace undercount fixture for gyro and sensor-fusion experiments."
         }
     ]
 }

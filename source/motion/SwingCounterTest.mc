@@ -99,117 +99,70 @@ function testSwingCounterManualCorrectionNeverGoesNegative(logger as Test.Logger
     return true;
 }
 
+function gyroTestAxis(rate as Float) as Array<Float> {
+    var samples = new Array<Float>[SwingCounter.SAMPLE_RATE_HZ];
+    for (var i = 0; i < samples.size(); i++) {
+        samples[i] = rate;
+    }
+    return samples;
+}
+
 (:test)
-function testMaceCounterIgnoresABriefDipThatDefaultTreatsAsANewSwing(logger as Test.Logger) as Boolean {
-    var defaultCounter = SwingCounter.defaultCounter();
-    var maceCounter = SwingCounter.maceCounter(SwingCounter.MACE_HIGH_MG);
+function testMaceCounterUsesGyroNotAcceleration(logger as Test.Logger) as Boolean {
+    var counter = SwingCounter.maceCounter();
+    counter.addSamples(swingTestSecond(12, 4000, 1000), swingTestZeros(), swingTestZeros());
+    Test.assertEqualMessage(counter.getCount(), 0, "acceleration spikes do not drive mace counting");
 
-    var swing = new Array<Number>[SwingCounter.SAMPLE_RATE_HZ];
-    for (var i = 0; i < swing.size(); i++) {
-        swing[i] = 2200;
-    }
-    defaultCounter.addSamples(swing, swingTestZeros(), swingTestZeros());
-    maceCounter.addSamples(swing, swingTestZeros(), swingTestZeros());
-
-    // A 2-sample dip (~80ms) below LOW_MG followed by a rise back past
-    // HIGH_MG: real in-swing noise, not a return to baseline.
-    var brieflyDips = new Array<Number>[SwingCounter.SAMPLE_RATE_HZ];
-    for (var j = 0; j < brieflyDips.size(); j++) {
-        brieflyDips[j] = j < 2 ? 1000 : 2200;
-    }
-    defaultCounter.addSamples(brieflyDips, swingTestZeros(), swingTestZeros());
-    maceCounter.addSamples(brieflyDips, swingTestZeros(), swingTestZeros());
-
-    Test.assertEqualMessage(defaultCounter.getCount(), 2, "a single-sample re-arm double-counts the brief dip");
-    Test.assertEqualMessage(maceCounter.getCount(), 1, "debounced re-arm holds through the brief dip");
+    var quiet = gyroTestAxis(20.0);
+    var rotating = gyroTestAxis(420.0);
+    var zero = gyroTestAxis(0.0);
+    counter.addGyroSamples(quiet, zero, zero, true);
+    counter.addGyroSamples(rotating, zero, zero, true);
+    counter.addGyroSamples(quiet, zero, zero, true);
+    Test.assertEqualMessage(counter.getCount(), 1, "a broad rotation-rate peak counts one mace swing");
     return true;
 }
 
 (:test)
-function testMaceCounterRefractoryHoldsThroughASameRepDoublet(logger as Test.Logger) as Boolean {
-    // Shape lifted from a real recording's per-second swing_event trace:
-    // never more than one event per second, but consecutive events came in
-    // pairs roughly 1s apart followed by a 4s gap to the next pair - a
-    // spurious re-arm-and-cross late in the same physical rep, not two
-    // real swings. The 1s legacy refractory (still used by
-    // MACE_DEBOUNCE_SAMPLES alone) lets the second cross through; the
-    // longer mace refractory should not.
-    var counter = SwingCounter.maceCounter(SwingCounter.MACE_HIGH_MG);
-    var high = new Array<Number>[SwingCounter.SAMPLE_RATE_HZ];
-    for (var i = 0; i < high.size(); i++) {
-        high[i] = 2200;
+function testMaceCounterCountsSeparatedGyroPeaks(logger as Test.Logger) as Boolean {
+    var counter = SwingCounter.maceCounter();
+    var zero = gyroTestAxis(0.0);
+    var quiet = gyroTestAxis(40.0);
+    var rotating = gyroTestAxis(420.0);
+    for (var cycle = 0; cycle < 3; cycle++) {
+        counter.addGyroSamples(quiet, zero, zero, true);
+        counter.addGyroSamples(rotating, zero, zero, true);
+        counter.addGyroSamples(quiet, zero, zero, true);
     }
-    var low = new Array<Number>[SwingCounter.SAMPLE_RATE_HZ];
-    for (var i = 0; i < low.size(); i++) {
-        low[i] = 1000;
-    }
-    // A dip that briefly re-arms (4 samples), then rises again for the rest
-    // of the second - exactly the spurious "second trigger" candidate.
-    var dipThenRise = new Array<Number>[SwingCounter.SAMPLE_RATE_HZ];
-    for (var j = 0; j < dipThenRise.size(); j++) {
-        dipThenRise[j] = j < 4 ? 1000 : 2200;
-    }
-
-    counter.addSamples(high, swingTestZeros(), swingTestZeros()); // real rep: counts
-    Test.assertEqualMessage(counter.getCount(), 1, "the real rep counts");
-    counter.addSamples(dipThenRise, swingTestZeros(), swingTestZeros()); // spurious candidate ~1s later
-    Test.assertEqualMessage(counter.getCount(), 1, "the same-rep doublet does not count again");
-    counter.addSamples(low, swingTestZeros(), swingTestZeros());
-    counter.addSamples(low, swingTestZeros(), swingTestZeros());
-    counter.addSamples(high, swingTestZeros(), swingTestZeros()); // next real rep, ~4s later
-    Test.assertEqualMessage(counter.getCount(), 2, "the next genuine rep still counts");
+    Test.assertEqualMessage(counter.getCount(), 3, "three separated rotation peaks count three swings");
     return true;
 }
 
 (:test)
-function testMaceCounterStillCountsASustainedReturnToBaseline(logger as Test.Logger) as Boolean {
-    var counter = SwingCounter.maceCounter(SwingCounter.MACE_HIGH_MG);
-
-    var swing = new Array<Number>[SwingCounter.SAMPLE_RATE_HZ];
-    for (var i = 0; i < swing.size(); i++) {
-        swing[i] = 2200;
+function testMaceCounterRejectsGyroTremorAndResets(logger as Test.Logger) as Boolean {
+    var counter = SwingCounter.maceCounter();
+    var zero = gyroTestAxis(0.0);
+    for (var second = 0; second < 5; second++) {
+        counter.addGyroSamples(gyroTestAxis(120.0), zero, zero, true);
     }
-    counter.addSamples(swing, swingTestZeros(), swingTestZeros());
-    Test.assertEqualMessage(counter.getCount(), 1, "first swing counts");
-
-    // MACE_MIN_GAP_SAMPLES (63, ~2.5s) needs more than one second at
-    // baseline to clear - three quiet seconds comfortably covers it before
-    // the next rise.
-    var quiet = new Array<Number>[SwingCounter.SAMPLE_RATE_HZ];
-    for (var j = 0; j < quiet.size(); j++) {
-        quiet[j] = 1000;
-    }
-    counter.addSamples(quiet, swingTestZeros(), swingTestZeros());
-    counter.addSamples(quiet, swingTestZeros(), swingTestZeros());
-    counter.addSamples(quiet, swingTestZeros(), swingTestZeros());
-    counter.addSamples(swing, swingTestZeros(), swingTestZeros());
-    Test.assertEqualMessage(
-        counter.getCount(),
-        2,
-        "a sustained return to baseline re-arms and the next rise counts"
-    );
+    Test.assertEqualMessage(counter.getCount(), 0, "sub-threshold rotation does not count");
+    counter.addGyroSamples(gyroTestAxis(420.0), zero, zero, true);
+    counter.addGyroSamples(gyroTestAxis(40.0), zero, zero, true);
+    Test.assertEqualMessage(counter.getCount(), 1, "a real peak counts before reset");
+    counter.reset();
+    Test.assertEqualMessage(counter.getCount(), 0, "reset clears gyro count and filter state");
     return true;
 }
 
 (:test)
-function testMaceCounterHonorsACustomThreshold(logger as Test.Logger) as Boolean {
-    // A swing that peaks at 1600mg - below the tuned MACE_HIGH_MG default,
-    // but real for someone whose style/strength never reaches that (the
-    // whole reason the swingThresholdMg setting exists).
-    var moderate = new Array<Number>[SwingCounter.SAMPLE_RATE_HZ];
-    for (var i = 0; i < moderate.size(); i++) {
-        moderate[i] = 1600;
-    }
-    var defaultSensitivity = SwingCounter.maceCounter(SwingCounter.MACE_HIGH_MG);
-    defaultSensitivity.addSamples(moderate, swingTestZeros(), swingTestZeros());
-    Test.assertEqualMessage(
-        defaultSensitivity.getCount(),
-        0,
-        "1600mg never reaches the tuned default threshold"
-    );
-
-    var moreSensitive = SwingCounter.maceCounter(1500);
-    moreSensitive.addSamples(moderate, swingTestZeros(), swingTestZeros());
-    Test.assertEqualMessage(moreSensitive.getCount(), 1, "a lower custom threshold counts the same swing");
+function testMaceCounterUpdatesDuringRestWithoutCounting(logger as Test.Logger) as Boolean {
+    var counter = SwingCounter.maceCounter();
+    var zero = gyroTestAxis(0.0);
+    counter.addGyroSamples(gyroTestAxis(420.0), zero, zero, false);
+    counter.addGyroSamples(gyroTestAxis(40.0), zero, zero, false);
+    Test.assertEqualMessage(counter.getCount(), 0, "rest rotation updates the filter but never counts");
+    counter.addGyroSamples(gyroTestAxis(420.0), zero, zero, true);
+    counter.addGyroSamples(gyroTestAxis(40.0), zero, zero, true);
+    Test.assertEqualMessage(counter.getCount(), 1, "the next work rotation peak counts normally");
     return true;
 }

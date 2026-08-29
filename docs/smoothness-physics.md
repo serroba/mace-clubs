@@ -41,8 +41,9 @@ Each valid window produces three orientation-resistant summaries:
 - crossing count: sign changes of demeaned `|a_measured|`, a coarse timing and
   periodicity proxy.
 
-No athlete mass, mace mass, lever arm, or angular velocity is available, so
-the app intentionally does not label any value as force or torque. Computing
+The smoothness model does not use athlete mass, implement mass, lever arm, or
+the separately captured gyroscope stream, so the app intentionally does not
+label any value as force or torque. Computing
 `F = m a` would be misleading because the measured acceleration is at the
 wrist, not at the mace centre of mass, and the required masses and geometry
 are unknown.

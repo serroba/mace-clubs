@@ -5,9 +5,9 @@
 **Website:** [serroba.github.io/mace-clubs](https://serroba.github.io/mace-clubs/) ·
 **Downloads:** [GitHub Releases](https://github.com/serroba/mace-clubs/releases)
 
-A Garmin Connect IQ workout app for steel mace and Indian club training. Primary
-target is the **Instinct 3 Solar**; the manifest supports 120 Garmin wearables
-(Connect IQ API 3.1+), and CI compiles every one of them.
+A Garmin Connect IQ workout app for steel mace and Indian club training. The
+supported watch is the **Instinct 3 Solar 45 mm**, whose 25 Hz gyroscope has
+been validated against labelled real-workout recordings.
 
 ## Features
 
@@ -18,7 +18,7 @@ target is the **Instinct 3 Solar**; the manifest supports 120 Garmin wearables
   network request, or smoothness data upload
 - On-watch history of the last 20 sessions, browsable from Settings with the
   per-set scores and the implement each session was recorded with
-- Optional accelerometer swing counter, plus 5:00 and 10:00 Challenge presets
+- Optional gyroscope-primary mace swing counter, plus 5:00 and 10:00 Challenge presets
   (after the traditional timed max-swing gada competitions) where counting is
   always on and detected swings replace metronome rounds on screen
 - Garmin Connect charts for cumulative swings and rolling swing cadence,
@@ -56,6 +56,17 @@ measurement, not an estimate of tendon force. The validator reports structural
 errors, missing series, metadata gaps, and a transparent data-quality score; use
 `--json` for automation. Its findings describe recording quality, not injury risk.
 - Tempo, tone, and vibration configurable from the Garmin Connect phone app
+
+For labelled calibration recordings, tune and verify the shared gyro detector
+against independently known per-set counts with:
+
+```sh
+node --experimental-strip-types tools/tune-swing-counter.ts
+```
+
+The current shared model reproduces the labelled mace sets `[5, 5, 10, 10]`
+and `[60, 60]`. These fixtures test detector replay; a fresh physical-watch
+workout remains the final check for live sensor behavior.
 
 ## Controls
 

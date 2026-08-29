@@ -36,7 +36,6 @@
     <string id="SettingSmoothnessEnabled">Local smoothness score (stays on watch)</string>
     <string id="SettingLoadExposureEnabled">Exercise load exposure (uses more battery)</string>
     <string id="SettingSwingDebug">Swing calibration logging: forces motion charts + swing counter together and adds gyroscope data (research use, more battery)</string>
-    <string id="SettingSwingThreshold">Mace swing sensitivity (mg, lower = more sensitive)</string>
     <string id="CueRoundStarts">Every loop (A and B)</string>
     <string id="CueEveryBeat">Every beat</string>
     <string id="CueCycleTop">Cycle top (once per pattern)</string>
