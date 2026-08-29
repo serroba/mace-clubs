@@ -3,5 +3,5 @@ base.sourcePath = source
 # Same as monkey.local.jungle, minus the swingTuning exclusion - this is the
 # only jungle that actually compiles SwingTuningSearch.mc's grid search.
 # Run via `make tuning-search`, not part of any routine test run.
-base.excludeAnnotations = noOffscreenRender
-fenix5.excludeAnnotations = noOffscreenRender;liveSessionSmoke
+base.excludeAnnotations = noOffscreenRender;testFont
+fenix5.excludeAnnotations = noOffscreenRender;liveSessionSmoke;testFont

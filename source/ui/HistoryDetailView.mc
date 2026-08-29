@@ -41,17 +41,17 @@ class HistoryDetailView extends WatchUi.View {
         dc.drawText(
             cx,
             h * 12 / 100,
-            Graphics.FONT_TINY,
+            AppFont.get(Graphics.FONT_TINY),
             HistoryMenu.stamp(SmoothnessLog.epochOf(_rec)),
             Graphics.TEXT_JUSTIFY_CENTER
         );
-        dc.drawText(cx, h * 22 / 100, Graphics.FONT_TINY, equipment, Graphics.TEXT_JUSTIFY_CENTER);
+        dc.drawText(cx, h * 22 / 100, AppFont.get(Graphics.FONT_TINY), equipment, Graphics.TEXT_JUSTIFY_CENTER);
 
         var movement = Lang.format(
             "$1$ | $2$",
             [Movement.typeLabel(SmoothnessLog.moveOf(_rec)), Movement.sideLabel(SmoothnessLog.sideOf(_rec))]
         );
-        dc.drawText(cx, h * 31 / 100, Graphics.FONT_XTINY, movement, Graphics.TEXT_JUSTIFY_CENTER);
+        dc.drawText(cx, h * 31 / 100, AppFont.get(Graphics.FONT_XTINY), movement, Graphics.TEXT_JUSTIFY_CENTER);
 
         if (_index < 0) {
             drawOverview(dc, cx, h);
@@ -65,7 +65,7 @@ class HistoryDetailView extends WatchUi.View {
         dc.drawText(
             cx,
             h * 43 / 100,
-            Graphics.FONT_SMALL,
+            AppFont.get(Graphics.FONT_SMALL),
             score < 0 ? "smooth --" : Lang.format("smooth $1$", [score]),
             Graphics.TEXT_JUSTIFY_CENTER
         );
@@ -73,14 +73,14 @@ class HistoryDetailView extends WatchUi.View {
             dc.drawText(
                 cx,
                 h * 58 / 100,
-                Graphics.FONT_TINY,
+                AppFont.get(Graphics.FONT_TINY),
                 Lang.format("$1$ sets | $2$ work", [_count, formatSecs(SmoothnessLog.totalWorkOf(_rec))]),
                 Graphics.TEXT_JUSTIFY_CENTER
             );
             dc.drawText(
                 cx,
                 h * 69 / 100,
-                Graphics.FONT_TINY,
+                AppFont.get(Graphics.FONT_TINY),
                 Lang.format("$1$ rest", [formatSecs(SmoothnessLog.totalRestOf(_rec))]),
                 Graphics.TEXT_JUSTIFY_CENTER
             );
@@ -88,7 +88,7 @@ class HistoryDetailView extends WatchUi.View {
             dc.drawText(
                 cx,
                 h * 62 / 100,
-                Graphics.FONT_TINY,
+                AppFont.get(Graphics.FONT_TINY),
                 Lang.format("$1$ saved sets", [_count]),
                 Graphics.TEXT_JUSTIFY_CENTER
             );
@@ -96,7 +96,7 @@ class HistoryDetailView extends WatchUi.View {
         dc.drawText(
             cx,
             h * 86 / 100,
-            Graphics.FONT_XTINY,
+            AppFont.get(Graphics.FONT_XTINY),
             _count > 0 ? "DOWN: set details" : "BACK: exit",
             Graphics.TEXT_JUSTIFY_CENTER
         );
@@ -107,7 +107,7 @@ class HistoryDetailView extends WatchUi.View {
         dc.drawText(
             cx,
             h * 41 / 100,
-            Graphics.FONT_TINY,
+            AppFont.get(Graphics.FONT_TINY),
             Lang.format(
                 "SET $1$/$2$ | $3$",
                 [_index + 1, _count, Movement.sideLabel(SmoothnessLog.blockSideOf(_rec, _index))]
@@ -117,7 +117,7 @@ class HistoryDetailView extends WatchUi.View {
         dc.drawText(
             cx,
             h * 53 / 100,
-            Graphics.FONT_TINY,
+            AppFont.get(Graphics.FONT_TINY),
             Lang.format(
                 "W$1$  R$2$",
                 [
@@ -130,7 +130,7 @@ class HistoryDetailView extends WatchUi.View {
         dc.drawText(
             cx,
             h * 65 / 100,
-            Graphics.FONT_TINY,
+            AppFont.get(Graphics.FONT_TINY),
             score < 0 ? "smooth --" : Lang.format("smooth $1$", [score]),
             Graphics.TEXT_JUSTIFY_CENTER
         );
@@ -140,8 +140,14 @@ class HistoryDetailView extends WatchUi.View {
         if (exposure >= 0) {
             load = Lang.format("$1$ | L$2$", [load, LoadExposure.compactLabel(exposure)]);
         }
-        dc.drawText(cx, h * 76 / 100, Graphics.FONT_XTINY, load, Graphics.TEXT_JUSTIFY_CENTER);
-        dc.drawText(cx, h * 88 / 100, Graphics.FONT_XTINY, "UP/DOWN: pages", Graphics.TEXT_JUSTIFY_CENTER);
+        dc.drawText(cx, h * 76 / 100, AppFont.get(Graphics.FONT_XTINY), load, Graphics.TEXT_JUSTIFY_CENTER);
+        dc.drawText(
+            cx,
+            h * 88 / 100,
+            AppFont.get(Graphics.FONT_XTINY),
+            "UP/DOWN: pages",
+            Graphics.TEXT_JUSTIFY_CENTER
+        );
     }
 
     private function formatSecs(total as Number) as String {

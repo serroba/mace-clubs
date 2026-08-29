@@ -46,12 +46,30 @@ class WeightEditorView extends WatchUi.View {
         dc.drawText(
             cx,
             h * 18 / 100,
-            Graphics.FONT_SMALL,
+            AppFont.get(Graphics.FONT_SMALL),
             Equipment.implementName(_kind).toUpper() + " WEIGHT",
             Graphics.TEXT_JUSTIFY_CENTER
         );
-        dc.drawText(cx, h * 40 / 100, Graphics.FONT_NUMBER_MEDIUM, label(), Graphics.TEXT_JUSTIFY_CENTER);
-        dc.drawText(cx, h * 68 / 100, Graphics.FONT_TINY, "UP/DOWN: 0.5", Graphics.TEXT_JUSTIFY_CENTER);
-        dc.drawText(cx, h * 80 / 100, Graphics.FONT_TINY, "SELECT: save", Graphics.TEXT_JUSTIFY_CENTER);
+        dc.drawText(
+            cx,
+            h * 40 / 100,
+            AppFont.get(Graphics.FONT_NUMBER_MEDIUM),
+            label(),
+            Graphics.TEXT_JUSTIFY_CENTER
+        );
+        dc.drawText(
+            cx,
+            h * 68 / 100,
+            AppFont.get(Graphics.FONT_TINY),
+            "UP/DOWN: 0.5",
+            Graphics.TEXT_JUSTIFY_CENTER
+        );
+        dc.drawText(
+            cx,
+            h * 80 / 100,
+            AppFont.get(Graphics.FONT_TINY),
+            "SELECT: save",
+            Graphics.TEXT_JUSTIFY_CENTER
+        );
     }
 }

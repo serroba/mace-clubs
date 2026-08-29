@@ -4,8 +4,11 @@ base.sourcePath = source
 # fonts into buffered bitmaps, so local suites run the real draw paths.
 # swingTuning is SwingTuningSearch.mc's grid search: too slow for routine
 # runs, opt-in only via `make tuning-search` (monkey.tuning.jungle).
-base.excludeAnnotations = noOffscreenRender;swingTuning
+# testFont is AppFont.mc's bundled bitmap-font substitute, only compiled by
+# monkey.e2e.jungle (tools/e2e/testfont/README.md) - local dev always uses
+# actual device fonts.
+base.excludeAnnotations = noOffscreenRender;swingTuning;testFont
 # fenix5 (API 3.1, our oldest supported level) fails Activity.SPORT_TRAINING
 # at runtime even though it compiles fine - a pre-existing gap unrelated to
 # the live-session smoke test, which every other device runs fine.
-fenix5.excludeAnnotations = noOffscreenRender;liveSessionSmoke;swingTuning
+fenix5.excludeAnnotations = noOffscreenRender;liveSessionSmoke;swingTuning;testFont

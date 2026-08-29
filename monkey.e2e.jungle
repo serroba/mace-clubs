@@ -1,0 +1,14 @@
+project.manifest = manifest.xml
+base.sourcePath = source
+# CI-only build variant for the Linux e2e pipeline (tools/e2e/linux/) - see
+# tools/e2e/testfont/README.md. Adds a bundled open-source bitmap font
+# (AppFont.mc's :testFont variant) that every app-drawn onUpdate() screen
+# routes its Graphics.FONT_* calls through. A bare Linux CI runner has no
+# licensed Garmin device fonts, and the simulator fatally crashes ("Invalid
+# Font Specified") the instant onUpdate() calls drawText with a missing
+# device font - so this isn't cosmetic, screens are unreachable without it.
+# Never shipped: monkey.jungle/monkey.local.jungle exclude :testFont, so
+# real builds and local dev never touch this font.
+base.resourcePath = $(base.resourcePath);resources-testfont
+base.excludeAnnotations = offscreenRender;swingTuning;noTestFont
+fenix5.excludeAnnotations = offscreenRender;liveSessionSmoke;swingTuning;noTestFont

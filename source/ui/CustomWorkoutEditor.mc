@@ -93,13 +93,25 @@ class CustomWorkoutEditorView extends WatchUi.View {
         dc.clear();
         var cx = dc.getWidth() / 2;
         var h = dc.getHeight();
-        dc.drawText(cx, h * 18 / 100, Graphics.FONT_SMALL, title(), Graphics.TEXT_JUSTIFY_CENTER);
-        dc.drawText(cx, h * 40 / 100, Graphics.FONT_NUMBER_MEDIUM, value(), Graphics.TEXT_JUSTIFY_CENTER);
-        dc.drawText(cx, h * 68 / 100, Graphics.FONT_TINY, stepLabel(), Graphics.TEXT_JUSTIFY_CENTER);
+        dc.drawText(cx, h * 18 / 100, AppFont.get(Graphics.FONT_SMALL), title(), Graphics.TEXT_JUSTIFY_CENTER);
+        dc.drawText(
+            cx,
+            h * 40 / 100,
+            AppFont.get(Graphics.FONT_NUMBER_MEDIUM),
+            value(),
+            Graphics.TEXT_JUSTIFY_CENTER
+        );
+        dc.drawText(
+            cx,
+            h * 68 / 100,
+            AppFont.get(Graphics.FONT_TINY),
+            stepLabel(),
+            Graphics.TEXT_JUSTIFY_CENTER
+        );
         dc.drawText(
             cx,
             h * 80 / 100,
-            Graphics.FONT_TINY,
+            AppFont.get(Graphics.FONT_TINY),
             _field == FIELD_REST ? "SELECT: save" : "SELECT: next",
             Graphics.TEXT_JUSTIFY_CENTER
         );

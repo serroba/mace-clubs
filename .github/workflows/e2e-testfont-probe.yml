@@ -1,0 +1,33 @@
+name: E2E testfont probe (scratch)
+
+# Throwaway diagnostic workflow - NOT part of the routine CI suite. Runs
+# only on this scratch branch to verify the :testFont custom bitmap font
+# (tools/e2e/testfont/) on a real x86_64 runner, ruling out whether a
+# native simulator segfault seen locally is QEMU/arm64-emulation-specific
+# (this repo's dev machine is arm64, connectiq-tester is amd64-only) or a
+# genuine font-format problem. Delete this file once that's answered.
+on:
+  push:
+    branches: [explore/e2e-testfont-probe]
+
+jobs:
+  probe:
+    name: Linux e2e testfont probe (real x86_64)
+    runs-on: ubuntu-latest
+    container:
+      image: ghcr.io/matco/connectiq-tester:latest
+    steps:
+      - uses: actions/checkout@v6
+      - name: Install GUI automation deps
+        run: |
+          apt-get update -qq
+          apt-get install -y -qq --no-install-recommends xdotool imagemagick tesseract-ocr openbox
+      - name: Run testfont probe
+        run: bash tools/e2e/linux/probe-testfont.sh
+      - name: Upload screenshots
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: testfont-probe-screenshots
+          path: tools/e2e/linux/shot-*.png
+          if-no-files-found: ignore

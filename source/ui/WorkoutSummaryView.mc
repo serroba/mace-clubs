@@ -129,24 +129,54 @@ class WorkoutSummaryView extends WatchUi.View {
 
         var lines = currentLines();
 
-        dc.drawText(headingX, h * 18 / 100, Graphics.FONT_MEDIUM, lines[0], Graphics.TEXT_JUSTIFY_CENTER);
+        dc.drawText(
+            headingX,
+            h * 18 / 100,
+            AppFont.get(Graphics.FONT_MEDIUM),
+            lines[0],
+            Graphics.TEXT_JUSTIFY_CENTER
+        );
         if (!lines[1].equals("")) {
-            dc.drawText(cx, h * 38 / 100, Graphics.FONT_SMALL, lines[1], Graphics.TEXT_JUSTIFY_CENTER);
+            dc.drawText(
+                cx,
+                h * 38 / 100,
+                AppFont.get(Graphics.FONT_SMALL),
+                lines[1],
+                Graphics.TEXT_JUSTIFY_CENTER
+            );
         }
         if (!lines[2].equals("")) {
-            dc.drawText(cx, h * 50 / 100, Graphics.FONT_TINY, lines[2], Graphics.TEXT_JUSTIFY_CENTER);
+            dc.drawText(
+                cx,
+                h * 50 / 100,
+                AppFont.get(Graphics.FONT_TINY),
+                lines[2],
+                Graphics.TEXT_JUSTIFY_CENTER
+            );
         }
         if (!lines[3].equals("")) {
-            dc.drawText(cx, h * 61 / 100, Graphics.FONT_TINY, lines[3], Graphics.TEXT_JUSTIFY_CENTER);
+            dc.drawText(
+                cx,
+                h * 61 / 100,
+                AppFont.get(Graphics.FONT_TINY),
+                lines[3],
+                Graphics.TEXT_JUSTIFY_CENTER
+            );
         }
         dc.drawText(
             cx,
             h * 79 / 100,
-            Graphics.FONT_XTINY,
+            AppFont.get(Graphics.FONT_XTINY),
             Lang.format("UP/DOWN $1$/$2$", [_page + 1, totalPages()]),
             Graphics.TEXT_JUSTIFY_CENTER
         );
-        dc.drawText(cx, h * 89 / 100, Graphics.FONT_XTINY, "BACK exit", Graphics.TEXT_JUSTIFY_CENTER);
+        dc.drawText(
+            cx,
+            h * 89 / 100,
+            AppFont.get(Graphics.FONT_XTINY),
+            "BACK exit",
+            Graphics.TEXT_JUSTIFY_CENTER
+        );
     }
 
     // [heading, line1, line2, line3] for the current page; exposed (not just

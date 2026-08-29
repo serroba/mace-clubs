@@ -472,25 +472,31 @@ class MaceClubsView extends WatchUi.View {
         var h = dc.getHeight();
 
         if (_starting) {
-            dc.drawText(cx, h * 20 / 100, Graphics.FONT_SMALL, "GET READY", Graphics.TEXT_JUSTIFY_CENTER);
+            dc.drawText(
+                cx,
+                h * 20 / 100,
+                AppFont.get(Graphics.FONT_SMALL),
+                "GET READY",
+                Graphics.TEXT_JUSTIFY_CENTER
+            );
             dc.drawText(
                 cx,
                 h * 38 / 100,
-                Graphics.FONT_NUMBER_HOT,
+                AppFont.get(Graphics.FONT_NUMBER_HOT),
                 getStartCountdownRemaining().toString(),
                 Graphics.TEXT_JUSTIFY_CENTER
             );
             dc.drawText(
                 cx,
                 h * 74 / 100,
-                Graphics.FONT_TINY,
+                AppFont.get(Graphics.FONT_TINY),
                 workout.getEquipmentLabel(),
                 Graphics.TEXT_JUSTIFY_CENTER
             );
             dc.drawText(
                 cx,
                 h * 85 / 100,
-                Graphics.FONT_TINY,
+                AppFont.get(Graphics.FONT_TINY),
                 Movement.typeLabel(workout.getMovementType()),
                 Graphics.TEXT_JUSTIFY_CENTER
             );
@@ -504,7 +510,7 @@ class MaceClubsView extends WatchUi.View {
             dc.drawText(
                 pausedHeadingX,
                 h * 22 / 100,
-                Graphics.FONT_MEDIUM,
+                AppFont.get(Graphics.FONT_MEDIUM),
                 done ? "DONE!" : "PAUSED",
                 Graphics.TEXT_JUSTIFY_CENTER
             );
@@ -517,7 +523,13 @@ class MaceClubsView extends WatchUi.View {
             var headline = balance.equals("")
                 ? Lang.format("$1$  $2$ work", [setsLabel, formatSecs(workout.getTotalWorkSeconds())])
                 : Lang.format("$1$  $2$", [setsLabel, balance]);
-            dc.drawText(cx, h * 35 / 100, Graphics.FONT_TINY, headline, Graphics.TEXT_JUSTIFY_CENTER);
+            dc.drawText(
+                cx,
+                h * 35 / 100,
+                AppFont.get(Graphics.FONT_TINY),
+                headline,
+                Graphics.TEXT_JUSTIFY_CENTER
+            );
             if (count > 0) {
                 var index = _summarySet;
                 if (index < 0 || index >= count) {
@@ -526,7 +538,7 @@ class MaceClubsView extends WatchUi.View {
                 dc.drawText(
                     cx,
                     h * 45 / 100,
-                    Graphics.FONT_TINY,
+                    AppFont.get(Graphics.FONT_TINY),
                     Lang.format(
                         "$1$ $2$/$3$ W$4$ R$5$",
                         [
@@ -541,17 +553,35 @@ class MaceClubsView extends WatchUi.View {
                 );
                 var detail = SummaryText.detail(workout, index);
                 if (!detail.equals("")) {
-                    dc.drawText(cx, h * 56 / 100, Graphics.FONT_TINY, detail, Graphics.TEXT_JUSTIFY_CENTER);
+                    dc.drawText(
+                        cx,
+                        h * 56 / 100,
+                        AppFont.get(Graphics.FONT_TINY),
+                        detail,
+                        Graphics.TEXT_JUSTIFY_CENTER
+                    );
                 }
             }
-            dc.drawText(cx, h * 69 / 100, Graphics.FONT_XTINY, "SELECT save", Graphics.TEXT_JUSTIFY_CENTER);
+            dc.drawText(
+                cx,
+                h * 69 / 100,
+                AppFont.get(Graphics.FONT_XTINY),
+                "SELECT save",
+                Graphics.TEXT_JUSTIFY_CENTER
+            );
             if (!done) {
-                dc.drawText(cx, h * 79 / 100, Graphics.FONT_XTINY, "BACK resume", Graphics.TEXT_JUSTIFY_CENTER);
+                dc.drawText(
+                    cx,
+                    h * 79 / 100,
+                    AppFont.get(Graphics.FONT_XTINY),
+                    "BACK resume",
+                    Graphics.TEXT_JUSTIFY_CENTER
+                );
             }
             dc.drawText(
                 cx,
                 h * (done ? 79 : 89) / 100,
-                Graphics.FONT_XTINY,
+                AppFont.get(Graphics.FONT_XTINY),
                 count > 1 ? "UP/DOWN sets" : "MENU discard",
                 Graphics.TEXT_JUSTIFY_CENTER
             );
@@ -569,12 +599,18 @@ class MaceClubsView extends WatchUi.View {
             }
             dc.drawBitmap(_subwindow ? cx - 45 : cx - 31, iconY, _icon);
             if (isRepMode()) {
-                dc.drawText(cx, h * 35 / 100, Graphics.FONT_SMALL, "REP MODE", Graphics.TEXT_JUSTIFY_CENTER);
+                dc.drawText(
+                    cx,
+                    h * 35 / 100,
+                    AppFont.get(Graphics.FONT_SMALL),
+                    "REP MODE",
+                    Graphics.TEXT_JUSTIFY_CENTER
+                );
             } else if (!isFreeTraining) {
                 dc.drawText(
                     cx,
                     h * 35 / 100,
-                    Graphics.FONT_SMALL,
+                    AppFont.get(Graphics.FONT_SMALL),
                     preset[:label] as String,
                     Graphics.TEXT_JUSTIFY_CENTER
                 );
@@ -582,7 +618,7 @@ class MaceClubsView extends WatchUi.View {
             dc.drawText(
                 cx,
                 h * (isFreeTraining ? 40 : 49) / 100,
-                isFreeTraining ? Graphics.FONT_SMALL : Graphics.FONT_TINY,
+                isFreeTraining ? AppFont.get(Graphics.FONT_SMALL) : AppFont.get(Graphics.FONT_TINY),
                 isRepMode()
                     ? Lang.format("target $1$ swings", [TrainingMode.targetLabel(_repTarget)])
                     : Lang.format("$1$ bpm | $2$", [metronome.getBpm(), patternLabel(preset)]),
@@ -591,14 +627,14 @@ class MaceClubsView extends WatchUi.View {
             dc.drawText(
                 cx,
                 h * (isFreeTraining ? 55 : 62) / 100,
-                isFreeTraining ? Graphics.FONT_SMALL : Graphics.FONT_TINY,
+                isFreeTraining ? AppFont.get(Graphics.FONT_SMALL) : AppFont.get(Graphics.FONT_TINY),
                 "SELECT to start",
                 Graphics.TEXT_JUSTIFY_CENTER
             );
             dc.drawText(
                 cx,
                 h * (isFreeTraining ? 70 : 75) / 100,
-                Graphics.FONT_TINY,
+                AppFont.get(Graphics.FONT_TINY),
                 "MENU opens settings",
                 Graphics.TEXT_JUSTIFY_CENTER
             );
@@ -608,7 +644,13 @@ class MaceClubsView extends WatchUi.View {
             // above on both the interval and free-training idle layouts.
             var lastSmooth = smoothnessText(false);
             if (!lastSmooth.equals("")) {
-                dc.drawText(cx, h * 88 / 100, Graphics.FONT_TINY, lastSmooth, Graphics.TEXT_JUSTIFY_CENTER);
+                dc.drawText(
+                    cx,
+                    h * 88 / 100,
+                    AppFont.get(Graphics.FONT_TINY),
+                    lastSmooth,
+                    Graphics.TEXT_JUSTIFY_CENTER
+                );
             }
             return;
         }
@@ -652,7 +694,7 @@ class MaceClubsView extends WatchUi.View {
                 dc.drawText(
                     w * 14 / 100,
                     h * 8 / 100,
-                    Graphics.FONT_TINY,
+                    AppFont.get(Graphics.FONT_TINY),
                     formatSecs(timerMs / 1000),
                     Graphics.TEXT_JUSTIFY_LEFT
                 );
@@ -661,7 +703,7 @@ class MaceClubsView extends WatchUi.View {
                 dc.drawText(
                     cx,
                     h * 6 / 100,
-                    Graphics.FONT_TINY,
+                    AppFont.get(Graphics.FONT_TINY),
                     formatSecs(timerMs / 1000),
                     Graphics.TEXT_JUSTIFY_CENTER
                 );
@@ -669,7 +711,7 @@ class MaceClubsView extends WatchUi.View {
             dc.drawText(
                 cx,
                 h * 30 / 100,
-                Graphics.FONT_SMALL,
+                AppFont.get(Graphics.FONT_SMALL),
                 Lang.format(
                     "SET $1$/$2$  $3$",
                     [s[:set], p.getSets(), phase == Intervals.PHASE_REST ? "REST" : "WORK"]
@@ -679,7 +721,7 @@ class MaceClubsView extends WatchUi.View {
             dc.drawText(
                 cx,
                 h * 40 / 100,
-                Graphics.FONT_NUMBER_HOT,
+                AppFont.get(Graphics.FONT_NUMBER_HOT),
                 formatSecs(s[:remaining] as Number),
                 Graphics.TEXT_JUSTIFY_CENTER
             );
@@ -687,28 +729,28 @@ class MaceClubsView extends WatchUi.View {
                 dc.drawText(
                     cx - 35,
                     h * 72 / 100,
-                    Graphics.FONT_MEDIUM,
+                    AppFont.get(Graphics.FONT_MEDIUM),
                     bpmSlotValue,
                     Graphics.TEXT_JUSTIFY_CENTER
                 );
                 dc.drawText(
                     cx - 35,
                     h * 87 / 100,
-                    Graphics.FONT_TINY,
+                    AppFont.get(Graphics.FONT_TINY),
                     bpmSlotLabel,
                     Graphics.TEXT_JUSTIFY_CENTER
                 );
                 dc.drawText(
                     cx + 35,
                     h * 72 / 100,
-                    Graphics.FONT_MEDIUM,
+                    AppFont.get(Graphics.FONT_MEDIUM),
                     otherValue,
                     Graphics.TEXT_JUSTIFY_CENTER
                 );
                 dc.drawText(
                     cx + 35,
                     h * 87 / 100,
-                    Graphics.FONT_TINY,
+                    AppFont.get(Graphics.FONT_TINY),
                     otherLabel,
                     Graphics.TEXT_JUSTIFY_CENTER
                 );
@@ -716,21 +758,45 @@ class MaceClubsView extends WatchUi.View {
                 dc.drawText(
                     cx - 50,
                     h * 72 / 100,
-                    Graphics.FONT_MEDIUM,
+                    AppFont.get(Graphics.FONT_MEDIUM),
                     bpmSlotValue,
                     Graphics.TEXT_JUSTIFY_CENTER
                 );
                 dc.drawText(
                     cx - 50,
                     h * 87 / 100,
-                    Graphics.FONT_TINY,
+                    AppFont.get(Graphics.FONT_TINY),
                     bpmSlotLabel,
                     Graphics.TEXT_JUSTIFY_CENTER
                 );
-                dc.drawText(cx, h * 72 / 100, Graphics.FONT_MEDIUM, setSwings, Graphics.TEXT_JUSTIFY_CENTER);
-                dc.drawText(cx, h * 87 / 100, Graphics.FONT_TINY, setSwingsLabel, Graphics.TEXT_JUSTIFY_CENTER);
-                dc.drawText(cx + 50, h * 72 / 100, Graphics.FONT_MEDIUM, hr, Graphics.TEXT_JUSTIFY_CENTER);
-                dc.drawText(cx + 50, h * 87 / 100, Graphics.FONT_TINY, "hr", Graphics.TEXT_JUSTIFY_CENTER);
+                dc.drawText(
+                    cx,
+                    h * 72 / 100,
+                    AppFont.get(Graphics.FONT_MEDIUM),
+                    setSwings,
+                    Graphics.TEXT_JUSTIFY_CENTER
+                );
+                dc.drawText(
+                    cx,
+                    h * 87 / 100,
+                    AppFont.get(Graphics.FONT_TINY),
+                    setSwingsLabel,
+                    Graphics.TEXT_JUSTIFY_CENTER
+                );
+                dc.drawText(
+                    cx + 50,
+                    h * 72 / 100,
+                    AppFont.get(Graphics.FONT_MEDIUM),
+                    hr,
+                    Graphics.TEXT_JUSTIFY_CENTER
+                );
+                dc.drawText(
+                    cx + 50,
+                    h * 87 / 100,
+                    AppFont.get(Graphics.FONT_TINY),
+                    "hr",
+                    Graphics.TEXT_JUSTIFY_CENTER
+                );
             }
             return;
         }
@@ -803,55 +869,117 @@ class MaceClubsView extends WatchUi.View {
             dc.drawText(
                 w * 10 / 100,
                 h * 8 / 100,
-                Graphics.FONT_TINY,
+                AppFont.get(Graphics.FONT_TINY),
                 formatSecs(timerMs / 1000),
                 Graphics.TEXT_JUSTIFY_LEFT
             );
-            dc.drawText(w * 10 / 100, h * 20 / 100, Graphics.FONT_TINY, phaseLine, Graphics.TEXT_JUSTIFY_LEFT);
-            dc.drawText(cx, h * 36 / 100, Graphics.FONT_MEDIUM, mainValue, Graphics.TEXT_JUSTIFY_CENTER);
-            dc.drawText(cx, h * 52 / 100, Graphics.FONT_TINY, mainLabel, Graphics.TEXT_JUSTIFY_CENTER);
+            dc.drawText(
+                w * 10 / 100,
+                h * 20 / 100,
+                AppFont.get(Graphics.FONT_TINY),
+                phaseLine,
+                Graphics.TEXT_JUSTIFY_LEFT
+            );
+            dc.drawText(
+                cx,
+                h * 36 / 100,
+                AppFont.get(Graphics.FONT_MEDIUM),
+                mainValue,
+                Graphics.TEXT_JUSTIFY_CENTER
+            );
+            dc.drawText(
+                cx,
+                h * 52 / 100,
+                AppFont.get(Graphics.FONT_TINY),
+                mainLabel,
+                Graphics.TEXT_JUSTIFY_CENTER
+            );
             dc.drawText(
                 cx - 30,
                 h * 70 / 100,
-                Graphics.FONT_MEDIUM,
+                AppFont.get(Graphics.FONT_MEDIUM),
                 workout.getSets().toString(),
                 Graphics.TEXT_JUSTIFY_CENTER
             );
-            dc.drawText(cx - 30, h * 84 / 100, Graphics.FONT_TINY, "sets", Graphics.TEXT_JUSTIFY_CENTER);
-            dc.drawText(cx + 30, h * 70 / 100, Graphics.FONT_MEDIUM, otherValue, Graphics.TEXT_JUSTIFY_CENTER);
-            dc.drawText(cx + 30, h * 84 / 100, Graphics.FONT_TINY, otherLabel, Graphics.TEXT_JUSTIFY_CENTER);
+            dc.drawText(
+                cx - 30,
+                h * 84 / 100,
+                AppFont.get(Graphics.FONT_TINY),
+                "sets",
+                Graphics.TEXT_JUSTIFY_CENTER
+            );
+            dc.drawText(
+                cx + 30,
+                h * 70 / 100,
+                AppFont.get(Graphics.FONT_MEDIUM),
+                otherValue,
+                Graphics.TEXT_JUSTIFY_CENTER
+            );
+            dc.drawText(
+                cx + 30,
+                h * 84 / 100,
+                AppFont.get(Graphics.FONT_TINY),
+                otherLabel,
+                Graphics.TEXT_JUSTIFY_CENTER
+            );
             return;
         }
         dc.drawText(
             cx,
             h * 6 / 100,
-            Graphics.FONT_TINY,
+            AppFont.get(Graphics.FONT_TINY),
             formatSecs(timerMs / 1000),
             Graphics.TEXT_JUSTIFY_CENTER
         );
-        dc.drawText(cx, h * 18 / 100, Graphics.FONT_SMALL, phaseLine, Graphics.TEXT_JUSTIFY_CENTER);
+        dc.drawText(
+            cx,
+            h * 18 / 100,
+            AppFont.get(Graphics.FONT_SMALL),
+            phaseLine,
+            Graphics.TEXT_JUSTIFY_CENTER
+        );
         dc.drawText(
             cx,
             h * 32 / 100,
             // Number fonts are digit-sized; combo text and rest-page labels
             // (e.g. "42 sw") need a text face.
-            comboWorking || restPageActive ? Graphics.FONT_LARGE : Graphics.FONT_NUMBER_HOT,
+            comboWorking || restPageActive
+                ? AppFont.get(Graphics.FONT_LARGE)
+                : AppFont.get(Graphics.FONT_NUMBER_HOT),
             mainValue,
             Graphics.TEXT_JUSTIFY_CENTER
         );
-        dc.drawText(cx, h * 56 / 100, Graphics.FONT_TINY, mainLabel, Graphics.TEXT_JUSTIFY_CENTER);
+        dc.drawText(cx, h * 56 / 100, AppFont.get(Graphics.FONT_TINY), mainLabel, Graphics.TEXT_JUSTIFY_CENTER);
         dc.drawText(
             cx - 50,
             h * 68 / 100,
-            Graphics.FONT_MEDIUM,
+            AppFont.get(Graphics.FONT_MEDIUM),
             workout.getSets().toString(),
             Graphics.TEXT_JUSTIFY_CENTER
         );
-        dc.drawText(cx - 50, h * 84 / 100, Graphics.FONT_TINY, "sets", Graphics.TEXT_JUSTIFY_CENTER);
-        dc.drawText(cx, h * 68 / 100, Graphics.FONT_MEDIUM, setSwings, Graphics.TEXT_JUSTIFY_CENTER);
-        dc.drawText(cx, h * 84 / 100, Graphics.FONT_TINY, setSwingsLabel, Graphics.TEXT_JUSTIFY_CENTER);
-        dc.drawText(cx + 50, h * 68 / 100, Graphics.FONT_MEDIUM, hr, Graphics.TEXT_JUSTIFY_CENTER);
-        dc.drawText(cx + 50, h * 84 / 100, Graphics.FONT_TINY, "hr", Graphics.TEXT_JUSTIFY_CENTER);
+        dc.drawText(
+            cx - 50,
+            h * 84 / 100,
+            AppFont.get(Graphics.FONT_TINY),
+            "sets",
+            Graphics.TEXT_JUSTIFY_CENTER
+        );
+        dc.drawText(
+            cx,
+            h * 68 / 100,
+            AppFont.get(Graphics.FONT_MEDIUM),
+            setSwings,
+            Graphics.TEXT_JUSTIFY_CENTER
+        );
+        dc.drawText(
+            cx,
+            h * 84 / 100,
+            AppFont.get(Graphics.FONT_TINY),
+            setSwingsLabel,
+            Graphics.TEXT_JUSTIFY_CENTER
+        );
+        dc.drawText(cx + 50, h * 68 / 100, AppFont.get(Graphics.FONT_MEDIUM), hr, Graphics.TEXT_JUSTIFY_CENTER);
+        dc.drawText(cx + 50, h * 84 / 100, AppFont.get(Graphics.FONT_TINY), "hr", Graphics.TEXT_JUSTIFY_CENTER);
     }
 
     // Draw a metric (rounds or heart rate, per the circleShows setting)
@@ -874,8 +1002,13 @@ class MaceClubsView extends WatchUi.View {
         }
         // Fill the circle: pick the largest font whose text fits the
         // subwindow, rather than a fixed small one floating in the middle.
-        var fonts = [Graphics.FONT_LARGE, Graphics.FONT_MEDIUM, Graphics.FONT_SMALL, Graphics.FONT_TINY] as Array<Graphics.FontDefinition>;
-        var font = Graphics.FONT_TINY;
+        var fonts = [
+            AppFont.get(Graphics.FONT_LARGE),
+            AppFont.get(Graphics.FONT_MEDIUM),
+            AppFont.get(Graphics.FONT_SMALL),
+            AppFont.get(Graphics.FONT_TINY)
+        ] as Array<Graphics.FontDefinition>;
+        var font = AppFont.get(Graphics.FONT_TINY);
         for (var i = 0; i < fonts.size(); i++) {
             var dims = dc.getTextDimensions(value, fonts[i]);
             if (dims[0] <= sw * 90 / 100 && dims[1] <= sh * 95 / 100) {
