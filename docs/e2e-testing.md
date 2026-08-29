@@ -36,8 +36,16 @@ npm run test:e2e
 
 Requires macOS with **Screen Recording** and **Accessibility** permission
 granted to whatever terminal/app runs this (System Settings > Privacy &
-Security). Not part of `make check` or CI - there's no GUI to drive there,
-the same reason `tools/visual_check.sh`'s Linux/Xvfb approach isn't either.
+Security), **and an awake, unlocked display session** - a sleeping or
+locked screen produces the same symptom as a missing permission (solid
+black `screencapture` output) plus every `Simulator.launch()` timing out
+waiting for a window, since the app can't actually paint one without a
+live WindowServer session. Confirmed via `ioreg -c IOHIDSystem`'s
+`HIDIdleTime` (seconds since the last real keyboard/mouse input) reading
+in the thousands right before a run like this fails - check that before
+suspecting memory pressure or a driver regression. Not part of
+`make check` or CI - there's no GUI to drive there, the same reason
+`tools/visual_check.sh`'s Linux/Xvfb approach isn't either.
 
 `npm run test:e2e` runs `tools/e2e/run-e2e.ts`, which runs each
 `*.e2e.test.ts` file as its own `node --test` process, one at a time.
@@ -126,7 +134,11 @@ system memory pressure (a starved JVM GCs constantly, which can push a cold
 launch well past that). If a run hangs or times out waiting for the
 simulator process/window, check `top`/`memory_pressure` before assuming the
 framework itself regressed; `pkill -9 -f "ConnectIQ.app/Contents/MacOS/simulator"`
-and a retry after freeing memory is the fastest way to confirm.
+and a retry after freeing memory is the fastest way to confirm. But check
+`ioreg -c IOHIDSystem | grep HIDIdleTime` first if the process is sitting
+at ~0% CPU rather than churning - a high idle time (screen asleep/locked)
+produces the exact same "window never appears" timeout and is a different
+fix (wake and unlock, not free memory).
 
 `run-e2e.ts` cleans up the simulator process on a Ctrl-C, a failed
 `Simulator.launch()`, and normal completion, so it shouldn't need that
