@@ -270,16 +270,40 @@ class WorkoutSession {
             _fit.createSwingDebugFields(session);
         }
         var sensorOptions = {:period => 1, :accelerometer => {:enabled => true, :sampleRate => 25}};
-        // Every supported device now has a gyroscope; requesting it is a hard
-        // runtime requirement rather than an optional enhancement.
-        sensorOptions[:gyroscope] = {:enabled => true, :sampleRate => 25};
+        // Mace's primary detector needs gyro data; export/debug also want it
+        // when available. Most supported devices have a gyroscope, but the
+        // fleet is broader than the one watch this has been physically
+        // validated on, so it stays a request, not an assumption.
+        var gyroRequested = _equipmentType == Equipment.TYPE_MACE || exportEnabled || _swingDebugEnabled;
+        if (gyroRequested) {
+            sensorOptions[:gyroscope] = {:enabled => true, :sampleRate => 25};
+        }
         try {
             Sensor.registerSensorDataListener(method(:onSensorData), sensorOptions);
             _capturing = true;
             _swingCounting = swingEnabled;
         } catch (e) {
-            // Unsupported/broken sensor registration must not silently fall
-            // back to a counter we know badly undercounts slow heavy mace.
+            // A device without a gyroscope may reject the combined request;
+            // retry accel-only rather than losing motion capture entirely.
+            if (gyroRequested) {
+                try {
+                    Sensor.registerSensorDataListener(
+                        method(:onSensorData),
+                        {:period => 1, :accelerometer => {:enabled => true, :sampleRate => 25}}
+                    );
+                    _capturing = true;
+                    _swingCounting = swingEnabled;
+                    // No gyroscope on this device: the gyro-primary mace
+                    // counter would never receive data and stay at zero, so
+                    // fall back to the accelerometer detector mace used
+                    // before gyro-primary counting shipped.
+                    if (_equipmentType == Equipment.TYPE_MACE) {
+                        _swingCounter = SwingCounter.defaultCounter();
+                    }
+                    return;
+                } catch (e2) {}
+            }
+            // no high-rate accel on this device; features stay unwritten
             _loadExposureEnabled = false;
             _fit.clearLoadExposureFields();
         }
