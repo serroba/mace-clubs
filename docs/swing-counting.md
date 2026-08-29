@@ -22,7 +22,8 @@ As of this writing: `GYRO_THRESHOLD_DPS = 250.0`, `GYRO_SMOOTHING_SAMPLES = 22`,
 recordings with real per-set ground truth (`tools/fixtures/index.json`'s
 `recB` and `recC` — see that file's `notes` for what each recording is).
 That is a small evidence base; treat these constants as a reasonable first
-cut, not a settled result.
+cut, not a settled result. See [CONTRIBUTING.md](../CONTRIBUTING.md#calibration-recordings)
+for how to contribute another labelled recording.
 
 ## Replay-testing this algorithm against real recordings
 

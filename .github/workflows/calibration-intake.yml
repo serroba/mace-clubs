@@ -1,0 +1,121 @@
+name: Calibration intake
+
+# Validates a "Calibration recording" issue (see
+# .github/ISSUE_TEMPLATE/calibration-recording.yml) with
+# tools/process-calibration-issue.ts and, if it passes, opens a draft PR
+# adding it to tools/fixtures/ as an *unlabelled* fixture - see
+# docs/swing-counting.md for why unlabelled, and CONTRIBUTING.md for the
+# human-facing side of this. No cloud service of our own: this all runs on
+# GitHub-hosted runners against files GitHub itself is already hosting.
+#
+# Nothing here is auto-merged - a maintainer always reviews the draft PR
+# before anything lands on main.
+
+permissions:
+  contents: write
+  issues: write
+  pull-requests: write
+
+on:
+  issues:
+    types: [opened, edited]
+
+jobs:
+  process:
+    name: Validate a calibration recording
+    if: contains(github.event.issue.labels.*.name, 'calibration-recording')
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      - name: Install FIT tooling
+        run: npm ci --prefix tools
+
+      - name: Write issue body to a file
+        uses: actions/github-script@v8
+        with:
+          script: |
+            const fs = require("fs");
+            fs.writeFileSync(`${process.env.RUNNER_TEMP}/issue-body.txt`, context.payload.issue.body || "");
+
+      - name: Process the calibration submission
+        id: process
+        run: |
+          node --experimental-strip-types tools/process-calibration-issue.ts \
+            --body-file "$RUNNER_TEMP/issue-body.txt" \
+            --issue-number "${{ github.event.issue.number }}" \
+            --issue-url "${{ github.event.issue.html_url }}" \
+            | tee "$RUNNER_TEMP/result.json"
+          echo "status=$(node -e 'console.log(JSON.parse(require("fs").readFileSync(process.env.RUNNER_TEMP + "/result.json", "utf8")).status)')" >> "$GITHUB_OUTPUT"
+
+      - name: Comment with the validation failure
+        if: steps.process.outputs.status == 'fail'
+        uses: actions/github-script@v8
+        with:
+          script: |
+            const fs = require("fs");
+            const result = JSON.parse(fs.readFileSync(`${process.env.RUNNER_TEMP}/result.json`, "utf8"));
+            const body = [
+              "Thanks for the submission! The automated check found a problem:",
+              "",
+              ...result.reasons.map((reason) => `- ${reason}`),
+              "",
+              "Edit this issue to fix it - this re-checks automatically on edit.",
+            ].join("\n");
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.payload.issue.number,
+              body,
+            });
+
+      - name: Open (or update) a draft PR
+        if: steps.process.outputs.status == 'pass'
+        uses: peter-evans/create-pull-request@v8
+        id: pr
+        with:
+          commit-message: "Add community calibration recording (issue #${{ github.event.issue.number }})"
+          title: "Community calibration: community-${{ github.event.issue.number }}"
+          body: |
+            Automated submission from #${{ github.event.issue.number }}, added to `tools/fixtures/index.json`'s
+            `unlabelledFixtures` - **not** used for tuning until a maintainer reviews it and promotes it to
+            `fixtures` with a verified `realSwingsPerSet`. See `docs/swing-counting.md`.
+
+            ![On-device detected vs. claimed real count](https://raw.githubusercontent.com/${{ github.repository }}/community-calibration-issue-${{ github.event.issue.number }}/tools/fixtures/community-${{ github.event.issue.number }}-preview.svg)
+
+            The full interactive report (`tools/fixtures/community-${{ github.event.issue.number }}-report.html`)
+            is in this PR's diff - check it out locally to view it (open the file directly in a browser).
+          branch: community-calibration-issue-${{ github.event.issue.number }}
+          delete-branch: false
+          draft: true
+          labels: calibration-recording
+
+      - name: Comment with the result
+        if: steps.process.outputs.status == 'pass'
+        uses: actions/github-script@v8
+        with:
+          script: |
+            const fs = require("fs");
+            const result = JSON.parse(fs.readFileSync(`${process.env.RUNNER_TEMP}/result.json`, "utf8"));
+            const prUrl = process.env.PR_URL;
+            const lines = [
+              "Thanks for the submission! It passed the automated check" +
+                (result.validationStatus !== "healthy"
+                  ? ` (FIT validation flagged it as "${result.validationStatus}" - see the PR for details)`
+                  : "") +
+                (prUrl ? ` and opened ${prUrl} for a maintainer to review.` : ", but opening the PR failed - a maintainer will follow up."),
+              "",
+              result.previewTable,
+            ];
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.payload.issue.number,
+              body: lines.join("\n"),
+            });
+        env:
+          PR_URL: ${{ steps.pr.outputs.pull-request-url }}

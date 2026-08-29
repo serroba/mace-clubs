@@ -1,0 +1,93 @@
+name: Calibration recording
+description: Contribute a real FIT recording to help tune and validate swing counting
+labels: [calibration-recording]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for helping improve swing counting! See
+        [CONTRIBUTING.md](https://github.com/serroba/mace-clubs/blob/main/CONTRIBUTING.md#calibration-recordings)
+        for how this is used and reviewed. A couple of things up front:
+
+        - This becomes part of the public repo - please only submit your own recording.
+        - **Don't record with GPS/location enabled.** A bot automatically checks for
+          location data and rejects anything that has it.
+        - **Attach your FIT file** by dragging it into the "Anything else?" field
+          below. If GitHub's uploader rejects the `.fit` extension, zip it first and
+          attach the `.zip` instead - the automated check handles both.
+        - A bot will validate this automatically and comment with the result within
+          a few minutes, usually opening a draft pull request for a maintainer to
+          review. Nothing is merged automatically.
+  - type: dropdown
+    id: equipment
+    attributes:
+      label: Equipment
+      options:
+        - mace
+        - clubs
+        - bulava
+    validations:
+      required: true
+  - type: input
+    id: equipment-weight
+    attributes:
+      label: Equipment weight (grams, per implement)
+      placeholder: "8000"
+    validations:
+      required: true
+  - type: dropdown
+    id: movement
+    attributes:
+      label: Movement
+      options:
+        - "360"
+        - 10-to-2
+        - mill
+        - shield-cast
+        - reverse-mill
+        - bullwhip
+        - combo
+        - flow-other
+    validations:
+      required: true
+  - type: dropdown
+    id: swing-debug
+    attributes:
+      label: Was "Swing calibration logging" enabled for this recording?
+      description: >-
+        Settings > Advanced > Swing calibration logging. This records the raw
+        per-axis gyro/accel the tuning tools need - without it, your recording
+        can still help validate structural correctness, but not swing-detection
+        tuning.
+      options:
+        - "Yes"
+        - "No / not sure"
+    validations:
+      required: true
+  - type: textarea
+    id: real-counts
+    attributes:
+      label: Real per-set swing counts
+      description: >-
+        The number of swings you actually did, per work set, in order - as
+        accurately as you can (e.g. counted live, or reviewed a video). Comma or
+        newline separated.
+      placeholder: "5, 5, 10, 10"
+    validations:
+      required: true
+  - type: textarea
+    id: notes
+    attributes:
+      label: Anything else?
+      description: >-
+        Recording caveats, how you counted, equipment details - and attach your
+        FIT/zip file here.
+  - type: checkboxes
+    id: consent
+    attributes:
+      label: Before you submit
+      options:
+        - label: This recording contains no GPS/location data (recorded indoors, or with location tracking off)
+          required: true
+        - label: I'm okay with this recording being published in this public repo under its license
+          required: true
