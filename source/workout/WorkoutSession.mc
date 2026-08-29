@@ -48,15 +48,12 @@ class WorkoutSession {
         reloadEquipment();
     }
 
-    // Mace swings get debounced counting (see SwingCounter.MACE_DEBOUNCE_SAMPLES);
-    // clubs and the bulava keep the original single-sample edge behaviour.
-    // The mace threshold is user-adjustable (swingThresholdMg): different
-    // swing styles and strengths genuinely need different sensitivity, and
-    // this is the one constant we have real evidence varies recording to
-    // recording (see SwingCounter.MACE_HIGH_MG).
+    // Mace uses the validated gyro-primary detector. Clubs and bulava retain
+    // the accelerometer detector until their own labelled gyro recordings
+    // justify a production change.
     private function newSwingCounter() as SwingCounter.Counter {
         return _equipmentType == Equipment.TYPE_MACE
-            ? SwingCounter.maceCounter(Equipment.numberProperty("swingThresholdMg", SwingCounter.MACE_HIGH_MG))
+            ? SwingCounter.maceCounter()
             : SwingCounter.defaultCounter();
     }
 
@@ -273,29 +270,16 @@ class WorkoutSession {
             _fit.createSwingDebugFields(session);
         }
         var sensorOptions = {:period => 1, :accelerometer => {:enabled => true, :sampleRate => 25}};
-        var gyroRequested = exportEnabled || _swingDebugEnabled;
-        if (gyroRequested) {
-            sensorOptions[:gyroscope] = {:enabled => true, :sampleRate => 25};
-        }
+        // Every supported device now has a gyroscope; requesting it is a hard
+        // runtime requirement rather than an optional enhancement.
+        sensorOptions[:gyroscope] = {:enabled => true, :sampleRate => 25};
         try {
             Sensor.registerSensorDataListener(method(:onSensorData), sensorOptions);
             _capturing = true;
             _swingCounting = swingEnabled;
         } catch (e) {
-            // A device without a gyroscope may reject the combined request;
-            // retry accel-only rather than losing motion capture entirely.
-            if (gyroRequested) {
-                try {
-                    Sensor.registerSensorDataListener(
-                        method(:onSensorData),
-                        {:period => 1, :accelerometer => {:enabled => true, :sampleRate => 25}}
-                    );
-                    _capturing = true;
-                    _swingCounting = swingEnabled;
-                    return;
-                } catch (e2) {}
-            }
-            // no high-rate accel on this device; features stay unwritten
+            // Unsupported/broken sensor registration must not silently fall
+            // back to a counter we know badly undercounts slow heavy mace.
             _loadExposureEnabled = false;
             _fit.clearLoadExposureFields();
         }
@@ -345,6 +329,9 @@ class WorkoutSession {
             var gyroZ = gyro.z as Array<Float>;
             var g = Motion.gyroFeatures(gyroX, gyroY, gyroZ);
             _fit.writeGyroPeak(g[:peak] as Float);
+            if (_swingCounting) {
+                _swingCounter.addGyroSamples(gyroX, gyroY, gyroZ, _workOpen);
+            }
             if (_swingDebugEnabled) {
                 // Stride must match FitFields.GYRO_AXIS_SAMPLE_COUNT, which
                 // sizes the gyro_x/y/z fields this feeds.

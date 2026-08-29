@@ -96,7 +96,7 @@ Health & Fitness
 - Sensor / accelerometer access (for heart rate and optional motion capture)
 
 ## Support
-- 120 Connect IQ devices, API 3.1+
+- Instinct 3 Solar 45 mm, the physically validated 25 Hz gyroscope target
 - Language: English
 
 ## Screenshots (need at least one)

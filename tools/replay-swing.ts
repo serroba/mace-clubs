@@ -19,9 +19,9 @@
 //   accelerometer data (only captured as combined magnitude here) plus
 //   proper sensor fusion, which is out of scope and not reliable at this
 //   scale anyway.
-// - The counter replay reruns the exact on-device threshold/debounce/
-//   refractory logic (see SwingCounter.mc) against the raw waveform, so
-//   "counted"/"rejected" markers match what actually happened on the watch.
+// - Mace replay mirrors the streaming gyro smoothing/peak/refractory logic;
+//   clubs and bulava mirror the accelerometer threshold logic. Exported gyro
+//   is decimated to 12.5Hz, so the replay uses the half-rate smoothing width.
 //
 // Everything runs locally; nothing is uploaded anywhere.
 
@@ -31,6 +31,7 @@ import { basename, dirname, extname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
 import { collect } from "./report-fit.ts";
+import { detectStreamingGyroPeaks } from "./gyro-swing.ts";
 import {
     type DecodedFit,
     dateField,
@@ -44,15 +45,9 @@ import { type Report } from "./report-types.ts";
 
 const ACCEL_SAMPLE_RATE_HZ = 25;
 const GYRO_STRIDE = 2;
-// Mirrors SwingCounter.mc's constants - keep these in sync with that file,
-// or the replay stops reflecting what the watch actually does. This is the
-// tuned default (SwingCounter.MACE_HIGH_MG); the real on-watch threshold is
-// user-adjustable (swingThresholdMg), which a replay from a real recording
-// has no way to know - see decodeReplay's mace note.
-const MACE_HIGH_MG = 1700;
-const MACE_LOW_MG = 1300;
-const MACE_MIN_GAP_SAMPLES = 63;
-const MACE_DEBOUNCE_SAMPLES = 4;
+// Exported gyro axes are decimated by two, so these are the 12.5Hz
+// equivalents of SwingCounter's 22-sample/25Hz production window.
+const MACE_GYRO_OPTIONS = { smoothingSamples: 11, thresholdDps: 250, minGapSeconds: 1 } as const;
 const DEFAULT_HIGH_MG = 1800;
 const DEFAULT_LOW_MG = 1300;
 const DEFAULT_MIN_GAP_SAMPLES = 25;
@@ -230,13 +225,21 @@ export function buildPayload(fit: DecodedFit, report: Report): ReplayPayload {
     const gyro = extractGyro(fit, origin);
     const orientation = integrateOrientation(gyro);
     const isMace = (report.summary.equipment ?? "").toLowerCase().includes("mace");
-    const { counted, rejected } = replayCounter(
+    const accelReplay = replayCounter(
         accel,
-        isMace ? MACE_HIGH_MG : DEFAULT_HIGH_MG,
-        isMace ? MACE_LOW_MG : DEFAULT_LOW_MG,
-        isMace ? MACE_MIN_GAP_SAMPLES : DEFAULT_MIN_GAP_SAMPLES,
-        isMace ? MACE_DEBOUNCE_SAMPLES : DEFAULT_DEBOUNCE_SAMPLES,
+        DEFAULT_HIGH_MG,
+        DEFAULT_LOW_MG,
+        DEFAULT_MIN_GAP_SAMPLES,
+        DEFAULT_DEBOUNCE_SAMPLES,
     );
+    const maceGyro = isMace && gyro.length > 0
+        ? detectStreamingGyroPeaks(gyro, MACE_GYRO_OPTIONS).map((peak) => peak.t)
+        : null;
+    // Legacy mace recordings without raw gyro remain replayable with their
+    // historical acceleration trace, but all current supported devices use
+    // the gyro branch.
+    const counted = maceGyro ?? accelReplay.counted;
+    const rejected = maceGyro === null ? accelReplay.rejected : [];
     const onDeviceEvents = report.records.filter((r) => r.swing_event === 1).map((r) => r.t);
     const laps: ReplayLap[] = report.laps.map((lap) => ({
         start: lap.start ?? 0,

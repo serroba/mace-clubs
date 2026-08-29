@@ -1,4 +1,5 @@
 import Toybox.Lang;
+import Toybox.Math;
 
 // On-watch swing-cycle counting from 25Hz accelerometer samples (milli-g).
 // A gada/club swing whips the implement (and the wrist) through one
@@ -16,44 +17,14 @@ module SwingCounter {
     // Legacy behaviour: a single sample past threshold flips the state.
     const DEBOUNCE_SAMPLES = 1;
 
-    // Two real recordings (both nominally 5/5/10/10 singles-then-doubles)
-    // replayed against HIGH_MG=1800 gave opposite failure patterns - one
-    // undercounted the doubles sets, the other badly undercounted the
-    // singles sets - showing plenty of real swings peak well under 1800mg
-    // and were never the "one clean sharp pass" the original threshold
-    // assumed. A grid search across both recordings' raw waveforms (see
-    // tools/replay-swing.ts) found HIGH_MG=1700 roughly halves total count
-    // error across both (15 -> 7 swings off, summed over all 8 real work
-    // sets) with zero false positives during rest, without touching
-    // MACE_DEBOUNCE_SAMPLES/MACE_MIN_GAP_SAMPLES. First-pass estimate from
-    // two recordings - revisit once metronome-paced recordings give exact
-    // per-rep ground truth instead of per-set totals. Different swing
-    // styles/strengths will likely want different values, so this also
-    // doubles as the default for the user-adjustable swingThresholdMg
-    // setting (see WorkoutSession.newSwingCounter()) rather than a value
-    // baked in for everyone.
-    const MACE_HIGH_MG = 1700;
-
-    // A mace's full-circle swing dwells through its arc for a couple of
-    // seconds rather than whipping through one sharp pass, which leaves
-    // room for in-swing noise to bounce back across HIGH_MG/LOW_MG inside
-    // what is really a single rep. Requiring the signal to hold past
-    // threshold for a few samples (~160ms, still far shorter than any real
-    // swing's peak dwell) filters that out without touching the thresholds
-    // themselves. First-pass estimate - validate against a real recording
-    // before trusting it as final.
-    const MACE_DEBOUNCE_SAMPLES = 4;
-
-    // A real recording's per-second swing_event trace (never more than one
-    // event per second) showed the actual failure mode: most overcounts are
-    // a second, spurious re-arm-and-cross roughly 1-2s after the real one,
-    // well inside the same physical rep, followed by a 3-5s gap to the next
-    // genuine rep. A 1s refractory (MIN_GAP_SAMPLES) sits right in the
-    // middle of that spurious gap; holding it through ~2.5s clears the
-    // false doublet while staying comfortably under every observed
-    // real inter-rep gap. First-pass estimate from one recording - revisit
-    // once we have more real mace data across cadences.
-    const MACE_MIN_GAP_SAMPLES = 63;
+    // Gyroscope-primary mace counting. The shared offline fit across both
+    // labelled gyro recordings uses an 11-sample window at the exported 12.5Hz
+    // rate; the watch receives 25Hz, so 22 samples preserves the same ~0.88s
+    // smoothing horizon. One-sample-delayed peak confirmation is causal and
+    // scored [5,5,10,10] and [60,60] against the two labelled recordings.
+    const GYRO_THRESHOLD_DPS = 250.0;
+    const GYRO_SMOOTHING_SAMPLES = 22;
+    const GYRO_MIN_GAP_SAMPLES = 25;
 
     class Counter {
         private var _highMg as Number;
@@ -65,24 +36,35 @@ module SwingCounter {
         private var _sinceLast as Number;
         private var _aboveStreak as Number = 0;
         private var _belowStreak as Number = 0;
+        private var _useGyro as Boolean;
+        private var _gyroWindow as Array<Float> = [];
+        private var _gyroWindowSum as Float = 0.0;
+        private var _gyroPreviousAverage as Float?;
+        private var _gyroCurrentAverage as Float?;
+        private var _sinceGyroPeak as Number = GYRO_MIN_GAP_SAMPLES;
 
         function initialize(
             highMg as Number,
             lowMg as Number,
             minGapSamples as Number,
-            debounceSamples as Number
+            debounceSamples as Number,
+            useGyro as Boolean
         ) {
             _highMg = highMg;
             _lowMg = lowMg;
             _minGapSamples = minGapSamples;
             _debounceSamples = debounceSamples;
             _sinceLast = minGapSamples;
+            _useGyro = useGyro;
         }
 
         // Comparisons stay in squared milli-g to avoid a per-sample sqrt;
         // watch accelerometers clip near 8g, which keeps the squares within
         // Number range.
         function addSamples(x as Array<Number>, y as Array<Number>, z as Array<Number>) as Void {
+            if (_useGyro) {
+                return;
+            }
             var n = x.size();
             if (y.size() != n || z.size() != n) {
                 return;
@@ -119,6 +101,57 @@ module SwingCounter {
             }
         }
 
+        // Streaming 25Hz rotation-rate peak detector. A trailing moving
+        // average suppresses small shoulders; the previous average is only
+        // accepted once the next sample confirms it was a local maximum.
+        function addGyroSamples(
+            x as Array<Float>,
+            y as Array<Float>,
+            z as Array<Float>,
+            countingOpen as Boolean
+        ) as Void {
+            if (!_useGyro) {
+                return;
+            }
+            var n = x.size();
+            if (n == 0 || y.size() != n || z.size() != n) {
+                return;
+            }
+            for (var i = 0; i < n; i++) {
+                var fx = x[i];
+                var fy = y[i];
+                var fz = z[i];
+                var magnitude = Math.sqrt(fx * fx + fy * fy + fz * fz).toFloat();
+                _gyroWindow.add(magnitude);
+                _gyroWindowSum += magnitude;
+                if (_gyroWindow.size() > GYRO_SMOOTHING_SAMPLES) {
+                    var removed = _gyroWindow[0];
+                    _gyroWindowSum -= removed;
+                    _gyroWindow.remove(removed);
+                }
+                if (_sinceGyroPeak < GYRO_MIN_GAP_SAMPLES) {
+                    _sinceGyroPeak++;
+                }
+                var average = _gyroWindowSum / _gyroWindow.size();
+                var previous = _gyroPreviousAverage;
+                var current = _gyroCurrentAverage;
+                if (previous != null
+                    && current != null
+                    && current >= GYRO_THRESHOLD_DPS
+                    && current > previous
+                    && current >= average
+                    && _sinceGyroPeak >= GYRO_MIN_GAP_SAMPLES)
+                {
+                    if (countingOpen) {
+                        _count++;
+                    }
+                    _sinceGyroPeak = 0;
+                }
+                _gyroPreviousAverage = current;
+                _gyroCurrentAverage = average;
+            }
+        }
+
         function getCount() as Number {
             return _count;
         }
@@ -136,6 +169,11 @@ module SwingCounter {
             _sinceLast = _minGapSamples;
             _aboveStreak = 0;
             _belowStreak = 0;
+            _gyroWindow = [];
+            _gyroWindowSum = 0.0;
+            _gyroPreviousAverage = null;
+            _gyroCurrentAverage = null;
+            _sinceGyroPeak = GYRO_MIN_GAP_SAMPLES;
         }
     }
 
@@ -143,14 +181,12 @@ module SwingCounter {
     // nothing in the real-world data we've gathered so far points at an
     // issue with those implements.
     function defaultCounter() as Counter {
-        return new Counter(HIGH_MG, LOW_MG, MIN_GAP_SAMPLES, DEBOUNCE_SAMPLES);
+        return new Counter(HIGH_MG, LOW_MG, MIN_GAP_SAMPLES, DEBOUNCE_SAMPLES, false);
     }
 
-    // highMg is caller-supplied (pass MACE_HIGH_MG for the tuned default) so
-    // it can be overridden per user (see the swingThresholdMg setting) -
-    // different swing styles/strengths legitimately need different
-    // sensitivity.
-    function maceCounter(highMg as Number) as Counter {
-        return new Counter(highMg, LOW_MG, MACE_MIN_GAP_SAMPLES, MACE_DEBOUNCE_SAMPLES);
+    // Mace counting is rotation-primary on the gyroscope-equipped support
+    // matrix; accelerometer parameters are ignored by this mode.
+    function maceCounter() as Counter {
+        return new Counter(HIGH_MG, LOW_MG, MIN_GAP_SAMPLES, DEBOUNCE_SAMPLES, true);
     }
 }
