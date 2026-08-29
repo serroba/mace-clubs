@@ -1,5 +1,5 @@
 {
-    "$schema": "Real recordings kept for swing-detection modelling. Each entry's realSwingsPerSet is ground truth from the person who recorded it, not something derivable from the FIT file - add it by hand whenever a new fixture is added.",
+    "$schema": "Real recordings kept for swing-detection modelling. Labelled fixtures have independently supplied realSwingsPerSet and may be used for scoring. Unlabelled fixtures are raw research profiles only and must not be treated as ground truth.",
     "fixtures": [
         {
             "id": "recA",
@@ -42,6 +42,44 @@
             "realSwingsPerSet": [60, 60],
             "onDeviceDetectedPerSet": [17, 18],
             "notes": "User-confirmed exact 60/60 ground truth. The accelerometer-only on-device counter captured only 28-30%, making this the primary slow-heavy-mace undercount fixture for gyro and sensor-fusion experiments."
+        }
+    ],
+    "unlabelledFixtures": [
+        {
+            "id": "clubs-2026-08-25",
+            "file": "24103113172_ACTIVITY.fit",
+            "appVersion": "0.15.0-dev",
+            "equipment": "clubs",
+            "equipmentCount": 2,
+            "equipmentWeightGrams": 4000,
+            "movement": "flow-other",
+            "swingDebugEnabled": true,
+            "onDeviceDetectedPerSet": [103, 120, 63, 98, 107, 90, 90, 98, 83, 86],
+            "notes": "Raw accelerometer and gyroscope profile. Independent per-set swing counts were not recorded, so this fixture is excluded from detector tuning and accuracy claims."
+        },
+        {
+            "id": "clubs-2026-08-27",
+            "file": "24129368059_ACTIVITY.fit",
+            "appVersion": "0.15.0-dev",
+            "equipment": "clubs",
+            "equipmentCount": 2,
+            "equipmentWeightGrams": 4000,
+            "movement": "flow-other",
+            "swingDebugEnabled": true,
+            "onDeviceDetectedPerSet": [79, 91, 84, 82, 86, 69, 68, 73, 74, 79],
+            "notes": "Raw accelerometer and gyroscope profile. Independent per-set swing counts were not recorded, so this fixture is excluded from detector tuning and accuracy claims."
+        },
+        {
+            "id": "clubs-2026-08-29",
+            "file": "24153331563_ACTIVITY.fit",
+            "appVersion": "0.15.0-dev",
+            "equipment": "clubs",
+            "equipmentCount": 2,
+            "equipmentWeightGrams": 4000,
+            "movement": "flow-other",
+            "swingDebugEnabled": true,
+            "onDeviceDetectedPerSet": [73, 79, 84, 92, 84, 102, 81],
+            "notes": "Raw accelerometer and gyroscope profile. Independent per-set swing counts were not recorded, so this fixture is excluded from detector tuning and accuracy claims."
         }
     ]
 }
