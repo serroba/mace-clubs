@@ -144,3 +144,50 @@ fix (wake and unlock, not free memory).
 `Simulator.launch()`, and normal completion, so it shouldn't need that
 manual `pkill` in practice - it's there as the fallback for anything that
 slips past those (a `kill -9` on the runner itself, for instance).
+
+## Known issue: `Simulator.hold()` doesn't actually hold
+
+`hold()` is supposed to synthesize a real held button-press (MENU is a
+long-press of UP on this device - see `simulator.ts`'s comment), but its
+current implementation - AppleScript's `key down`/`key up` commands - is a
+silent no-op against this app. Confirmed with a deliberately unambiguous
+test (Select, whose single-press effect - advancing off the idle screen -
+is used and proven by every other passing test): a `key down 36` / `key up
+36` pair produces literally no effect, while the working `press()`'s
+single `key code 36` command reliably advances the screen every time.
+
+Eight approaches were tried and ruled out, all with the same "zero
+observable effect" result except where noted:
+
+- AppleScript `key down`/`key up` (the current, broken implementation).
+- Raw `CGEventPost` to `.cghidEventTap`, both as a single down/up pair and
+  as a repeated keyDown "autorepeat train" (in case the app's hold
+  detection watches for the OS's real autorepeat mechanism rather than
+  wall-clock time between one down and one up).
+- The same repeat-train approach against `.cgSessionEventTap`.
+- `CGEventPostToPid`, targeting the simulator's own process directly
+  (Java/AWT apps have a history of only reliably picking up synthetic
+  input targeted at their own PID rather than posted to whatever the OS
+  considers globally frontmost) - still nothing.
+- The same, with the event's Unicode string explicitly set to the arrow
+  keys' NSEvent function-key codepoints (`0xF700`/`0xF701`) - a
+  bare `CGEventCreateKeyboardEvent` doesn't populate this the way
+  AppleScript's `key code` does, and some AWT input paths need it to
+  translate an event at all - still nothing.
+- The same, with an explicit `.combinedSessionState` event source instead
+  of the default - still nothing.
+- Rapidly repeating the *working* `key code` command in a tight loop, on
+  the theory that the app might treat a fast-enough burst as a hold: it
+  doesn't - confirmed observably, since 20 rapid `key code 126` presses
+  cycled the idle preset selector 20 separate times (each one a discrete
+  tap-and-release), never triggering the hold-only Settings menu.
+
+So `key code` (AppleScript's own synthesized press) is the only mechanism
+proven to reach this app at all, and it only ever produces a tap, never a
+hold - `discard-confirmation.e2e.test.ts`, `rest-options-menu.e2e.test.ts`,
+and `settings-menu.e2e.test.ts` are written and typecheck-clean but
+currently skipped (`describe.skip`) pending a real fix. Worth trying next:
+comparing exactly what fields/state AppleScript's `key code` sets on its
+underlying event (e.g. via a capturing `CGEventTap` listener script) against
+what a manually-constructed one has, since something concrete is clearly
+different between the two and blind parameter guessing didn't find it.
