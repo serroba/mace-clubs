@@ -12,7 +12,7 @@ RAFIKI ?= $(shell $(TOOL_RESOLVER) rafiki)
 JAVA_PATH := $(if $(findstring /,$(JAVA)),$(dir $(JAVA)):,)
 export PATH := $(JAVA_PATH)$(PATH)
 
-.PHONY: check pre-commit install-hooks doctor tools-check tool-resolver-test manifest-check xml fit-schema format format-check lint build test-build simulator-test coverage clean
+.PHONY: check pre-commit install-hooks doctor tools-check tool-resolver-test manifest-check xml fit-schema format format-check lint build test-build simulator-test tuning-search coverage clean
 
 check: doctor tools-check xml fit-schema format-check lint build test-build
 
@@ -77,6 +77,14 @@ test-build: $(DEVELOPER_KEY) | $(BIN_DIR)
 
 simulator-test: test-build
 	"$(MONKEYDO)" $(BIN_DIR)/mace-clubs-test.prg $(DEVICE) -t
+
+# SwingTuningSearch.mc's gyro-parameter grid search against the recorded
+# replay fixtures - excluded from every other build via the swingTuning
+# annotation, only monkey.tuning.jungle compiles it in. Slow (a few hundred
+# combos replayed against two recordings); not part of `check`/`simulator-test`.
+tuning-search: $(DEVELOPER_KEY) | $(BIN_DIR)
+	"$(MONKEYC)" -f monkey.tuning.jungle -d $(DEVICE) -o $(BIN_DIR)/mace-clubs-tuning.prg -y $(DEVELOPER_KEY) --unit-test
+	"$(MONKEYDO)" $(BIN_DIR)/mace-clubs-tuning.prg $(DEVICE) -t
 
 # Function coverage of the unit tests, via rafiki
 # (https://github.com/bombsimon/monkey-c-rs). The test subcommand runs the

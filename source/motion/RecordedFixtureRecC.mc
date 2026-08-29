@@ -3,8 +3,7 @@ import Toybox.Lang;
 // Real recorded gyroscope replay data for tools/fixtures/index.json's "recC"
 // fixture, extracted from 24142167505_ACTIVITY.fit. One entry per second, 0-indexed
 // from the FIT recording's origin (the same origin computeOrigin() uses in
-// report-fit.ts/replay-swing.ts). Dev/CI only: excluded from every store
-// build by the (:test) annotation (see monkey.jungle).
+// report-fit.ts/replay-swing.ts).
 //
 // gyroX/Y/Z are the real per-axis deg/s samples the watch recorded, decimated
 // 2x at capture time (~12.5Hz) to fit the FIT developer-field budget - the
@@ -14,6 +13,9 @@ import Toybox.Lang;
 // coarser) motion, which is what matters for catching whether a tuning
 // change moves the count on this recording. See RecordedSwingReplay.mc and
 // RecordedSwingReplayTest.mc for how this feeds through.
+//
+// Dev/CI only: excluded from every store build by the (:test) annotation
+// (see monkey.jungle).
 //
 // Regenerate with: node --experimental-strip-types tools/export-replay-fixture.ts recC
 (:test)

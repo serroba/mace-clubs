@@ -18,7 +18,14 @@ module RecordedSwingReplay {
     // Returns {:perSet => Array<Number>, :total => Number}: perSet is the
     // swing count accrued during each contiguous work span, in order.
     function replayMace(seconds as Array<Dictionary>) as Dictionary {
-        var counter = SwingCounter.maceCounter();
+        return replayWithCounter(seconds, SwingCounter.maceCounter());
+    }
+
+    // Same replay, but against a caller-supplied Counter - lets
+    // SwingTuningSearch try candidate gyro parameters (see
+    // SwingCounter.maceCounterWithGyroParams()) without a second
+    // implementation of this loop.
+    function replayWithCounter(seconds as Array<Dictionary>, counter as SwingCounter.Counter) as Dictionary {
         var perSet = [] as Array<Number>;
         var setStartCount = 0;
         var wasWorkOpen = false;

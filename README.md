@@ -242,7 +242,9 @@ git tag v0.1.0 && git push origin v0.1.0
 The smoothness model, privacy boundary, equations, assumptions, and validation
 plan are documented in [docs/smoothness-physics.md](docs/smoothness-physics.md).
 The exercise-aware load fields and their interpretation are documented in
-[docs/load-exposure.md](docs/load-exposure.md).
+[docs/load-exposure.md](docs/load-exposure.md). The gyro-primary mace swing
+detector, its tuning evidence, and how to replay-test a change against real
+recordings are documented in [docs/swing-counting.md](docs/swing-counting.md).
 
 - Small, focused PRs — one feature or concern per PR, stacked when they depend on each other.
 - TDD where the code is testable: unit tests (`(:test)` functions) accompany or precede the

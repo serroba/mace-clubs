@@ -32,18 +32,24 @@ module SwingCounter {
         private var _aboveStreak as Number = 0;
         private var _belowStreak as Number = 0;
         private var _useGyro as Boolean;
+        private var _gyroThresholdDps as Float;
+        private var _gyroSmoothingSamples as Number;
+        private var _gyroMinGapSamples as Number;
         private var _gyroWindow as Array<Float> = [];
         private var _gyroWindowSum as Float = 0.0;
         private var _gyroPreviousAverage as Float?;
         private var _gyroCurrentAverage as Float?;
-        private var _sinceGyroPeak as Number = GYRO_MIN_GAP_SAMPLES;
+        private var _sinceGyroPeak as Number;
 
         function initialize(
             highMg as Number,
             lowMg as Number,
             minGapSamples as Number,
             debounceSamples as Number,
-            useGyro as Boolean
+            useGyro as Boolean,
+            gyroThresholdDps as Float,
+            gyroSmoothingSamples as Number,
+            gyroMinGapSamples as Number
         ) {
             _highMg = highMg;
             _lowMg = lowMg;
@@ -51,6 +57,10 @@ module SwingCounter {
             _debounceSamples = debounceSamples;
             _sinceLast = minGapSamples;
             _useGyro = useGyro;
+            _gyroThresholdDps = gyroThresholdDps;
+            _gyroSmoothingSamples = gyroSmoothingSamples;
+            _gyroMinGapSamples = gyroMinGapSamples;
+            _sinceGyroPeak = gyroMinGapSamples;
         }
 
         // Comparisons stay in squared milli-g to avoid a per-sample sqrt;
@@ -119,12 +129,12 @@ module SwingCounter {
                 var magnitude = Math.sqrt(fx * fx + fy * fy + fz * fz).toFloat();
                 _gyroWindow.add(magnitude);
                 _gyroWindowSum += magnitude;
-                if (_gyroWindow.size() > GYRO_SMOOTHING_SAMPLES) {
+                if (_gyroWindow.size() > _gyroSmoothingSamples) {
                     var removed = _gyroWindow[0];
                     _gyroWindowSum -= removed;
                     _gyroWindow.remove(removed);
                 }
-                if (_sinceGyroPeak < GYRO_MIN_GAP_SAMPLES) {
+                if (_sinceGyroPeak < _gyroMinGapSamples) {
                     _sinceGyroPeak++;
                 }
                 var average = _gyroWindowSum / _gyroWindow.size();
@@ -132,10 +142,10 @@ module SwingCounter {
                 var current = _gyroCurrentAverage;
                 if (previous != null
                     && current != null
-                    && current >= GYRO_THRESHOLD_DPS
+                    && current >= _gyroThresholdDps
                     && current > previous
                     && current >= average
-                    && _sinceGyroPeak >= GYRO_MIN_GAP_SAMPLES)
+                    && _sinceGyroPeak >= _gyroMinGapSamples)
                 {
                     if (countingOpen) {
                         _count++;
@@ -168,7 +178,7 @@ module SwingCounter {
             _gyroWindowSum = 0.0;
             _gyroPreviousAverage = null;
             _gyroCurrentAverage = null;
-            _sinceGyroPeak = GYRO_MIN_GAP_SAMPLES;
+            _sinceGyroPeak = _gyroMinGapSamples;
         }
     }
 
@@ -176,12 +186,41 @@ module SwingCounter {
     // nothing in the real-world data we've gathered so far points at an
     // issue with those implements.
     function defaultCounter() as Counter {
-        return new Counter(HIGH_MG, LOW_MG, MIN_GAP_SAMPLES, DEBOUNCE_SAMPLES, false);
+        return new Counter(
+            HIGH_MG,
+            LOW_MG,
+            MIN_GAP_SAMPLES,
+            DEBOUNCE_SAMPLES,
+            false,
+            GYRO_THRESHOLD_DPS,
+            GYRO_SMOOTHING_SAMPLES,
+            GYRO_MIN_GAP_SAMPLES
+        );
     }
 
     // Mace counting is rotation-primary on the gyroscope-equipped support
     // matrix; accelerometer parameters are ignored by this mode.
     function maceCounter() as Counter {
-        return new Counter(HIGH_MG, LOW_MG, MIN_GAP_SAMPLES, DEBOUNCE_SAMPLES, true);
+        return maceCounterWithGyroParams(GYRO_THRESHOLD_DPS, GYRO_SMOOTHING_SAMPLES, GYRO_MIN_GAP_SAMPLES);
+    }
+
+    // Dev/tuning only: lets a search harness try candidate gyro parameters
+    // against the real Counter implementation instead of a reimplementation.
+    // See source/motion/SwingTuningSearch.mc.
+    function maceCounterWithGyroParams(
+        gyroThresholdDps as Float,
+        gyroSmoothingSamples as Number,
+        gyroMinGapSamples as Number
+    ) as Counter {
+        return new Counter(
+            HIGH_MG,
+            LOW_MG,
+            MIN_GAP_SAMPLES,
+            DEBOUNCE_SAMPLES,
+            true,
+            gyroThresholdDps,
+            gyroSmoothingSamples,
+            gyroMinGapSamples
+        );
     }
 }
