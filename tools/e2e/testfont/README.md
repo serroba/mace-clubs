@@ -34,7 +34,7 @@ Writes `resources-testfont/fonts/testfont.fnt` + `testfont_0.png`, and a
 at *runtime* with a native, stack-trace-free "Invalid Font Specified"
 crash - Garmin's custom-font format is single-channel only).
 
-## Status
+## Status: blocked on a Linux simulator segfault (unresolved)
 
 A single fixed-size bitmap font can't replicate the actual per-size
 layout of `Graphics.FONT_LARGE`/`FONT_TINY`/etc., so `AppFont.get()`
@@ -42,10 +42,40 @@ returns the same resource for every request - this build variant trades
 layout fidelity for "screens don't crash and text OCRs," which is what
 this pipeline needs.
 
-Verified so far: the idle screen renders real glyphs from this font
-(OCR read back garbled-but-real text, confirmed via
-`tools/e2e/linux/probe-testfont.sh` under local QEMU-emulated Docker).
-A screen *transition* immediately afterward currently segfaults the
-simulator's native binary - under investigation, see
-`.github/workflows/e2e-testfont-probe.yml` (scratch workflow probing
-whether this is QEMU/arm64-emulation-specific or a genuine font issue).
+**What works:** the idle screen renders real glyphs from this font (OCR
+read back garbled-but-real text). This proves the original problem this
+font exists to solve - the app fatally crashing on Linux the instant an
+app-drawn screen calls `dc.drawText()` with a missing device font - is
+solved for a screen that never transitions.
+
+**What's still broken:** the moment the app transitions from the idle
+screen to the equipment-picker `Menu2`, the simulator's native binary
+segfaults (not a catchable Monkey C exception - the whole process dies).
+Confirmed via `tools/e2e/linux/probe-testfont.sh`:
+
+- **Reproduces identically on real x86_64 hardware**, not just local
+  QEMU/arm64 emulation (verified via `.github/workflows/e2e-testfont-probe.yml`,
+  a scratch branch-scoped workflow - ruled out emulation as the cause).
+- **Independent of font size**: reproduces at both 22px and 14px line
+  height, ruling out a GTK-layout-overflow theory (the pre-existing
+  `gtk_distribute_natural_allocation: assertion 'extra_space >= 0' failed`
+  warning, present even in known-working runs, isn't the cause either -
+  or at least not one this font's metrics control).
+- **Independent of load timing**: reproduces whether the font resource is
+  lazily loaded on first draw or pre-warmed in `MaceClubsApp.onStart()`
+  before any rendering happens.
+- **Requires the outgoing view to have actually drawn with the custom
+  font**: bypassing `AppFont.get()` on the idle screen (reverting it to
+  the real, missing device font) does NOT segfault - it instead crashes
+  immediately and catchably with the original "Invalid Font Specified"
+  Monkey C exception, before ever reaching a Menu2 push. So the trigger
+  isn't merely "a custom FontResource is loaded somewhere" - it's tied to
+  the outgoing view having actually rendered pixels with it right before
+  a `Menu2` push replaces it.
+
+Current best explanation: a genuine bug/limitation in the Linux build of
+Garmin's simulator when a loaded custom `FontResource` has been drawn
+with and a `Menu2` is then pushed - not something fixable by adjusting
+the font itself. A real fix would likely mean avoiding `Menu2` entirely
+in this build variant (app-drawn menus instead), which is a materially
+larger change than this font substitution.

@@ -26,7 +26,7 @@ from pathlib import Path
 from PIL import Image, ImageDraw, ImageFont
 
 FONT_PATH = "/Users/sebastian/Library/Fonts/JetBrainsMono-Regular.ttf"
-FONT_SIZE_PX = 22
+FONT_SIZE_PX = 14
 OUT_DIR = Path(__file__).resolve().parent.parent.parent.parent / "resources-testfont" / "fonts"
 FONT_ID = "id_font_testfont"
 FNT_NAME = "testfont.fnt"
@@ -36,8 +36,8 @@ PNG_NAME = "testfont_0.png"
 # units) without needing to enumerate exact strings per view.
 CHARSET = [chr(c) for c in range(0x20, 0x7F)]
 
-CELL_W = 18
-CELL_H = 30
+CELL_W = 12
+CELL_H = 18
 COLS = 14
 PADDING = 1
 

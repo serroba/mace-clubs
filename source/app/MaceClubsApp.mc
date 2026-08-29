@@ -1,4 +1,5 @@
 import Toybox.Application;
+import Toybox.Graphics;
 import Toybox.Lang;
 import Toybox.WatchUi;
 
@@ -9,7 +10,15 @@ class MaceClubsApp extends Application.AppBase {
         AppBase.initialize();
     }
 
-    function onStart(state as Dictionary?) as Void {}
+    function onStart(state as Dictionary?) as Void {
+        // Pre-warms AppFont's (:testFont) resource load at startup rather
+        // than lazily on the first onUpdate() draw call - loading a custom
+        // FontResource from inside onUpdate() crashes the Linux simulator
+        // on the very next screen transition (segfault, reproduced on both
+        // QEMU-emulated and real x86_64 runners). No-op pass-through in
+        // real builds, which exclude :testFont.
+        AppFont.get(Graphics.FONT_TINY);
+    }
 
     function onStop(state as Dictionary?) as Void {}
 
