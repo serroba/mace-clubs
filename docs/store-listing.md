@@ -1,6 +1,6 @@
 # Connect IQ Store listing — DRAFT (review before submitting)
 
-Upload file: `mace-clubs.iq` from the v0.10.1 GitHub release.
+Upload file: `mace-clubs.iq` from the v0.15.0 GitHub release.
 
 Note: the store renders these fields as plain text — no markdown emphasis.
 
@@ -35,8 +35,8 @@ or working side during any rest without leaving the session, and the
 summary shows a left/right set balance at a glance.
 
 Challenge presets bring the traditional timed test: 5 or 10 minutes of
-continuous swinging with an on-watch swing counter powered by the
-accelerometer. Detected swings show live while you work and are saved with
+continuous mace swinging with an on-watch swing counter powered primarily by
+the gyroscope. Detected swings show live while you work and are saved with
 the activity per set and in total.
 
 Also included:
@@ -55,45 +55,29 @@ Also included:
   and the implement each was recorded with
 - Optional per-set load exposure from wrist motion: exposure, peak, active
   seconds, and weight-volume, saved with the activity
-- Optional motion-capture logging records accelerometer data each second
-  for offline swing analysis
+- Optional calibration logging records accelerometer and gyroscope data
+  for private offline swing analysis
 
-## What's new — v0.10.1
-The paused and completed workout summary is clearer on Instinct watches. The
-heading now stays clear of the circular subwindow, work and rest durations are
-labelled, two-handed sets say Both instead of 2H, and unavailable smoothness
-uses the readable smooth -- label. Action hints are smaller so the workout
-numbers remain the focus.
+## What's new — v0.15.0
+Mace swing counting now uses the watch gyroscope as its primary signal. The
+detector was fitted once across labelled real recordings and reproduces both a
+short `[5, 5, 10, 10]` workout and the previously undercounted `[60, 60]`
+workout in offline replay. Acceleration spikes no longer drive mace counts.
 
-Also included in v0.10.0: your training history now lives on the watch.
-
-Open History from Settings to browse your last 20 sessions, newest first,
-each with the date and its average smoothness score. Open one and UP/DOWN
-scrolls through the per-set scores, labelled with the implement, quantity,
-and weight they were recorded with, so a 6 kg bulava session is never
-compared against a 10 kg mace one. It all stays on the watch.
-
-The idle screen now shows the last comparable session's smoothness and its
-trend before you start, so you know what you are chasing. It appears once
-there is history for the implement, movement, and side you have selected.
-
-New optional load exposure: with it enabled, each work set records the
-dynamic acceleration exposure of your wrist, its peak, how many seconds
-were actually active, and weight-volume (implement kilograms times detected
-swings). The set browser shows a compact L token and the full values are
-saved with the activity for offline analysis. These are descriptive
-measurements from a wrist sensor, not tendon force, technique quality, or
-injury risk. It uses extra battery and is off by default.
+Support is intentionally limited to the Instinct 3 Solar 45 mm while that is
+the only physical watch with labelled recordings and a validated 25 Hz gyro
+path. Calibration logging and the local FIT tools now expose the raw rotation
+stream for further analysis.
 
 Hero image: `docs/store-assets/hero-v0.4.0.png` (1440×720 PNG, under 2 MB) —
-consider refreshing for v0.10.0.
+consider refreshing after v0.15.0; this release does not change the watch UI.
 
 ## Category
 Health & Fitness
 
 ## Permissions (shown to users)
 - Records activities (FIT) and writes custom FIT data fields
-- Sensor / accelerometer access (for heart rate and optional motion capture)
+- Sensor access (for heart rate, gyroscope swing counting, and optional motion capture)
 
 ## Support
 - Instinct 3 Solar 45 mm, the physically validated 25 Hz gyroscope target

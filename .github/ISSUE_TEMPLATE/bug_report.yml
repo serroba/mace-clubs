@@ -14,7 +14,7 @@ body:
     attributes:
       label: Device
       description: Which watch (or simulator device) did this happen on?
-      placeholder: e.g. Instinct 3 Solar 45mm, venu3 in the simulator
+      placeholder: Instinct 3 Solar 45 mm or its simulator profile
     validations:
       required: true
   - type: textarea

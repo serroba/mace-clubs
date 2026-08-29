@@ -1,14 +1,9 @@
 import Toybox.Lang;
 import Toybox.Math;
 
-// On-watch swing-cycle counting from 25Hz accelerometer samples (milli-g).
-// A gada/club swing whips the implement (and the wrist) through one
-// high-acceleration pass per cycle, so the magnitude trace shows one
-// dominant peak per swing above the ~1g resting baseline. Counting is a
-// rising-edge threshold crossing with hysteresis (re-arm only after the
-// magnitude falls back near baseline) plus a refractory window, because a
-// single overhead pass can stay above threshold for several samples and
-// competition pace never exceeds one swing per second.
+// On-watch swing-cycle counting. Mace counting is gyroscope-primary on the
+// validated 25 Hz watch; club and bulava retain the legacy accelerometer
+// detector until labelled gyro recordings exist for those implements.
 module SwingCounter {
     const HIGH_MG = 1800;
     const LOW_MG = 1300;
