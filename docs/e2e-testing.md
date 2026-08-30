@@ -102,17 +102,19 @@ void describe("Some screen", () => {
 ## Running in CI
 
 The suite runs on **Linux**, headlessly, on GitHub-hosted runners -
-`.github/workflows/e2e-linux.yml`, on pushes to `main` and on demand. The
-same test files run on both platforms; only the driver's backend differs
-(see "Two platforms, one driver" below). Device fonts are fetched at job
-time through Garmin's own authenticated API (see
+`.github/workflows/e2e-linux.yml`, on PRs, on pushes to `main`, on release
+tags, and on demand. The same test files run on both platforms; only the
+driver's backend differs (see "Two platforms, one driver" below). Device
+fonts are fetched at job time through Garmin's own authenticated API (see
 `tools/e2e/linux/README.md`), so nothing proprietary lives in an image or
 this repo.
 
-It deliberately doesn't run on `pull_request`: fork PRs can't read the
-secrets the font fetch needs, and this suite is slower and more
-environment-sensitive than the rest of CI. Regressions are caught
-post-merge instead of gating every PR.
+Only PRs **from forks** are excluded: GitHub withholds secrets from them,
+so the font fetch can't work. They skip cleanly via the job's `if` rather
+than failing on a missing credential. The release-tag run is
+informational - `release.yml` triggers on the same tag and runs alongside
+it, so it can't gate a release that's already tagged; the `pre-push` hook
+below is the actual gate.
 
 **macOS in CI is a different story** and remains out of scope - it would
 need a logged-in GUI session (AppleScript's `System Events` can't work over

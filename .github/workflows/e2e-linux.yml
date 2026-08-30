@@ -10,22 +10,34 @@ name: E2E UI tests (Linux)
 # or a registry, and the fonts only ever touch the runner's ephemeral disk.
 # They're cached, so credentials are exercised once per cache key.
 #
-# Not on pull_request: PRs from forks can't read secrets (the font fetch
-# would fail), and this suite is slower and more environment-sensitive than
-# the rest of CI. Runs on main and on demand instead, so a regression is
-# caught post-merge rather than gating every PR.
+# Runs on PRs from branches in this repo, on main, on release tags, and on
+# demand. Only *fork* PRs are excluded (the `if` below): GitHub withholds
+# secrets from them, so the font fetch can't work - they skip cleanly
+# rather than failing on a missing credential.
+#
+# The release-tag run is informational, not a gate: release.yml triggers on
+# the same tag and runs alongside this, so a failure here won't stop a
+# release that's already tagged. The pre-push hook (.githooks/pre-push) is
+# the actual release gate; this is the CI-side record of the same check.
 
 permissions:
   contents: read
 
 on:
+  pull_request:
   push:
     branches: [main]
+    tags: ["v*"]
   workflow_dispatch:
 
 jobs:
   e2e:
     name: E2E UI suite (instinct3solar45mm)
+    # Fork PRs get no secrets, so the font fetch would fail - skip instead.
+    # Always true for pushes and workflow_dispatch (no pull_request payload).
+    if: >-
+      github.event_name != 'pull_request' ||
+      github.event.pull_request.head.repo.full_name == github.repository
     runs-on: ubuntu-latest
     timeout-minutes: 30
     container:
@@ -46,6 +58,9 @@ jobs:
           # only ever meant to compile and unit-test Monkey C).
           curl -fsSL https://deb.nodesource.com/setup_22.x | bash -
           apt-get install -y -qq --no-install-recommends nodejs
+
+      - name: Install driver dependencies
+        run: npm ci --prefix tools
 
       - name: Cache device fonts
         id: fonts-cache
