@@ -514,10 +514,24 @@ class MaceClubsView extends WatchUi.View {
             var setsLabel = count == 1 ? "1 set" : Lang.format("$1$ sets", [count]);
             // .equals(), not ==: Monkey C's == on Strings is reference
             // equality, not content equality.
+            // On a subwindow watch this row only has the width left of the
+            // cut-out - 113px of 176 on the 45mm - and "1 set  0:02 work"
+            // measures 115px, so its tail was being drawn behind the bezel.
+            // Shrinking does not help: FONT_XTINY and FONT_TINY have
+            // identical metrics on this device. The "work" suffix is the
+            // redundant part, since the row directly below already spells the
+            // same figure out as W0:02, so that goes instead of the number.
+            var workSuffix = _subwindow ? "" : " work";
             var headline = balance.equals("")
-                ? Lang.format("$1$  $2$ work", [setsLabel, formatSecs(workout.getTotalWorkSeconds())])
+                ? Lang.format(
+                    "$1$  $2$$3$",
+                    [setsLabel, formatSecs(workout.getTotalWorkSeconds()), workSuffix]
+                )
                 : Lang.format("$1$  $2$", [setsLabel, balance]);
-            dc.drawText(cx, h * 35 / 100, Graphics.FONT_TINY, headline, Graphics.TEXT_JUSTIFY_CENTER);
+            // Centred in the clear area beside the cut-out, the same way the
+            // PAUSED heading above it already is.
+            var headlineX = _subwindow ? Layout.clearWidthBesideSubwindow(w) / 2 : cx;
+            dc.drawText(headlineX, h * 35 / 100, Graphics.FONT_TINY, headline, Graphics.TEXT_JUSTIFY_CENTER);
             if (count > 0) {
                 var index = _summarySet;
                 if (index < 0 || index >= count) {

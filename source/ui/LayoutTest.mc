@@ -204,6 +204,26 @@ function testRenderedTextDoesNotCollide(logger as Test.Logger) as Boolean {
         )
     );
 
+    // The paused screen's headline sits level with the subwindow's lower
+    // edge, so on an Instinct its right-hand end vanishes behind the cut-out
+    // - "1 set 0:02 work" (115px against 113px of clear width) lost the "rk",
+    // caught by the release screenshots. Shrinking cannot save it: FONT_XTINY
+    // and FONT_TINY measure identically on this device, so the view drops the
+    // redundant "work" suffix instead. These are the forms it can then draw.
+    var clear = Layout.clearWidthBesideSubwindow(w);
+    if (clear < w) {
+        var headlines = ["1 set  0:02", "10 sets  12:34", "3 sets  L2/R1"] as Array<String>;
+        for (var i = 0; i < headlines.size(); i++) {
+            Test.assertMessage(
+                dc.getTextDimensions(headlines[i], Graphics.FONT_TINY)[0] <= clear,
+                Lang.format(
+                    "paused headline \"$1$\" is wider than the $2$px clear of the subwindow",
+                    [headlines[i], clear]
+                )
+            );
+        }
+    }
+
     // The headline face fitFont picks must fit its slot by width as well as
     // height, for the numeric values and the lettered rest-page ones alike.
     var topY = h * 32 / 100;

@@ -2,6 +2,7 @@ import Toybox.Graphics;
 import Toybox.Lang;
 import Toybox.Math;
 import Toybox.System;
+import Toybox.WatchUi;
 
 // Screen geometry for the app-drawn views.
 //
@@ -98,6 +99,25 @@ module Layout {
         // Chord half-width of the inscribed circle at this height.
         var chord = Math.sqrt((halfHeight * halfHeight - dy * dy).toDouble());
         return chord.toNumber();
+    }
+
+    /**
+     * Width available to the left of the Instinct's circular subwindow, or
+     * the full width where there is no subwindow.
+     *
+     * The cut-out sits in the top-right (x=113, y=0, 62x62 on the 45mm) and
+     * its physical bezel eats a few pixels more than the logical rect, so a
+     * centred row level with its lower edge loses its right-hand end behind
+     * it - which is what happened to the paused screen's "1 set 0:02 work".
+    */
+    function clearWidthBesideSubwindow(screenWidth as Number) as Number {
+        if (WatchUi has :getSubscreen) {
+            var sub = WatchUi.getSubscreen();
+            if (sub != null) {
+                return sub.x as Number;
+            }
+        }
+        return screenWidth;
     }
 
     function isRound() as Boolean {
