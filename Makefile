@@ -12,7 +12,7 @@ RAFIKI ?= $(shell $(TOOL_RESOLVER) rafiki)
 JAVA_PATH := $(if $(findstring /,$(JAVA)),$(dir $(JAVA)):,)
 export PATH := $(JAVA_PATH)$(PATH)
 
-.PHONY: check pre-commit install-hooks doctor tools-check tool-resolver-test manifest-check xml fit-schema format format-check lint build test-build simulator-test tuning-search coverage clean
+.PHONY: check pre-commit install-hooks doctor tools-check tool-resolver-test manifest-check xml fit-schema format format-check lint build test-build simulator-test tuning-search coverage clean release-docs release-shots release-assets release-check
 
 check: doctor tools-check xml fit-schema format-check lint build test-build
 
@@ -95,6 +95,28 @@ tuning-search: $(DEVELOPER_KEY) | $(BIN_DIR)
 coverage: $(DEVELOPER_KEY) | $(BIN_DIR)
 	@command -v "$(RAFIKI)" >/dev/null || { echo "rafiki is not on PATH"; exit 1; }
 	"$(RAFIKI)" coverage test -d $(DEVICE) -y $(DEVELOPER_KEY) --start-simulator source
+
+# Release paperwork. Both take VERSION=x.y.z and write into docs/; commit
+# what they produce, then tag. The pre-push hook refuses a v* tag whose docs
+# are missing or stale, which is what stops these going out of date again -
+# 19 of the first 26 tags shipped with no product-update doc at all.
+release-docs:
+	@test -n "$(VERSION)" || { echo "usage: make release-docs VERSION=x.y.z"; exit 1; }
+	$(NODE_TS) tools/release-docs.ts $(VERSION)
+
+# Drives the real simulator, so it needs an awake, unlocked screen on macOS -
+# same requirement as the e2e suite. Builds each device before shooting it.
+release-shots:
+	@test -n "$(VERSION)" || { echo "usage: make release-shots VERSION=x.y.z"; exit 1; }
+	$(NODE_TS) tools/release-shots.ts $(VERSION)
+
+release-assets: release-docs release-shots
+
+# What the pre-push hook runs. Separate target so it can be checked by hand
+# before tagging, rather than discovering a gap at push time.
+release-check:
+	@test -n "$(VERSION)" || { echo "usage: make release-check VERSION=x.y.z"; exit 1; }
+	bash tools/check_release_docs.sh $(VERSION)
 
 clean:
 	$(RM) $(BIN_DIR)/mace-clubs.prg $(BIN_DIR)/mace-clubs-test.prg

@@ -1,0 +1,41 @@
+{
+  "device": "instinct3solar45mm",
+  "shots": [
+    {
+      "shot": "01-start-screen",
+      "listingItem": 1,
+      "file": "docs/store-assets/v0.15.1/instinct3solar45mm/01-start-screen.png",
+      "bytes": 32667
+    },
+    {
+      "shot": "02-equipment-picker",
+      "listingItem": 2,
+      "file": "docs/store-assets/v0.15.1/instinct3solar45mm/02-equipment-picker.png",
+      "bytes": 33090
+    },
+    {
+      "shot": "03-movement-picker",
+      "listingItem": 2,
+      "file": "docs/store-assets/v0.15.1/instinct3solar45mm/03-movement-picker.png",
+      "bytes": 30837
+    },
+    {
+      "shot": "04-work-screen",
+      "listingItem": 3,
+      "file": "docs/store-assets/v0.15.1/instinct3solar45mm/04-work-screen.png",
+      "bytes": 27909
+    },
+    {
+      "shot": "05-rest-screen",
+      "listingItem": 3,
+      "file": "docs/store-assets/v0.15.1/instinct3solar45mm/05-rest-screen.png",
+      "bytes": 30491
+    },
+    {
+      "shot": "06-paused-summary",
+      "listingItem": 6,
+      "file": "docs/store-assets/v0.15.1/instinct3solar45mm/06-paused-summary.png",
+      "bytes": 35608
+    }
+  ]
+}
