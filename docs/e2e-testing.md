@@ -144,3 +144,37 @@ fix (wake and unlock, not free memory).
 `Simulator.launch()`, and normal completion, so it shouldn't need that
 manual `pkill` in practice - it's there as the fallback for anything that
 slips past those (a `kill -9` on the runner itself, for instance).
+
+## How `Simulator.hold()` works (and why it's a mouse event)
+
+MENU is a long-press of UP on this device, and `hold()` synthesizes it as
+a **mouse press-and-hold on the device skin's UP-button hotspot** (from
+the same `simulator.json` `keys` array the key mappings come from), via
+`mouse-hold.swift`. That's not an implementation quirk - it's the only
+mechanism that works, because the simulator maps keyboard input to taps
+only. Ten approaches established this (a capturing `CGEventTap` listener
+script was the diagnostic turning point - it showed synthetic keyboard
+events were reaching the window server all along and let their fields be
+diffed against AppleScript's working `key code` events):
+
+- AppleScript's `key down`/`key up` commands: silent no-op, confirmed
+  with an unambiguous single-tap test (Select).
+- Raw `CGEventPost` keyboard events (any tap point, any event source,
+  with or without an explicit Unicode string, targeted globally or at the
+  simulator's own PID): silently dropped by the app **unless the
+  arrow-key modifier flags (`fn`+`numericPad`, `0xa00000`) are set** -
+  `CGEventCreateKeyboardEvent` doesn't populate those the way
+  AppleScript's `key code` does, and the app discards arrow-key events
+  without them. With the flags set and posted to `.cghidEventTap`, a
+  *fast* down/up pair does land - but only ever as a tap.
+- Any down/up pair held longer (with or without an OS-style autorepeat
+  train between them): ignored outright, not even a tap. The simulator
+  simply has no keyboard path to a hold.
+- Rapidly repeating the working `key code` command: 20 discrete taps
+  (observably - it cycled the idle preset selector 20 times), never a
+  hold.
+
+A human triggers MENU in the simulator by press-and-holding the mouse on
+the skin's button, so the driver does exactly that. The hotspot center
+(`MENU_BUTTON_CENTER` in `simulator.ts`) is device-skin-specific, like
+the screenshot geometry - the `launch()` device guard covers both.
