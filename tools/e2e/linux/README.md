@@ -41,13 +41,25 @@ So: mount your own locally-licensed copy in read-only at `docker run` time
 instead of baking it into the image. Nothing proprietary ever enters a
 Docker layer, gets committed to git, or gets pushed anywhere.
 
-A real CI job still needs its own answer for fonts, since GitHub-hosted
-runners have no locally-licensed SDK to mount from - two non-authenticated
-options worth exploring next: (a) design a small open-license bitmap font
-good enough for OCR (doesn't need to look like Garmin's shipped fonts,
-just needs the driver to prove screen state), or (b) accept no on-screen
-text in CI and assert via pixel-region/color checks instead. Neither is
-built yet - see `docs/e2e-testing.md`.
+**The CI fonts answer (solved, proven):** fetch them at job time through
+Garmin's own authenticated font API via
+[connect-iq-sdk-manager-cli](https://github.com/lindell/connect-iq-sdk-manager-cli)
+(a community CLI speaking Garmin's real SSO flow headlessly), using the
+repo's `GARMIN_USERNAME`/`GARMIN_PASSWORD` secrets. Verified end to end on
+a GitHub-hosted runner (`.github/workflows/e2e-linux-fonts-probe.yml`,
+branch-scoped): login, 54 font files for this device in ~4s to exactly the
+path the simulator reads (`/root/.Garmin/ConnectIQ/Fonts`), then this
+probe passing with OCR-verified text on the app-drawn idle screen and two
+Menu2 transitions. Fonts are cached via `actions/cache` keyed on device +
+CLI version, so credentials are exercised once per cache key, not every
+run - and they only ever land on the runner's ephemeral disk, never in an
+image or the repo.
+
+(An earlier alternative - substituting a bundled open-source bitmap font -
+is dead-ended by an upstream simulator segfault; see
+`explore/e2e-testfont-probe` and the Garmin bug-report draft. With real
+fonts, no custom FontResource is ever loaded, so that bug is never
+triggered.)
 
 ## Reproducing
 
