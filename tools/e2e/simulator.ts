@@ -14,7 +14,7 @@ import { homedir } from "node:os";
 import { isAbsolute, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
-import { type DeviceProfile, loadDeviceProfile } from "./device-profile.ts";
+import { type DeviceProfile, isGestureDriven, loadDeviceProfile } from "./device-profile.ts";
 import { resolve as resolveTool } from "../resolve-tool.ts";
 import { screensDiffer } from "./pixel-diff.ts";
 import { LinuxPlatform } from "./platform-linux.ts";
@@ -37,6 +37,12 @@ const REPO_ROOT = fileURLToPath(new URL("../..", import.meta.url));
 // geometry happened to be hardcoded for. MACE_E2E_DEVICE overrides it, which
 // is how CI fans the same tests out across screen sizes.
 const DEFAULT_DEVICE = "instinct3solar45mm";
+
+// How long a swiped list keeps gliding after the gesture ends, and how far
+// apart to sample once it has. Both only apply to gesture-driven devices; a
+// key press stops the moment it lands, so it keeps the tighter timing.
+const GESTURE_GLIDE_MS = 600;
+const GESTURE_POLL_MS = 300;
 
 export function targetDevice(): string {
     const override = process.env["MACE_E2E_DEVICE"];
@@ -208,6 +214,23 @@ export class Simulator {
         // Wait for the redraw to finish rather than a fixed delay - some
         // transitions (e.g. a reveal animation) take longer than others,
         // and a fixed sleep either wastes time or races a slow one.
+        //
+        // A swipe needs more patience than a key press. On a gesture-driven
+        // device UP/DOWN is a swipe (see isGestureDriven), and a touch list
+        // does not stop when the finger lifts - it glides. waitForStable
+        // looks for two consecutive similar frames, and mid-glide two frames
+        // sampled 100ms apart can easily be similar enough to pass, so the
+        // next step runs against a list that is still moving. That is exactly
+        // how venu3 failed in CI: two press("down") calls to scroll "Discard
+        // & go home" into view, then an OCR read of "d ' _ A te" - a smear of
+        // a moving screen, not wrong text. So after a gesture, let the glide
+        // get going, then sample far enough apart that "unchanged" means
+        // stopped rather than briefly slow.
+        if (isGestureDriven(this.platform.device) && (button === "up" || button === "down")) {
+            await sleep(GESTURE_GLIDE_MS);
+            await this.waitForStable(this.settleMs * 2, GESTURE_POLL_MS);
+            return;
+        }
         await this.waitForStable(this.settleMs, 100);
     }
 

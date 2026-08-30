@@ -24,7 +24,7 @@ import { homedir, tmpdir } from "node:os";
 import { join } from "node:path";
 import { promisify } from "node:util";
 
-import type { DeviceProfile } from "./device-profile.ts";
+import { type DeviceProfile, isGestureDriven } from "./device-profile.ts";
 import { resolve as resolveTool } from "../resolve-tool.ts";
 import type { Button, Platform } from "./platform.ts";
 
@@ -125,7 +125,7 @@ export class LinuxPlatform implements Platform {
         // event entirely; a swipe raises the same next/previous-page
         // behaviour there. Verified on vivoactive6, where a swipe up cycles
         // the preset exactly as DOWN does on the Instinct.
-        if (!this.device.hasUpDownKeys && this.device.isTouch) {
+        if (isGestureDriven(this.device)) {
             if (button === "up" || button === "down") {
                 await this.swipe(button);
                 return;

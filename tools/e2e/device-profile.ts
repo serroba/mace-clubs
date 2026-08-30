@@ -72,6 +72,20 @@ interface SimulatorJson {
 }
 
 /**
+ * Does this watch have to be driven by touch gestures rather than keys?
+ *
+ * True for the 30 manifest devices with no UP/DOWN keys. They drop arrow-key
+ * events entirely, their Menu2 highlights nothing until you scroll (so ENTER
+ * confirms nothing), and their system dialogs ignore a synthetic Escape - so
+ * paging becomes a swipe, SELECT a tap, and BACK a click on the ESC hotspot.
+ * The driver also has to settle differently afterwards: a swipe glides to a
+ * stop, a key press does not. See Simulator.press().
+ */
+export function isGestureDriven(device: DeviceProfile): boolean {
+    return !device.hasUpDownKeys && device.isTouch;
+}
+
+/**
  * Where the SDK keeps its per-device files. The Windows/macOS SDK manager and
  * the Linux CLI disagree, and CI runs as root in a container, so all three
  * candidates are tried rather than branching on process.platform.
