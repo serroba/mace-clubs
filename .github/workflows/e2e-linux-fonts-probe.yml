@@ -28,7 +28,7 @@ jobs:
       - name: Install GUI automation deps
         run: |
           apt-get update -qq
-          apt-get install -y -qq --no-install-recommends xdotool imagemagick tesseract-ocr openbox
+          apt-get install -y -qq --no-install-recommends xdotool imagemagick tesseract-ocr openbox curl ca-certificates
 
       - name: Cache device fonts
         id: fonts-cache
