@@ -1,0 +1,125 @@
+{
+  "version": "0.16.0",
+  "captured_at": "2026-08-30T07:10:41.409Z",
+  "devices": {
+    "instinct3solar45mm": [
+      {
+        "shot": "01-start-screen",
+        "listingItem": 1,
+        "file": "docs/store-assets/v0.16.0/instinct3solar45mm/01-start-screen.png",
+        "bytes": 32667
+      },
+      {
+        "shot": "02-equipment-picker",
+        "listingItem": 2,
+        "file": "docs/store-assets/v0.16.0/instinct3solar45mm/02-equipment-picker.png",
+        "bytes": 33090
+      },
+      {
+        "shot": "03-movement-picker",
+        "listingItem": 2,
+        "file": "docs/store-assets/v0.16.0/instinct3solar45mm/03-movement-picker.png",
+        "bytes": 30837
+      },
+      {
+        "shot": "04-work-screen",
+        "listingItem": 3,
+        "file": "docs/store-assets/v0.16.0/instinct3solar45mm/04-work-screen.png",
+        "bytes": 27909
+      },
+      {
+        "shot": "05-rest-screen",
+        "listingItem": 3,
+        "file": "docs/store-assets/v0.16.0/instinct3solar45mm/05-rest-screen.png",
+        "bytes": 30268
+      },
+      {
+        "shot": "06-paused-summary",
+        "listingItem": 6,
+        "file": "docs/store-assets/v0.16.0/instinct3solar45mm/06-paused-summary.png",
+        "bytes": 35074
+      }
+    ],
+    "fenix7": [
+      {
+        "shot": "01-start-screen",
+        "listingItem": 1,
+        "file": "docs/store-assets/v0.16.0/fenix7/01-start-screen.png",
+        "bytes": 65540
+      },
+      {
+        "shot": "02-equipment-picker",
+        "listingItem": 2,
+        "file": "docs/store-assets/v0.16.0/fenix7/02-equipment-picker.png",
+        "bytes": 61272
+      },
+      {
+        "shot": "03-movement-picker",
+        "listingItem": 2,
+        "file": "docs/store-assets/v0.16.0/fenix7/03-movement-picker.png",
+        "bytes": 57100
+      },
+      {
+        "shot": "04-work-screen",
+        "listingItem": 3,
+        "file": "docs/store-assets/v0.16.0/fenix7/04-work-screen.png",
+        "bytes": 61007
+      },
+      {
+        "shot": "05-rest-screen",
+        "listingItem": 3,
+        "file": "docs/store-assets/v0.16.0/fenix7/05-rest-screen.png",
+        "bytes": 65310
+      },
+      {
+        "shot": "06-paused-summary",
+        "listingItem": 6,
+        "file": "docs/store-assets/v0.16.0/fenix7/06-paused-summary.png",
+        "bytes": 70209
+      }
+    ],
+    "venu3": [
+      {
+        "shot": "01-start-screen",
+        "listingItem": 1,
+        "file": "docs/store-assets/v0.16.0/venu3/01-start-screen.png",
+        "bytes": 146417
+      },
+      {
+        "shot": "02-equipment-picker",
+        "listingItem": 2,
+        "file": "docs/store-assets/v0.16.0/venu3/02-equipment-picker.png",
+        "bytes": 186918
+      },
+      {
+        "shot": "03-movement-picker",
+        "listingItem": 2,
+        "file": "docs/store-assets/v0.16.0/venu3/03-movement-picker.png",
+        "bytes": 174707
+      },
+      {
+        "shot": "04-work-screen",
+        "listingItem": 3,
+        "file": "docs/store-assets/v0.16.0/venu3/04-work-screen.png",
+        "bytes": 142245
+      },
+      {
+        "shot": "05-rest-screen",
+        "listingItem": 3,
+        "file": "docs/store-assets/v0.16.0/venu3/05-rest-screen.png",
+        "bytes": 149079
+      },
+      {
+        "shot": "06-paused-summary",
+        "listingItem": 6,
+        "file": "docs/store-assets/v0.16.0/venu3/06-paused-summary.png",
+        "bytes": 162674
+      }
+    ]
+  },
+  "manual_still_required": {
+    "4": "Combo work screen - needs the bulava implement and the Combo movement selected",
+    "5": "Challenge screen - needs a Challenge preset chosen on the idle screen",
+    "7": "History list - needs saved sessions, which a fresh simulator has none of"
+  }
+}
