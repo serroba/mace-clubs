@@ -125,6 +125,12 @@ so it's out of scope until there's an actual need for it; this suite stays a
 local, pre-merge/manual-verification tool for now, same as
 `tools/visual_check.sh`.
 
+Until then, the suite gates releases locally instead: the `pre-push` hook
+(`.githooks/pre-push`, enabled via `make install-hooks`) runs it whenever a
+`v*` tag is pushed - the push that triggers the release workflow - under
+`caffeinate` so the display can't sleep mid-run. It still needs the screen
+unlocked when the push starts.
+
 ## Known flakiness
 
 The Connect IQ simulator is a real (JVM-backed) GUI app with no automation

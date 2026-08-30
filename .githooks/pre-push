@@ -4,5 +4,22 @@ set -euo pipefail
 repo_root="$(git rev-parse --show-toplevel)"
 cd "$repo_root"
 
+# Release gate: pushing a v* tag is what triggers the release workflow, so
+# the full e2e UI suite must pass locally first - it can't run in CI yet
+# (macOS-GUI-only; the Linux port is blocked, see docs/e2e-testing.md's
+# "Running in CI"). Needs an awake, unlocked screen: caffeinate keeps the
+# display from sleeping mid-run, but can't unlock an already-locked one -
+# if the suite times out waiting for the simulator window, unlock and
+# retry the push. Tag deletions (zero local sha) don't re-release anything
+# and skip the gate.
+zero_sha="0000000000000000000000000000000000000000"
+while read -r _local_ref local_sha remote_ref _remote_sha; do
+    if [[ "$remote_ref" == refs/tags/v* && "$local_sha" != "$zero_sha" ]]; then
+        echo "Pushing release tag ${remote_ref#refs/tags/} - running the e2e UI suite first..."
+        caffeinate -dimsu npm run test:e2e --prefix tools
+        break
+    fi
+done
+
 echo "Running complete pre-push validation..."
 exec make check
