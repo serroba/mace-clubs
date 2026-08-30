@@ -1,0 +1,91 @@
+name: E2E UI tests (Linux)
+
+# The real e2e UI suite (tools/e2e/*.e2e.test.ts) running headlessly on a
+# GitHub-hosted runner - the same test files the macOS driver runs locally,
+# through platform-linux.ts's Xvfb/xdotool/ImageMagick/Tesseract backend.
+#
+# Device fonts are fetched at job time through Garmin's own authenticated
+# API via connect-iq-sdk-manager-cli, using this repo's GARMIN_USERNAME /
+# GARMIN_PASSWORD secrets - nothing proprietary lives in an image, the repo,
+# or a registry, and the fonts only ever touch the runner's ephemeral disk.
+# They're cached, so credentials are exercised once per cache key.
+#
+# Not on pull_request: PRs from forks can't read secrets (the font fetch
+# would fail), and this suite is slower and more environment-sensitive than
+# the rest of CI. Runs on main and on demand instead, so a regression is
+# caught post-merge rather than gating every PR.
+
+permissions:
+  contents: read
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  e2e:
+    name: E2E UI suite (instinct3solar45mm)
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    container:
+      image: ghcr.io/matco/connectiq-tester:latest
+    defaults:
+      run:
+        # The container's /bin/sh is dash; these scripts need bash.
+        shell: bash
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Install display, input, screenshot, and OCR tooling
+        run: |
+          apt-get update -qq
+          apt-get install -y -qq --no-install-recommends \
+            xvfb xdotool imagemagick tesseract-ocr openbox curl ca-certificates
+          # Node for the driver itself - the base image has none (it was
+          # only ever meant to compile and unit-test Monkey C).
+          curl -fsSL https://deb.nodesource.com/setup_22.x | bash -
+          apt-get install -y -qq --no-install-recommends nodejs
+
+      - name: Cache device fonts
+        id: fonts-cache
+        uses: actions/cache@v4
+        with:
+          path: /root/.Garmin/ConnectIQ/Fonts
+          key: ciq-fonts-instinct3solar45mm-cli-v0.8.4
+
+      - name: Fetch device fonts via Garmin's authenticated API
+        if: steps.fonts-cache.outputs.cache-hit != 'true'
+        env:
+          GARMIN_USERNAME: ${{ secrets.GARMIN_USERNAME }}
+          GARMIN_PASSWORD: ${{ secrets.GARMIN_PASSWORD }}
+        run: |
+          test -n "$GARMIN_USERNAME" || { echo "::error::GARMIN_USERNAME secret is not set"; exit 1; }
+          test -n "$GARMIN_PASSWORD" || { echo "::error::GARMIN_PASSWORD secret is not set"; exit 1; }
+          curl -sL "https://github.com/lindell/connect-iq-sdk-manager-cli/releases/download/v0.8.4/connect-iq-sdk-manager-cli_0.8.4_Linux_x86_64.tar.gz" \
+            | tar xz -C /tmp connect-iq-sdk-manager
+          export HOME=/root
+          # Hash of the agreement at developer.garmin.com/downloads/connect-iq/sdks/agreement.html,
+          # read and accepted by the repo owner (also previously accepted via
+          # the official SDK Manager). Re-read and bump when the CLI reports
+          # a hash mismatch.
+          /tmp/connect-iq-sdk-manager agreement accept -H CC737BBBA104D7740D5BBCF27D0F6382
+          /tmp/connect-iq-sdk-manager login
+          /tmp/connect-iq-sdk-manager device download -d instinct3solar45mm --include-fonts
+          echo "fonts downloaded: $(find /root/.Garmin/ConnectIQ/Fonts -type f | wc -l) files"
+          # The simulator only needs Fonts/; keep the session token out of
+          # the cached path.
+          rm -f /root/.Garmin/ConnectIQ/token.json
+
+      - name: Run the e2e UI suite
+        run: bash tools/e2e/linux/run-suite.sh
+
+      # Screenshots of whatever the driver last saw, for diagnosing a
+      # failure that can't be reproduced locally.
+      - name: Upload screenshot diffs
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: e2e-screenshot-diffs
+          path: tools/e2e/.diffs/
+          if-no-files-found: ignore

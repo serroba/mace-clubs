@@ -24,7 +24,7 @@ void describe("Settings menu", () => {
         await sim.hold("menu");
 
         const joined = (await sim.readText()).join(" ");
-        assert.match(joined, /Settings/);
-        assert.match(joined, /History/);
+        assert.match(joined, /Settings/i);
+        assert.match(joined, /History/i);
     });
 });

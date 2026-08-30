@@ -42,9 +42,9 @@ void describe("Workout summary screen", () => {
         await sim.press("select");
 
         const joined = (await sim.readText()).join(" ");
-        assert.match(joined, /SUMMARY/);
-        assert.match(joined, /sets/);
-        assert.match(joined, /work/);
-        assert.match(joined, /BACK exit/);
+        assert.match(joined, /SUMMARY/i);
+        assert.match(joined, /sets/i);
+        assert.match(joined, /work/i);
+        assert.match(joined, /BACK exit/i);
     });
 });

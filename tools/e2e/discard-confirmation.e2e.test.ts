@@ -42,13 +42,13 @@ void describe("Discard confirmation", () => {
         await sim.hold("menu");
 
         const confirmLines = (await sim.readText()).join(" ");
-        assert.match(confirmLines, /Discard/);
-        assert.match(confirmLines, /home/);
+        assert.match(confirmLines, /Discard/i);
+        assert.match(confirmLines, /home/i);
 
         // BACK backs out of the confirmation without discarding - the
         // workout must still be running afterward.
         await sim.press("back");
         const afterLines = (await sim.readText()).join(" ");
-        assert.doesNotMatch(afterLines, /Discard/, "confirmation should be dismissed");
+        assert.doesNotMatch(afterLines, /Discard/i, "confirmation should be dismissed");
     });
 });

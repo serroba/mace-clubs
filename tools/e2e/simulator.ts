@@ -1,40 +1,27 @@
-// A minimal, Playwright-flavored driver for the Garmin Connect IQ simulator
-// on macOS. There is no official automation API for this app; everything
-// here is AppleScript (osascript) + screencapture, with the mechanics
-// discovered empirically:
-//
-// - `click window 1` (the title bar) is required before sending key events,
-//   or the simulator silently swallows them - `set frontmost to true` alone
-//   is not enough to get real OS-level key focus for this app.
-// - Buttons map to standard macOS virtual key codes: SELECT=Return(36),
-//   BACK=Escape(53), UP=126, DOWN=125.
-// - MENU is a long-press of UP, per this device's own simulator.json `keys`
-//   array (`{"behavior":"onMenu","id":"menu","isHold":true}` at the same
-//   `location` as `"up"`) - so it's a key-down/key-up pair with a delay
-//   between, not a distinct key code.
-// - The watch's actual screen (not the surrounding device bezel art) sits
-//   at a fixed offset within the window: simulator.json's
-//   `display.location` gives {x:101, y:158, width:176, height:176} within
-//   the device image; the image itself starts 28pt below the window's
-//   top-left (a standard macOS title bar). Screenshots are cropped to
-//   exactly that region so baselines contain only app UI pixels, never
-//   bezel art (which would make every baseline device-skin-specific for no
-//   reason).
+// A minimal, Playwright-flavored driver for the Garmin Connect IQ
+// simulator. There is no official automation API for this app on any
+// platform, so every OS-specific mechanic (how to send a key, capture the
+// screen, read text) lives behind the Platform seam in platform.ts -
+// platform-macos.ts and platform-linux.ts implement it, and each documents
+// the empirical findings behind its own approach. This file is the
+// platform-agnostic part: launch sequencing and retries, settle-waiting,
+// and the press/hold/read API the tests use.
 //
 // See docs/e2e-testing.md for how to write a new test against this driver.
 
-import { execFile, execFileSync, spawn, spawnSync, type ChildProcess } from "node:child_process";
-import { readFile, rm, writeFile } from "node:fs/promises";
+import { spawn, type ChildProcess } from "node:child_process";
 import { homedir } from "node:os";
 import { isAbsolute, join } from "node:path";
 import { fileURLToPath } from "node:url";
-import { promisify } from "node:util";
 
 import { resolve as resolveTool } from "../resolve-tool.ts";
 import { screensDiffer } from "./pixel-diff.ts";
+import { LinuxPlatform } from "./platform-linux.ts";
+import { MacosPlatform } from "./platform-macos.ts";
+import type { Button, Platform } from "./platform.ts";
 
-const OCR_SCRIPT = fileURLToPath(new URL("ocr.swift", import.meta.url));
-const MOUSE_HOLD_SCRIPT = fileURLToPath(new URL("mouse-hold.swift", import.meta.url));
+export type { Button } from "./platform.ts";
+
 // tools/e2e/ -> tools/ -> repo root. `prgPath` is resolved against this,
 // not process.cwd(), so a caller's working directory never matters -
 // run-e2e.ts spawns each test file with cwd set to this directory, which
@@ -43,63 +30,36 @@ const MOUSE_HOLD_SCRIPT = fileURLToPath(new URL("mouse-hold.swift", import.meta.
 // repo root.
 const REPO_ROOT = fileURLToPath(new URL("../..", import.meta.url));
 
+// The screenshot crop geometry in each platform backend is specific to this
+// one device's skin - other devices' simulator.json report entirely
+// different display locations (fenix7 {x:77,y:146,260x260}, venu3
+// {x:91,y:206,454x454}), so supporting another device means finding and
+// adding its constants, not just passing an id. launch() fails fast rather
+// than silently cropping the wrong region.
 const DEFAULT_DEVICE = "instinct3solar45mm";
-const TITLE_BAR_POINTS = 28;
-// From DEFAULT_DEVICE's own simulator.json: display.location. This geometry
-// (and EXPECTED_WINDOW_SIZE below) is specific to that one device's skin -
-// other devices' simulator.json report entirely different location/size
-// values (confirmed: fenix7 is {x:77,y:146,w:260,h:260}, venu3 is
-// {x:91,y:206,w:454,h:454}), and the window-size constant below isn't a
-// pure function of the device image size either (there's undocumented
-// extra chrome height on top of it), so it can't be derived generically -
-// see the launch() guard that fails fast rather than silently cropping the
-// wrong region for any other device.
-const SCREEN_OFFSET = { x: 101, y: 158 } as const;
-const SCREEN_SIZE = { width: 176, height: 176 } as const;
-// Center of the UP/MENU button's clickable hotspot on the device skin, from
-// the same simulator.json's `keys` array ({x:2, y:212, w:33, h:68} - the
-// "up" and "menu" entries share it, menu being the isHold variant). Like
-// SCREEN_OFFSET, specific to this one device's skin.
-const MENU_BUTTON_CENTER = { x: 2 + 33 / 2, y: 212 + 68 / 2 } as const;
-// The device.png skin's native size (381x496) plus the app's own status
-// bar - the window can briefly report a different (e.g. zero/tiny) size
-// while macOS is still animating it open, which would make an early
-// screenshot capture garbage (window chrome instead of the watch screen).
-const EXPECTED_WINDOW_SIZE = { width: 381, height: 552 } as const;
 
-const KEY_CODES = {
-    select: 36,
-    back: 53,
-    up: 126,
-    down: 125,
-} as const;
-
-export type Button = keyof typeof KEY_CODES;
-
-interface Bounds {
-    x: number;
-    y: number;
-    width: number;
-    height: number;
+function createPlatform(): Platform {
+    switch (process.platform) {
+        case "darwin":
+            return new MacosPlatform();
+        case "linux":
+            return new LinuxPlatform();
+        default:
+            throw new Error(`the e2e driver supports macOS and Linux, not "${process.platform}"`);
+    }
 }
 
-function runAppleScript(script: string): string {
-    return execFileSync("osascript", [], { input: script, encoding: "utf8" });
-}
-
-const execFileAsync = promisify(execFile);
-
-function isSimulatorProcessRunning(): boolean {
-    return spawnSync("pgrep", ["-f", "ConnectIQ.app/Contents/MacOS/simulator"]).status === 0;
-}
+/** Module-level so run-e2e.ts's signal handlers can clean up a simulator
+ * left behind by a killed test process without constructing a driver. */
+const platform = createPlatform();
 
 /** connectiq is launched `detached` (its own process group), so a Ctrl-C
  * during a hung test run won't reach it via the terminal's SIGINT - it'd be
  * orphaned, silently costing memory, until the next launch()'s pre-kill.
  * Exported so run-e2e.ts's signal handlers can call the same cleanup
- * Simulator.close() uses instead of duplicating the pkill. */
+ * Simulator.close() uses instead of duplicating the kill. */
 export function killSimulatorProcess(): void {
-    spawnSync("pkill", ["-9", "-f", "ConnectIQ.app/Contents/MacOS/simulator"]);
+    platform.killSimulator();
 }
 
 async function sleep(ms: number): Promise<void> {
@@ -134,10 +94,12 @@ export interface SimulatorOptions {
 
 export class Simulator {
     private readonly settleMs: number;
+    private readonly platform: Platform;
     private monkeydoProcess: ChildProcess | null = null;
 
-    private constructor(settleMs: number) {
+    private constructor(settleMs: number, platformImpl: Platform) {
         this.settleMs = settleMs;
+        this.platform = platformImpl;
     }
 
     /** Always starts a genuinely fresh simulator process, even if one is
@@ -150,63 +112,43 @@ export class Simulator {
     static async launch(options: SimulatorOptions): Promise<Simulator> {
         const device = options.device ?? DEFAULT_DEVICE;
         if (device !== DEFAULT_DEVICE) {
-            // SCREEN_OFFSET/SCREEN_SIZE/EXPECTED_WINDOW_SIZE above are only
-            // valid for DEFAULT_DEVICE's skin - silently using them for any
-            // other device would crop screenshots to the wrong region
-            // rather than failing loudly. Support for another device means
-            // finding and adding its own constants, not just passing an id.
             throw new Error(
                 `Simulator only supports device "${DEFAULT_DEVICE}" today - screenshot geometry is ` +
                     `hardcoded to its skin. Passing "${device}" would silently crop the wrong region.`,
             );
         }
         const prgPath = isAbsolute(options.prgPath) ? options.prgPath : join(REPO_ROOT, options.prgPath);
-        const connectiqBin = resolveTool("connectiq", homedir(), process.env["PATH"] ?? "");
         const monkeydoBin = resolveTool("monkeydo", homedir(), process.env["PATH"] ?? "");
 
-        if (isSimulatorProcessRunning()) {
-            killSimulatorProcess();
-            await waitFor(() => !isSimulatorProcessRunning(), 10_000, "the previous simulator process to exit");
+        if (platform.isSimulatorRunning()) {
+            platform.killSimulator();
+            await waitFor(() => !platform.isSimulatorRunning(), 10_000, "the previous simulator process to exit");
         }
 
-        spawn(connectiqBin, [], { detached: true, stdio: "ignore" }).unref();
-        const sim = new Simulator(options.settleMs ?? 1500);
+        platform.startSimulator();
+        const sim = new Simulator(options.settleMs ?? 1500, platform);
         try {
-            await waitFor(() => isSimulatorProcessRunning(), 20_000, "the simulator process to start");
+            await waitFor(() => platform.isSimulatorRunning(), 20_000, "the simulator process to start");
             await sleep(3000); // the simulator needs time to finish booting its own UI
 
             await sim.loadApp(monkeydoBin, prgPath, device);
 
-            await waitFor(() => sim.windowExists(), 30_000, "the simulator window to appear");
-            // The window is a normal resizable macOS window - a previous
-            // session (or the user dragging it) can leave it at any size, which
-            // would break the fixed SCREEN_OFFSET/SCREEN_SIZE math below. Force
-            // it back to the size that math assumes rather than hoping for it.
-            sim.setWindowSize(EXPECTED_WINDOW_SIZE.width, EXPECTED_WINDOW_SIZE.height);
-            await waitFor(
-                () => {
-                    const bounds = sim.windowBounds();
-                    return (
-                        bounds.width === EXPECTED_WINDOW_SIZE.width && bounds.height === EXPECTED_WINDOW_SIZE.height
-                    );
-                },
-                5000,
-                "the simulator window to resize",
-            );
-            // Immediately after a resize the window can briefly render blank
-            // before the app repaints - two consecutive blank frames look
-            // "stable" to waitForStable() even though nothing real has drawn
-            // yet, which would make the very first press() below look like it
-            // navigated somewhere when it actually just revealed the launcher
-            // screen for the first time. Wait for real (OCR-readable) content
-            // instead of just pixel stability.
+            await waitFor(() => platform.windowExists(), 30_000, "the simulator window to appear");
+            await platform.prepareWindow();
+            // Immediately after the window appears it can briefly render
+            // blank before the app repaints - two consecutive blank frames
+            // look "stable" to waitForStable() even though nothing real has
+            // drawn yet, which would make the very first press() below look
+            // like it navigated somewhere when it actually just revealed the
+            // launcher screen for the first time. Wait for real
+            // (OCR-readable) content instead of just pixel stability.
             // A cold simulator can take a good while to actually boot the
             // device and render its first frame after monkeydo connects -
-            // observed up to ~25s on this machine. This is a one-time cost per
-            // launch(), not per test, so it's worth being generous here.
+            // observed up to ~25s. This is a one-time cost per launch(), not
+            // per test, so it's worth being generous here.
             await waitFor(async () => (await sim.readText()).length > 0, 45_000, "the launcher screen to render");
-            // The launcher screen still has a brief reveal animation on top of
-            // that first paint; wait it out so the first real interaction
+            // The launcher screen still has a brief reveal animation on top
+            // of that first paint; wait it out so the first real interaction
             // doesn't land mid-transition.
             await sim.waitForStable(4000, 300);
             return sim;
@@ -246,62 +188,9 @@ export class Simulator {
         }
     }
 
-    private windowExists(): boolean {
-        try {
-            const out = runAppleScript(
-                'tell application "System Events" to tell process "simulator" to return count of windows',
-            ).trim();
-            return Number(out) > 0;
-        } catch {
-            return false;
-        }
-    }
-
-    private setWindowSize(width: number, height: number): void {
-        runAppleScript(`
-            tell application "System Events"
-                tell process "simulator"
-                    set size of window 1 to {${String(width)}, ${String(height)}}
-                end tell
-            end tell
-        `);
-    }
-
-    private windowBounds(): Bounds {
-        const out = runAppleScript(`
-            tell application "System Events"
-                tell process "simulator"
-                    set win to window 1
-                    set {px, py} to position of win
-                    set {sw, sh} to size of win
-                    return (px as string) & "," & (py as string) & "," & (sw as string) & "," & (sh as string)
-                end tell
-            end tell
-        `).trim();
-        const parts = out.split(",").map(Number);
-        const [x, y, width, height] = parts;
-        if (x === undefined || y === undefined || width === undefined || height === undefined) {
-            throw new Error(`could not parse simulator window bounds from "${out}"`);
-        }
-        return { x, y, width, height };
-    }
-
-    /** Real OS-level key focus needs an actual click on the window - being
-     * "frontmost" per System Events is not sufficient for this app. */
-    private focus(): void {
-        runAppleScript(`
-            tell application "System Events"
-                tell process "simulator"
-                    set frontmost to true
-                    click window 1
-                end tell
-            end tell
-        `);
-    }
-
     async press(button: Button): Promise<void> {
-        this.focus();
-        runAppleScript(`tell application "System Events" to key code ${String(KEY_CODES[button])}`);
+        this.platform.focus();
+        await this.platform.pressKey(button);
         // Wait for the redraw to finish rather than a fixed delay - some
         // transitions (e.g. a reveal animation) take longer than others,
         // and a fixed sleep either wastes time or races a slow one.
@@ -326,37 +215,18 @@ export class Simulator {
     }
 
     /** MENU is the only held button this device exposes (a long-press of UP).
-     *
-     * Implemented as a mouse press-and-hold on the skin's UP-button hotspot
-     * (MENU_BUTTON_CENTER), because the simulator maps keyboard input to
-     * taps only - no keyboard event can produce a hold, no matter how it's
-     * synthesized. See mouse-hold.swift's header for the approaches that
-     * were tried and ruled out before landing here. */
+     * Both platforms implement it as a mouse press-and-hold on the skin's
+     * UP-button hotspot - the simulator maps keyboard input to taps only, so
+     * no synthesized key event of any kind produces a hold. */
     async hold(_button: "menu", holdMs = 1200): Promise<void> {
-        this.focus();
-        const bounds = this.windowBounds();
-        const x = bounds.x + MENU_BUTTON_CENTER.x;
-        const y = bounds.y + TITLE_BAR_POINTS + MENU_BUTTON_CENTER.y;
-        await execFileAsync("swift", [MOUSE_HOLD_SCRIPT, String(x), String(y), String(holdMs)]);
+        this.platform.focus();
+        await this.platform.holdMenu(holdMs);
         await this.waitForStable(this.settleMs, 100);
     }
 
-    /** Screenshot of just the watch screen (176x176pt), not the device bezel. */
+    /** Screenshot of just the watch screen (176x176), not the device bezel. */
     async screenshot(): Promise<Buffer> {
-        const bounds = this.windowBounds();
-        const screenX = bounds.x + SCREEN_OFFSET.x;
-        const screenY = bounds.y + TITLE_BAR_POINTS + SCREEN_OFFSET.y;
-        const tmpPath = join("/tmp", `mace-clubs-e2e-${String(Date.now())}-${String(Math.random()).slice(2)}.png`);
-        await execFileAsync("screencapture", [
-            "-x",
-            `-R${String(screenX)},${String(screenY)},${String(SCREEN_SIZE.width)},${String(SCREEN_SIZE.height)}`,
-            tmpPath,
-        ]);
-        try {
-            return await readFile(tmpPath);
-        } finally {
-            await rm(tmpPath, { force: true });
-        }
+        return await this.platform.captureScreen();
     }
 
     /** Polls screenshots until two consecutive captures agree within
@@ -364,7 +234,7 @@ export class Simulator {
      * animation/countdown of unknown duration instead of guessing a fixed
      * delay. Exact byte equality is deliberately not used: two captures of
      * the same static screen can still differ by a few pixels from
-     * screencapture/PNG-encoding jitter alone. */
+     * capture/PNG-encoding jitter alone. */
     async waitForStable(timeoutMs = 5000, pollMs = 200): Promise<Buffer> {
         const start = Date.now();
         let previous = await this.screenshot();
@@ -379,30 +249,19 @@ export class Simulator {
         return previous;
     }
 
-    /** OCRs the current screen (via macOS's built-in Vision framework - see
-     * ocr.swift) and returns one string per recognized line/region. Prefer
-     * this over a screenshot baseline for asserting *what state the app is
-     * in* (e.g. "did we reach the rest screen") - it survives font
-     * hinting/anti-aliasing noise that would flake a pixel comparison, and
-     * reads far more clearly in a test than a wall of screenshot diffs.
-     * Keep screenshot()/expectScreenshotMatches() for asserting *layout*. */
+    /** OCRs the current screen and returns one string per recognized
+     * line/region. Prefer this over a screenshot baseline for asserting
+     * *what state the app is in* (e.g. "did we reach the rest screen") - it
+     * survives font hinting/anti-aliasing noise that would flake a pixel
+     * comparison, and reads far more clearly in a test than a wall of
+     * screenshot diffs. Keep screenshot()/expectScreenshotMatches() for
+     * asserting *layout*. */
     async readText(): Promise<string[]> {
-        const png = await this.screenshot();
-        const tmpPath = join("/tmp", `mace-clubs-e2e-ocr-${String(Date.now())}-${String(Math.random()).slice(2)}.png`);
-        await writeFile(tmpPath, png);
-        try {
-            const { stdout } = await execFileAsync("swift", [OCR_SCRIPT, tmpPath]);
-            return stdout
-                .split("\n")
-                .map((line) => line.trim())
-                .filter((line) => line.length > 0);
-        } finally {
-            await rm(tmpPath, { force: true });
-        }
+        return await this.platform.ocr(await this.screenshot());
     }
 
     close(): void {
         this.monkeydoProcess?.kill();
-        killSimulatorProcess();
+        this.platform.killSimulator();
     }
 }
