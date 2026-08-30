@@ -5,8 +5,15 @@
 **Website:** [serroba.github.io/mace-clubs](https://serroba.github.io/mace-clubs/) ·
 **Downloads:** [GitHub Releases](https://github.com/serroba/mace-clubs/releases)
 
-A Garmin Connect IQ workout app for steel mace, Indian club, and bulava
-training.
+A Garmin watch app for steel mace, Indian club, and bulava training, shaped by
+the way these implements are actually trained.
+
+Set your tempo and the watch holds it with a wrist buzz, so you keep your
+cadence without looking at your arm. Pick your implement and it offers that
+implement's movements — 360s and 10-to-2s for the mace, mills and casts for
+clubs, the traditional combination set for the bulava. Each hand's sets are
+counted separately, because the tradition says they should be. Finish, and the
+session is in Garmin Connect with every set labelled by what you actually did.
 
 **Runs on 120 Connect IQ watches. Swing counting is validated on the Instinct 3
 Solar 45 mm.** Everything else — the metronome, intervals, movement and side
@@ -18,66 +25,37 @@ been checked against known-correct numbers. Contributing a recording from your
 own watch is the thing that changes that — see
 [CONTRIBUTING.md](CONTRIBUTING.md#calibration-recordings).
 
-## Features
+## What it does
 
-- Records to Garmin Connect (sport: Training / Strength) under the implement and
-  weight you chose — `Mace 4kg`, `Clubs 2x1kg` — with Mace & Clubs as the
-  recording app
-- Configurable metronome (5–240 bpm) with tone and vibration cues
-- Five-second start delay and advance warning before each new work interval
-- Optional on-watch Rhythm Score with a 12-session local trend; no account,
-  network request, or Rhythm Score upload
-- On-watch history of the last 20 sessions, browsable from Settings with the
-  per-set scores and the implement each session was recorded with
-- Optional gyroscope-primary mace swing counter, plus 5:00 and 10:00 Challenge presets
-  (after the traditional timed max-swing gada competitions) where counting is
-  always on and detected swings replace metronome rounds on screen
-- Garmin Connect charts for cumulative swings and rolling swing cadence,
-  backed by per-second detected-swing events in exported FIT activities
-- Rep mode for quantity-first sessions: no metronome or prescribed interval,
-  a large live per-set swing count, optional target cue, manual set/rest
-  boundaries, and UP/DOWN correction before a set is committed
-- Optional per-set exercise load exposure from wrist motion, recording dynamic
-  acceleration exposure, peak, active seconds, and weight-volume when swing
-  counting is also enabled; values are descriptive proxies, not tendon force
-- Optional one-second wrist-motion intensity and peak charts in Garmin Connect;
-  enable Motion charts in Settings (additional battery use)
-- Watch-wrist and equipment metadata written into each FIT session
-- Set total written to the FIT session, with work sets and timed rests recorded
-  as separate lap boundaries for analysis in Garmin Connect and exported FIT files
+**Keeps the tempo.** A metronome from 5 to 240 bpm, adjustable mid-workout,
+with tone and vibration cues and an accent on the first beat of each loop. For
+the bulava combo it calls the whole sequence: a pulse on each movement change,
+a double pulse on the hand switch.
 
-## Local workout report
+**Runs the session.** Interval presets with work and rest, free training with
+explicit work/rest phases, a custom shape set from the phone or the watch, and
+5:00 and 10:00 Challenge presets after the traditional timed gada competitions.
+Five-second start countdown, and a warning before each work interval.
 
-Garmin's original FIT export contains the app's opt-in per-second motion
-features even though Garmin Connect does not graph them. Generate a private,
-self-contained report locally from either the downloaded ZIP or a raw FIT file:
+**Counts the swings.** An optional gyroscope-primary swing counter, always on
+for challenges, with detected swings shown live and saved per set and in total.
+Rep mode makes that count the primary metric, with UP/DOWN correction before a
+set is committed.
 
-```sh
-npm ci --prefix tools
-node --experimental-strip-types tools/report-fit.ts ~/Downloads/activity.zip
-node --experimental-strip-types tools/validate-workout.ts ~/Downloads/activity.zip
-```
+**Remembers the practice.** Your last 20 sessions stay on the watch, browsable
+from Settings with each session's per-set scores and implement. An optional
+Rhythm Score tracks how repeatable your motion is across a 12-session trend —
+no account, no network request, nothing uploaded.
 
-The resulting HTML stays on your computer and combines motion intensity, heart
-rate, swing cadence, individual swing markers, work/rest phases, normalized set
-rhythm, per-set Rhythm Score, and its rolling form where the FIT file contains
-it. Enabling both the local Rhythm Score and motion research export records the rolling
-score for Garmin Connect and this report. Motion exposure is a wrist-motion
-measurement, not an estimate of tendon force. The validator reports structural
-errors, missing series, metadata gaps, and a transparent data-quality score; use
-`--json` for automation. Its findings describe recording quality, not injury risk.
-- Tempo, tone, and vibration configurable from the Garmin Connect phone app
+**Records what you did.** Work sets and timed rests become separate lap
+boundaries, each carrying its movement, working side, implement weight,
+duration, and Rhythm Score. Optional per-second charts in Garmin Connect cover
+cumulative swings, swing cadence, and wrist-motion intensity.
 
-For labelled calibration recordings, tune and verify the shared gyro detector
-against independently known per-set counts with:
-
-```sh
-node --experimental-strip-types tools/tune-swing-counter.ts
-```
-
-The current shared model reproduces the labelled mace sets `[5, 5, 10, 10]`
-and `[60, 60]`. These fixtures test detector replay; a fresh physical-watch
-workout remains the final check for live sensor behavior.
+**Measures exposure, carefully.** An optional per-set record of wrist motion —
+exposure, peak, active seconds, weight-volume. These are descriptive proxies
+for what your wrist did, not estimates of tendon force, and
+[docs/load-exposure.md](docs/load-exposure.md) says exactly what they are.
 
 ## Controls
 
@@ -88,47 +66,14 @@ workout remains the final check for live sensor behavior.
 | UP / DOWN | Choose workout preset | Tempo ±5 bpm; Rep mode: count ±1 | Browse sets |
 | MENU | Settings | Free rest: movement/side/discard menu; otherwise discard and return home | Discard and return home |
 
-Interval presets (e.g. 5 × 2:00 work / 1:00 rest) call work and rest with tone and
-vibration cues, run the metronome only during work, and count sets automatically.
-Challenge presets are one continuous work interval with no rest; swing counting
-is forced on, total swings are written to the session (`total_swings`) and each
-work lap (`swing_count`), and swings during rest or pause never count.
-The Custom preset defaults to 5 × 2:00 work / 2:00 rest. Configure it directly
-on the watch from MENU → Settings → Custom workout, or from the Garmin Connect
-phone app. The on-watch editor walks through sets, work duration, and rest
-duration; duration controls move in 30-second steps.
-In Free training, SELECT completes the current set and enters REST; press SELECT
-again to begin the next WORK phase. Rest keeps activity and heart-rate recording
-running. BACK remains a true whole-session pause/resume control.
-Rep mode is enabled from MENU → Settings → Mode (or Garmin Connect settings).
-It uses the same manual work/rest flow but keeps the metronome silent and makes
-the current set's detected swings the primary metric. Its optional target (0
-means off) gives one cue when reached; on-watch target choices cycle through
-common values, while Garmin Connect accepts any value from 0–999. UP/DOWN adds
-or removes one rep while working, before SELECT commits that corrected count to
-the set summary and FIT lap.
-Garmin may label recorded set and rest boundaries as laps or splits. Work laps
-carry their one-based `set_number`; rest laps carry zero. Each boundary also
-records its work/rest phase, duration, implement weight, watch wrist, and
-set Rhythm Score where available. Starting a workout asks for equipment and then
-movement; the movement list follows the implement (mace: 360, 10-to-2,
-flow/other; clubs: mill, shield cast, flow/other; bulava: combo, mill,
-reverse mill, bullwhip, flow/other) and the choice is saved with every work
-block. The bulava **Combo** is the traditional combination set — mill,
-reverse mill, bullwhip on one hand, then the other. The metronome calls the
-sequence: an accent on each movement change, a double pulse on the hand
-switch, and the screen shows the current hand and movement (e.g. `L REV
-MILL`). Beats per movement are phone-configurable (default 4-4-2), and combo
-sets always record an alternating working side. During a free-training rest, MENU offers switching the
-movement or working side for the next set, so left/right ladders only need one
-press per rest. Working side is also configurable in Settings, separately from
-watch wrist. Single-side work sets are tallied per hand and the paused and
-completed summaries show an `L3/R2` balance tag, following the
-traditional convention of giving each hand the same number of sets. The paused and completed screens provide an
-on-watch set summary; use UP/DOWN to inspect individual work/rest durations.
-Connect IQ does not
-expose Garmin's native strength-set message type, so the Strength summary can
-still show `-- Sets`.
+In free training, SELECT ends the current set and enters REST; SELECT again
+begins the next work phase. BACK stays a true whole-session pause, separate
+from that boundary. During a rest, MENU switches the movement or working side
+for the next set, so a left/right ladder needs one press per rest.
+
+What each workout shape does, how movements and sides are chosen and recorded,
+and what reaches Garmin Connect are in
+[docs/training-reference.md](docs/training-reference.md).
 
 ## Development
 
@@ -226,6 +171,39 @@ linter, and `rafiki` in either `PATH` or `~/.cargo/bin`. This keeps `make check`
 working in non-interactive shells that have not loaded your shell profile.
 Override `DEVICE`, `DEVELOPER_KEY`, `JAVA`, `MONKEYC`, `MONKEYDO`, `FORMATTER`,
 `LINTER`, or `RAFIKI` when needed.
+
+### Local workout report
+
+Garmin's original FIT export contains the app's opt-in per-second motion
+features even though Garmin Connect does not graph them. Generate a private,
+self-contained report locally from either the downloaded ZIP or a raw FIT file:
+
+```sh
+npm ci --prefix tools
+node --experimental-strip-types tools/report-fit.ts ~/Downloads/activity.zip
+node --experimental-strip-types tools/validate-workout.ts ~/Downloads/activity.zip
+```
+
+The resulting HTML stays on your computer and combines motion intensity, heart
+rate, swing cadence, individual swing markers, work/rest phases, normalized set
+rhythm, per-set Rhythm Score, and its rolling form where the FIT file contains
+it. Enabling both the local Rhythm Score and motion research export records
+the rolling score for Garmin Connect and this report. Motion exposure is a wrist-motion
+measurement, not an estimate of tendon force. The validator reports structural
+errors, missing series, metadata gaps, and a transparent data-quality score; use
+`--json` for automation. Its findings describe recording quality, not injury risk.
+
+For labelled calibration recordings, tune and verify the shared gyro detector
+against independently known per-set counts with:
+
+```sh
+node --experimental-strip-types tools/tune-swing-counter.ts
+```
+
+The current shared model reproduces the labelled mace sets `[5, 5, 10, 10]`
+and `[60, 60]`. These fixtures test detector replay; a fresh physical-watch
+workout remains the final check for live sensor behavior.
+
 
 ### Formatting and linting
 
