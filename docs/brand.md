@@ -101,6 +101,43 @@ Rendering per-size icons and wiring them through the jungle's resource
 qualifiers is now a mechanical job, since the geometry is vector. It has not
 been done.
 
+## The device-support claim
+
+Three surfaces used to say three different things. The website said the app
+"runs on 120+ Connect IQ watches", the README said "the supported watch is the
+Instinct 3 Solar 45 mm", and v0.15.0's notes said support was *intentionally*
+limited to that one watch — while the manifest shipped 120 products. A Fenix
+owner reading any two of those comes away misled, and the version that costs
+you a one-star review is the one they believe.
+
+Both halves are true; they are about different things. Use this, and keep the
+short form intact as one sentence:
+
+> **Runs on 120 Connect IQ watches. Swing counting is validated on the
+> Instinct 3 Solar 45 mm.**
+
+Where there is room, the long form follows it:
+
+> Everything else — the metronome, intervals, movement and side tracking, and
+> activity recording — behaves the same on all of them. Swing counting is the
+> exception: its detector is tuned against labelled recordings from that one
+> watch and its 25 Hz gyroscope. On other watches it still runs, falling back
+> to the accelerometer where there is no gyroscope, but the counts have not
+> been checked against known-correct numbers.
+
+The fallback is real and worth stating, because "not validated" reads as "does
+not work" otherwise. `WorkoutSession.startMotionCapture` asks for the
+gyroscope, and a device that rejects the combined sensor request drops to the
+accelerometer detector rather than counting zero.
+
+What makes the second sentence shorter is labelled recordings from other
+watches, which is why every statement of it links to
+[CONTRIBUTING.md](../CONTRIBUTING.md#calibration-recordings).
+
+The count is not a slogan — it is `grep -c '<iq:product' manifest.xml`, and
+`make manifest-check` reports CIQ 3.1+ wearables the manifest is missing. If
+the manifest grows, this number moves with it.
+
 ## What the app does not name
 
 The recorded activity is **not** called "Mace & Clubs". `WorkoutSession.mc`

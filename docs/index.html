@@ -131,6 +131,17 @@
   .feature h3 { margin: 0 0 12px; font-size: 1rem; }
   .feature p { margin: 0; color: rgba(255, 250, 240, .62); font-size: .9rem; }
 
+  .support-note {
+    margin: 44px 0 0;
+    max-width: 780px;
+    padding-left: 20px;
+    border-left: 2px solid var(--ember);
+    color: rgba(255, 250, 240, .62);
+    font-size: .88rem;
+  }
+  .support-note strong { display: block; margin-bottom: 8px; color: var(--cream); }
+  .support-note a { color: #f27750; text-underline-offset: 3px; }
+
   .rhythm { display: grid; grid-template-columns: .8fr 1.2fr; gap: 90px; align-items: start; }
   .rhythm h2 { margin: 0; font-size: clamp(3.2rem, 6vw, 6rem); line-height: .9; letter-spacing: -.055em; }
   .rhythm-copy { padding-top: 8px; }
@@ -259,6 +270,15 @@
         <article class="feature"><b>05</b><h3>Look back on the watch</h3><p>Your last twenty sessions stay on the wrist: browse them from Settings, scroll the per-set smoothness, and see the last comparable score before you start.</p></article>
         <article class="feature"><b>06</b><h3>Measure the exposure</h3><p>An optional per-set record of wrist motion — exposure, peak, active seconds, and weight-volume — kept as transparent measurements, not a single invented score.</p></article>
       </div>
+      <p class="support-note">
+        <strong>Runs on 120 Connect IQ watches. Swing counting is validated on the Instinct 3 Solar 45&nbsp;mm.</strong>
+        Everything above behaves the same on all of them. Swing counting is the exception — its detector is
+        tuned against labelled recordings from that one watch and its 25&nbsp;Hz gyroscope. Elsewhere it still
+        runs, falling back to the accelerometer where there is no gyroscope, but the counts have not been
+        checked against known-correct numbers.
+        <a href="https://github.com/serroba/mace-clubs/blob/main/CONTRIBUTING.md#calibration-recordings">Contributing a recording</a>
+        from your own watch is what changes that.
+      </p>
     </div>
   </section>
 
@@ -309,7 +329,7 @@
     <div class="shell build">
       <div><p class="eyebrow">Open source</p><h2>Build it.<br>Shape it.<br>Swing it.</h2></div>
       <div>
-        <p>Mace &amp; Clubs is MIT-licensed and built in the open. <a href="https://github.com/serroba/mace-clubs/releases/latest">Download the latest release</a> or compile it with the Garmin Connect IQ SDK — it runs on 120+ Connect IQ watches.</p>
+        <p>Mace &amp; Clubs is MIT-licensed and built in the open. <a href="https://github.com/serroba/mace-clubs/releases/latest">Download the latest release</a> or compile it with the Garmin Connect IQ SDK — it runs on 120 Connect IQ watches.</p>
         <pre>git clone https://github.com/serroba/mace-clubs.git
 cd mace-clubs
 
