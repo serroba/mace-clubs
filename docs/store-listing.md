@@ -1,6 +1,8 @@
 # Connect IQ Store listing — DRAFT (review before submitting)
 
-Upload file: `mace-clubs.iq` from the v0.15.0 GitHub release.
+<!-- generated:upload -->
+Upload file: `mace-clubs.iq` from the v0.15.1 GitHub release.
+<!-- /generated:upload -->
 
 Note: the store renders these fields as plain text — no markdown emphasis.
 
@@ -58,19 +60,13 @@ Also included:
 - Optional calibration logging records accelerometer and gyroscope data
   for private offline swing analysis
 
-## What's new — v0.15.0
-Mace swing counting now uses the watch gyroscope as its primary signal. The
-detector was fitted once across labelled real recordings and reproduces both a
-short `[5, 5, 10, 10]` workout and the previously undercounted `[60, 60]`
-workout in offline replay. Acceleration spikes no longer drive mace counts.
+<!-- generated:whatsnew -->
+## What's new — v0.15.1
 
-Support is intentionally limited to the Instinct 3 Solar 45 mm while that is
-the only physical watch with labelled recordings and a validated 25 Hz gyro
-path. Calibration logging and the local FIT tools now expose the raw rotation
-stream for further analysis.
-
-Hero image: `docs/store-assets/hero-v0.4.0.png` (1440×720 PNG, under 2 MB) —
-consider refreshing after v0.15.0; this release does not change the watch UI.
+- Add a gyro-tuning grid search against real recordings; document current findings
+- Restore full device support after the gyro-primary mace change
+- Add a recorded-fixture replay testing framework for on-device motion code
+<!-- /generated:whatsnew -->
 
 ## Category
 Health & Fitness
@@ -84,7 +80,10 @@ Health & Fitness
 - Language: English
 
 ## Screenshots (need at least one)
-Capture from the simulator or watch:
+`make release-shots VERSION=x.y.z` captures items 1-3 and 6 automatically for
+instinct3solar45mm, fenix7 and venu3 into `docs/store-assets/v<version>/`; its
+manifest.json lists which of the below still need a hand capture and why.
+
 1. Start screen — workout name + `50 bpm | 4-2`
 2. Movement picker after choosing an implement
 3. In-workout — timer, bpm, rounds / HR
