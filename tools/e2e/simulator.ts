@@ -81,6 +81,17 @@ export function killSimulatorProcess(): void {
     platform.killSimulator();
 }
 
+/** Has the simulator managed to put a window on screen? run-e2e.ts asks
+ * after a failure to tell "the app is broken" apart from "this machine
+ * cannot show a window right now". */
+export function simulatorWindowExists(): boolean {
+    try {
+        return platform.windowExists();
+    } catch {
+        return false;
+    }
+}
+
 async function sleep(ms: number): Promise<void> {
     await new Promise<void>((res) => {
         setTimeout(res, ms);
