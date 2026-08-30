@@ -49,6 +49,17 @@ if [[ -n "$(git status --porcelain -- docs/product-updates "$listing" docs/store
     problems+=("generated release docs have uncommitted changes - commit them before tagging")
 fi
 
+# Present is not the same as current. Everything above only asks whether the
+# files exist and are committed, which is why this gate reported v0.16.0 ready
+# while its title still said "Mace and Clubs" - the generator had changed
+# underneath it and nothing compared the two. Ask the generator directly.
+if ! stale_report="$(node --experimental-strip-types --disable-warning=ExperimentalWarning \
+    tools/release-docs.ts --check "$version" 2>&1)"; then
+    while IFS= read -r line; do
+        [[ "$line" == *" - docs/"* ]] && problems+=("${line##*- } is out of date with tools/release-docs.ts")
+    done <<<"$stale_report"
+fi
+
 if [[ ${#problems[@]} -gt 0 ]]; then
     echo "Release paperwork for v${version} is not ready:" >&2
     printf '  - %s\n' "${problems[@]}" >&2
