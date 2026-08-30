@@ -552,7 +552,9 @@ class MaceClubsView extends WatchUi.View {
                 cx,
                 h * (done ? 79 : 89) / 100,
                 Graphics.FONT_XTINY,
-                count > 1 ? "UP/DOWN sets" : "MENU discard",
+                count > 1
+                    ? Lang.format("$1$ sets", [DeviceInput.pageLabel()])
+                    : Lang.format("$1$ discard", [DeviceInput.menuLabel()]),
                 Graphics.TEXT_JUSTIFY_CENTER
             );
             return;
@@ -563,11 +565,20 @@ class MaceClubsView extends WatchUi.View {
             // devices shifted left of the cut-out, elsewhere centered
             var preset = selectedPreset();
             var isFreeTraining = preset[:sets] as Number == 0;
-            var iconY = h * 38 / 100 - 70;
+            // Positioned from the icon's own dimensions rather than the
+            // 31/45/70 pixel constants this used to carry: those centred a
+            // 62px bitmap on a 176px screen and left it off-centre anywhere
+            // the launcher icon is a different size.
+            var iconX = cx - _icon.getWidth() / 2;
+            if (_subwindow) {
+                // Shift clear of the subwindow cut-out in the top-right.
+                iconX -= Layout.scaled(w, 14);
+            }
+            var iconY = h * 38 / 100 - _icon.getHeight() - Layout.scaled(w, 8);
             if (iconY < 2) {
                 iconY = 2;
             }
-            dc.drawBitmap(_subwindow ? cx - 45 : cx - 31, iconY, _icon);
+            dc.drawBitmap(iconX, iconY, _icon);
             if (isRepMode()) {
                 dc.drawText(cx, h * 35 / 100, Graphics.FONT_SMALL, "REP MODE", Graphics.TEXT_JUSTIFY_CENTER);
             } else if (!isFreeTraining) {
@@ -599,7 +610,7 @@ class MaceClubsView extends WatchUi.View {
                 cx,
                 h * (isFreeTraining ? 70 : 75) / 100,
                 Graphics.FONT_TINY,
-                "MENU opens settings",
+                Lang.format("$1$ opens settings", [DeviceInput.menuLabel()]),
                 Graphics.TEXT_JUSTIFY_CENTER
             );
             // Last comparable session's smoothness (with trend), so the score
@@ -676,61 +687,39 @@ class MaceClubsView extends WatchUi.View {
                 ),
                 Graphics.TEXT_JUSTIFY_CENTER
             );
+            // No caption under this one, so the countdown may use the whole
+            // gap down to the footer row - but still only as much of it as
+            // the chosen face actually needs.
+            var countdown = formatSecs(s[:remaining] as Number);
             dc.drawText(
                 cx,
                 h * 40 / 100,
-                Graphics.FONT_NUMBER_HOT,
-                formatSecs(s[:remaining] as Number),
+                Layout.fitFont(
+                    dc,
+                    countdown,
+                    Layout.numberFonts(),
+                    2 * Layout.usableHalfWidth(w, h, h * 40 / 100),
+                    h * 32 / 100
+                ),
+                countdown,
                 Graphics.TEXT_JUSTIFY_CENTER
             );
             if (_subwindow) {
-                dc.drawText(
-                    cx - 35,
+                drawMetricRow(
+                    dc,
                     h * 72 / 100,
-                    Graphics.FONT_MEDIUM,
-                    bpmSlotValue,
-                    Graphics.TEXT_JUSTIFY_CENTER
-                );
-                dc.drawText(
-                    cx - 35,
-                    h * 87 / 100,
-                    Graphics.FONT_TINY,
-                    bpmSlotLabel,
-                    Graphics.TEXT_JUSTIFY_CENTER
-                );
-                dc.drawText(
-                    cx + 35,
-                    h * 72 / 100,
-                    Graphics.FONT_MEDIUM,
-                    otherValue,
-                    Graphics.TEXT_JUSTIFY_CENTER
-                );
-                dc.drawText(
-                    cx + 35,
-                    h * 87 / 100,
-                    Graphics.FONT_TINY,
-                    otherLabel,
-                    Graphics.TEXT_JUSTIFY_CENTER
+                    Layout.SUBWINDOW_COLUMN_PITCH,
+                    [bpmSlotValue, otherValue] as Array<String>,
+                    [bpmSlotLabel, otherLabel] as Array<String>
                 );
             } else {
-                dc.drawText(
-                    cx - 50,
+                drawMetricRow(
+                    dc,
                     h * 72 / 100,
-                    Graphics.FONT_MEDIUM,
-                    bpmSlotValue,
-                    Graphics.TEXT_JUSTIFY_CENTER
+                    Layout.COLUMN_PITCH,
+                    [bpmSlotValue, setSwings, hr] as Array<String>,
+                    [bpmSlotLabel, setSwingsLabel, "hr"] as Array<String>
                 );
-                dc.drawText(
-                    cx - 50,
-                    h * 87 / 100,
-                    Graphics.FONT_TINY,
-                    bpmSlotLabel,
-                    Graphics.TEXT_JUSTIFY_CENTER
-                );
-                dc.drawText(cx, h * 72 / 100, Graphics.FONT_MEDIUM, setSwings, Graphics.TEXT_JUSTIFY_CENTER);
-                dc.drawText(cx, h * 87 / 100, Graphics.FONT_TINY, setSwingsLabel, Graphics.TEXT_JUSTIFY_CENTER);
-                dc.drawText(cx + 50, h * 72 / 100, Graphics.FONT_MEDIUM, hr, Graphics.TEXT_JUSTIFY_CENTER);
-                dc.drawText(cx + 50, h * 87 / 100, Graphics.FONT_TINY, "hr", Graphics.TEXT_JUSTIFY_CENTER);
             }
             return;
         }
@@ -810,16 +799,13 @@ class MaceClubsView extends WatchUi.View {
             dc.drawText(w * 10 / 100, h * 20 / 100, Graphics.FONT_TINY, phaseLine, Graphics.TEXT_JUSTIFY_LEFT);
             dc.drawText(cx, h * 36 / 100, Graphics.FONT_MEDIUM, mainValue, Graphics.TEXT_JUSTIFY_CENTER);
             dc.drawText(cx, h * 52 / 100, Graphics.FONT_TINY, mainLabel, Graphics.TEXT_JUSTIFY_CENTER);
-            dc.drawText(
-                cx - 30,
+            drawMetricRow(
+                dc,
                 h * 70 / 100,
-                Graphics.FONT_MEDIUM,
-                workout.getSets().toString(),
-                Graphics.TEXT_JUSTIFY_CENTER
+                Layout.SUBWINDOW_FREE_COLUMN_PITCH,
+                [workout.getSets().toString(), otherValue] as Array<String>,
+                ["sets", otherLabel] as Array<String>
             );
-            dc.drawText(cx - 30, h * 84 / 100, Graphics.FONT_TINY, "sets", Graphics.TEXT_JUSTIFY_CENTER);
-            dc.drawText(cx + 30, h * 70 / 100, Graphics.FONT_MEDIUM, otherValue, Graphics.TEXT_JUSTIFY_CENTER);
-            dc.drawText(cx + 30, h * 84 / 100, Graphics.FONT_TINY, otherLabel, Graphics.TEXT_JUSTIFY_CENTER);
             return;
         }
         dc.drawText(
@@ -830,28 +816,74 @@ class MaceClubsView extends WatchUi.View {
             Graphics.TEXT_JUSTIFY_CENTER
         );
         dc.drawText(cx, h * 18 / 100, Graphics.FONT_SMALL, phaseLine, Graphics.TEXT_JUSTIFY_CENTER);
+        drawHeadline(dc, h * 32 / 100, h * 68 / 100, mainValue, mainLabel, comboWorking || restPageActive);
+        drawMetricRow(
+            dc,
+            h * 68 / 100,
+            Layout.COLUMN_PITCH,
+            [workout.getSets().toString(), setSwings, hr] as Array<String>,
+            ["sets", setSwingsLabel, "hr"] as Array<String>
+        );
+    }
+
+    // A row of value-over-label columns, spread across the usable width
+    // rather than at a fixed pixel pitch. `referencePitch` is the gap the
+    // Instinct uses, so its layout is unchanged and wider screens scale off
+    // it - at the old hardcoded 50px a 454px watch drew "sets" "rnds" "hr"
+    // on top of each other.
+    private function drawMetricRow(
+        dc as Dc,
+        valueY as Number,
+        referencePitch as Number,
+        values as Array<String>,
+        labels as Array<String>
+    ) as Void {
+        var w = dc.getWidth();
+        var h = dc.getHeight();
+        var labelY = Layout.labelBelow(w, valueY, Graphics.FONT_MEDIUM);
+        for (var i = 0; i < values.size(); i++) {
+            var x = Layout.columnX(w, h, i, values.size(), referencePitch, valueY);
+            dc.drawText(x, valueY, Graphics.FONT_MEDIUM, values[i], Graphics.TEXT_JUSTIFY_CENTER);
+            dc.drawText(
+                Layout.columnX(w, h, i, values.size(), referencePitch, labelY),
+                labelY,
+                Graphics.FONT_TINY,
+                labels[i],
+                Graphics.TEXT_JUSTIFY_CENTER
+            );
+        }
+    }
+
+    // The big centre value plus its caption, sized to the space actually
+    // available between the phase line and the footer row. FONT_NUMBER_HOT is
+    // 30px tall on the Instinct but 131px on a 454px AMOLED, where it used to
+    // run straight through the caption underneath; fitFont steps it down only
+    // where it genuinely does not fit.
+    private function drawHeadline(
+        dc as Dc,
+        topY as Number,
+        footerY as Number,
+        value as String,
+        label as String,
+        needsTextFace as Boolean
+    ) as Void {
+        var w = dc.getWidth();
+        var h = dc.getHeight();
+        var cx = w / 2;
+        var captionHeight = Graphics.getFontHeight(Graphics.FONT_TINY);
+        var available = footerY - topY - captionHeight - Layout.scaled(w, Layout.LABEL_GAP);
+        // Number faces are digit-only; combo status and rest-page values
+        // ("42 sw", "load 1.2k") carry letters and need a text face.
+        var fonts = needsTextFace ? Layout.textFonts() : Layout.numberFonts();
+        var font = Layout.fitFont(dc, value, fonts, 2 * Layout.usableHalfWidth(w, h, topY), available);
+        dc.drawText(cx, topY, font, value, Graphics.TEXT_JUSTIFY_CENTER);
         dc.drawText(
             cx,
-            h * 32 / 100,
-            // Number fonts are digit-sized; combo text and rest-page labels
-            // (e.g. "42 sw") need a text face.
-            comboWorking || restPageActive ? Graphics.FONT_LARGE : Graphics.FONT_NUMBER_HOT,
-            mainValue,
+            Layout.labelBelow(w, topY, font),
+            Graphics.FONT_TINY,
+            label,
             Graphics.TEXT_JUSTIFY_CENTER
         );
-        dc.drawText(cx, h * 56 / 100, Graphics.FONT_TINY, mainLabel, Graphics.TEXT_JUSTIFY_CENTER);
-        dc.drawText(
-            cx - 50,
-            h * 68 / 100,
-            Graphics.FONT_MEDIUM,
-            workout.getSets().toString(),
-            Graphics.TEXT_JUSTIFY_CENTER
-        );
-        dc.drawText(cx - 50, h * 84 / 100, Graphics.FONT_TINY, "sets", Graphics.TEXT_JUSTIFY_CENTER);
-        dc.drawText(cx, h * 68 / 100, Graphics.FONT_MEDIUM, setSwings, Graphics.TEXT_JUSTIFY_CENTER);
-        dc.drawText(cx, h * 84 / 100, Graphics.FONT_TINY, setSwingsLabel, Graphics.TEXT_JUSTIFY_CENTER);
-        dc.drawText(cx + 50, h * 68 / 100, Graphics.FONT_MEDIUM, hr, Graphics.TEXT_JUSTIFY_CENTER);
-        dc.drawText(cx + 50, h * 84 / 100, Graphics.FONT_TINY, "hr", Graphics.TEXT_JUSTIFY_CENTER);
     }
 
     // Draw a metric (rounds or heart rate, per the circleShows setting)

@@ -1,4 +1,5 @@
 import Toybox.Lang;
+import Toybox.System;
 import Toybox.WatchUi;
 
 // Instinct 3 controls:
@@ -7,7 +8,16 @@ import Toybox.WatchUi;
 //   UP / DOWN (left)    - idle: choose workout preset; in workout: tempo +-5 bpm
 //                         (free-flow rest: page through extra info screens instead)
 //   MENU (hold CTRL)    - idle: settings menu; in workout: discard & go home
+//
+// Other hardware raises the same behaviours differently, and this delegate
+// only ever sees the behaviour - except for MENU, which seven touch devices
+// cannot raise at all. See onTap() and DeviceInput for that gap; the on-screen
+// hints name whichever affordance the running device actually has.
 class MaceClubsDelegate extends WatchUi.BehaviorDelegate {
+    // Taps at or below this share of the screen open the menu on devices with
+    // no MENU key; it sits just above the idle screen's hint line.
+    const MENU_TAP_TOP_PERCENT = 62;
+
     private var _view as MaceClubsView;
 
     function initialize(view as MaceClubsView) {
@@ -15,7 +25,20 @@ class MaceClubsDelegate extends WatchUi.BehaviorDelegate {
         _view = view;
     }
 
+    // Declining here on the tap-target devices is what lets a tap reach
+    // onTap(): a BehaviorDelegate offers the behaviour first and only falls
+    // back to the raw input event if the behaviour goes unhandled - verified
+    // in the simulator on vivoactive6, where returning true from onSelect
+    // swallowed every tap into "start workout". Declining also silences the
+    // physical SELECT key, so onKey() picks that back up below.
     function onSelect() as Boolean {
+        if (tapMenuActive()) {
+            return false;
+        }
+        return handleSelect();
+    }
+
+    private function handleSelect() as Boolean {
         if (_view.paused) {
             _view.metronome.stop();
             _view.finishWorkout();
@@ -113,6 +136,43 @@ class MaceClubsDelegate extends WatchUi.BehaviorDelegate {
         }
         WatchUi.requestUpdate();
         return true;
+    }
+
+    // Seven shipped devices have no MENU key - venu441mm, venu445mm, venux1,
+    // vivoactive6 and the three vivoactive3 variants - so onMenu() can never
+    // fire on them, and settings, history and the custom-workout editor were
+    // unreachable. Confirmed in the simulator on vivoactive6: a long-press on
+    // the screen does nothing and a long-press of BACK exits the app. They are
+    // all touch devices, so on the idle screen the lower part of the display -
+    // where the "TAP opens settings" hint sits - opens the menu, and the rest
+    // of the screen still starts a workout.
+    //
+    // Only while idle: once a workout is running a stray tap must not be able
+    // to reach the discard path.
+    function onTap(event as WatchUi.ClickEvent) as Boolean {
+        if (!tapMenuActive()) {
+            return false;
+        }
+        var coords = event.getCoordinates();
+        if (coords[1] >= System.getDeviceSettings().screenHeight * MENU_TAP_TOP_PERCENT / 100) {
+            return onMenu();
+        }
+        return handleSelect();
+    }
+
+    // onSelect() declines on these devices so taps can be routed by position,
+    // which would otherwise leave the physical SELECT key doing nothing -
+    // vivoactive6 and the venu 4 family both have one.
+    function onKey(event as WatchUi.KeyEvent) as Boolean {
+        if (tapMenuActive() && event.getKey() == WatchUi.KEY_ENTER) {
+            return handleSelect();
+        }
+        return false;
+    }
+
+    // The idle screen on a device that has no other way into the menu.
+    private function tapMenuActive() as Boolean {
+        return DeviceInput.needsMenuTapTarget() && !_view.workout.isStarted() && !_view.isStarting();
     }
 
     private function showHomeConfirmation() as Void {
