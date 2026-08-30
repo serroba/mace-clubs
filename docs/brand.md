@@ -101,6 +101,34 @@ Rendering per-size icons and wiring them through the jungle's resource
 qualifiers is now a mechanical job, since the geometry is vector. It has not
 been done.
 
+## The Rhythm Score
+
+The app's one genuinely proprietary metric was called "smoothness score" — a
+generic noun, and one nobody repeats. Named metrics are how a measurement
+becomes something a coach says out loud: Body Battery, Strain, Training Load.
+It is now the **Rhythm Score**, which is also the tagline the website already
+leads with, so the two reinforce each other instead of being unrelated.
+
+Capitalised, both words, in prose: the Rhythm Score. On the watch, where there
+is no room for either, the label is lowercase `rhythm 82`.
+
+"Flow Score" was the obvious alternative — it is the community's own word,
+Dutch Flow Academy and "mace flow" and so on. It was rejected because `Flow /
+other` is already a movement name in the app, and a work screen reading
+`FLOW / flow 82` helps nobody.
+
+**Only the user-facing name changed.** The code still says smoothness —
+`Smoothness.mc`, `SmoothnessLog.mc`, the `smoothnessEnabled` property, the
+`FitSmoothness` string id — because that is genuinely what the quantity is, and
+churning identifiers buys nothing a reader of the code wants.
+[smoothness-physics.md](smoothness-physics.md) describes the quantity and keeps
+its own vocabulary.
+
+The rename was free on screen: `smooth` and `rhythm` are both six characters,
+and so are `SMOOTH` and `RHYTHM`, which matters because
+`WorkoutSummaryView.smoothnessLines()` keeps that heading as short as `PAUSED`
+so the Instinct's subwindow cut-out never lands on it.
+
 ## The device-support claim
 
 Three surfaces used to say three different things. The website said the app

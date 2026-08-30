@@ -51,7 +51,7 @@ module SettingsMenu {
         );
         menu.addItem(
             new WatchUi.ToggleMenuItem(
-                "Smoothness",
+                "Rhythm Score",
                 null,
                 "smoothnessEnabled",
                 boolProp("smoothnessEnabled", false),

@@ -116,11 +116,11 @@
   .watch::before, .watch::after { content: ""; position: absolute; z-index: -1; width: 138px; height: 88px; background: #344139; left: 50%; transform: translateX(-50%); }
   .watch::before { top: -76px; border-radius: 24px 24px 6px 6px; }
   .watch::after { bottom: -76px; border-radius: 6px 6px 24px 24px; }
-  /* The real 176x176 capture, scaled into the bezel. image-rendering keeps the
-     watch's own hinted pixels crisp instead of smearing them. */
-  /* The Instinct 3 Solar's display shape is "semi-octagon" (the SDK's own
-     simulator.json says so), not a circle - which is why the app draws its
-     bottom line nearly edge to edge. Masking it round clipped real content. */
+  /* The real 176x176 capture, scaled into the bezel; image-rendering keeps the
+     watch's own hinted pixels crisp instead of smearing them. The Instinct 3
+     Solar's display shape is "semi-octagon" (the SDK's own simulator.json says
+     so), not a circle - which is why the app draws its bottom line nearly edge
+     to edge, and why masking it round clipped real content. */
   .face {
     width: 252px;
     height: 252px;
@@ -309,7 +309,7 @@
         <article class="feature"><b>02</b><h3>Separate work &amp; rest</h3><p>SELECT moves Free training between work and recorded recovery, and the rest menu switches movement or side for the next set.</p></article>
         <article class="feature"><b>03</b><h3>Name the movement</h3><p>Each implement offers its own canon — 360s and 10-to-2s, mills and casts, or the bulava combo — and the summary tallies your left/right balance.</p></article>
         <article class="feature"><b>04</b><h3>Count the challenge</h3><p>Five or ten minutes of continuous mace swinging, scored live from wrist rotation by the gyroscope-primary counter and saved with every set.</p></article>
-        <article class="feature"><b>05</b><h3>Look back on the watch</h3><p>Your last twenty sessions stay on the wrist: browse them from Settings, scroll the per-set smoothness, and see the last comparable score before you start.</p></article>
+        <article class="feature"><b>05</b><h3>Look back on the watch</h3><p>Your last twenty sessions stay on the wrist: browse them from Settings, scroll the per-set Rhythm Score, and see the last comparable score before you start.</p></article>
         <article class="feature"><b>06</b><h3>Measure the exposure</h3><p>An optional per-set record of wrist motion — exposure, peak, active seconds, and weight-volume — kept as transparent measurements, not a single invented score.</p></article>
       </div>
       <div class="screens">
@@ -362,7 +362,7 @@
         </div>
         <aside class="block-note">
           <strong>Built around movement blocks—not generic gym reps.</strong>
-          <p>Every completed block keeps its work and rest duration, implement weight, movement, working side, watch wrist, smoothness, swing count, and — when load exposure is on — its motion exposure, peak, active seconds, and weight-volume. FIT laps carry that meaning into exported activity data.</p>
+          <p>Every completed block keeps its work and rest duration, implement weight, movement, working side, watch wrist, Rhythm Score, swing count, and — when load exposure is on — its motion exposure, peak, active seconds, and weight-volume. FIT laps carry that meaning into exported activity data.</p>
         </aside>
       </div>
     </div>

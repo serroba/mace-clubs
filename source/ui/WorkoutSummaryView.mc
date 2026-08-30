@@ -82,7 +82,8 @@ class WorkoutSummaryView extends WatchUi.View {
         var line2 = windows > 0 ? Lang.format("$1$s of motion", [windows]) : "";
         // Kept as short as "PAUSED"/"DONE!" so the subwindow layout's shifted
         // heading (see onUpdate) never runs into the physical cut-out.
-        return ["SMOOTH", line1, line2, ""];
+        // "RHYTHM" is the same six characters "SMOOTH" was, so the fit holds.
+        return ["RHYTHM", line1, line2, ""];
     }
 
     private function swingsAndLoadLines() as Array<String> {

@@ -51,9 +51,9 @@ Also included:
 - Rounds, heart rate, and set count on screen while you train
 - Saves to Garmin Connect as a strength activity: per-set movement, side,
   implement weight, durations, and set count
-- Optional on-watch smoothness score with a private 12-session trend;
+- Optional on-watch Rhythm Score with a private 12-session trend;
   nothing is uploaded
-- Browse your last 20 sessions on the watch, with per-set smoothness scores
+- Browse your last 20 sessions on the watch, with per-set Rhythm Scores
   and the implement each was recorded with
 - Optional per-set load exposure from wrist motion: exposure, peak, active
   seconds, and weight-volume, saved with the activity

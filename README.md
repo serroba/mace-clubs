@@ -25,8 +25,8 @@ own watch is the thing that changes that — see
   recording app
 - Configurable metronome (5–240 bpm) with tone and vibration cues
 - Five-second start delay and advance warning before each new work interval
-- Optional on-watch smoothness score with a 12-session local trend; no account,
-  network request, or smoothness data upload
+- Optional on-watch Rhythm Score with a 12-session local trend; no account,
+  network request, or Rhythm Score upload
 - On-watch history of the last 20 sessions, browsable from Settings with the
   per-set scores and the implement each session was recorded with
 - Optional gyroscope-primary mace swing counter, plus 5:00 and 10:00 Challenge presets
@@ -60,8 +60,8 @@ node --experimental-strip-types tools/validate-workout.ts ~/Downloads/activity.z
 
 The resulting HTML stays on your computer and combines motion intensity, heart
 rate, swing cadence, individual swing markers, work/rest phases, normalized set
-rhythm, per-set smoothness, and rolling smoothness where the FIT file contains
-it. Enabling both local smoothness and motion research export records the rolling
+rhythm, per-set Rhythm Score, and its rolling form where the FIT file contains
+it. Enabling both the local Rhythm Score and motion research export records the rolling
 score for Garmin Connect and this report. Motion exposure is a wrist-motion
 measurement, not an estimate of tendon force. The validator reports structural
 errors, missing series, metadata gaps, and a transparent data-quality score; use
@@ -110,7 +110,7 @@ the set summary and FIT lap.
 Garmin may label recorded set and rest boundaries as laps or splits. Work laps
 carry their one-based `set_number`; rest laps carry zero. Each boundary also
 records its work/rest phase, duration, implement weight, watch wrist, and
-set smoothness where available. Starting a workout asks for equipment and then
+set Rhythm Score where available. Starting a workout asks for equipment and then
 movement; the movement list follows the implement (mace: 360, 10-to-2,
 flow/other; clubs: mill, shield cast, flow/other; bulava: combo, mill,
 reverse mill, bullwhip, flow/other) and the choice is saved with every work
@@ -251,7 +251,7 @@ git tag v0.1.0 && git push origin v0.1.0
 ## Workflow
 
 See [CONTRIBUTING.md](CONTRIBUTING.md) for PR conventions and how to contribute a
-calibration recording. The smoothness model, privacy boundary, equations, assumptions, and validation
+calibration recording. The model behind the Rhythm Score, its privacy boundary, equations, assumptions, and validation
 plan are documented in [docs/smoothness-physics.md](docs/smoothness-physics.md).
 The exercise-aware load fields and their interpretation are documented in
 [docs/load-exposure.md](docs/load-exposure.md). The gyro-primary mace swing
