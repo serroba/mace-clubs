@@ -49,11 +49,10 @@ void suite("Rest options menu", () => {
         assertScreenShows(joined, "Move");
         assertScreenShows(joined, "Side");
 
-        // "Discard & go home" is the third item - below the fold on this
-        // screen, so scroll down until it's visible before asserting it.
-        await sim.press("down");
-        await sim.press("down");
-        const scrolled = (await sim.readText()).join(" ");
-        assertScreenShows(scrolled, "Discard");
+        // "Discard & go home" is the last item and below the fold on this
+        // screen. Scroll until it is actually visible rather than pressing a
+        // fixed number of times: a button steps one row, but a swipe flings a
+        // touch list by a variable amount and overscrolls a three-item menu.
+        await sim.pressUntilVisible("down", "Discard");
     });
 });

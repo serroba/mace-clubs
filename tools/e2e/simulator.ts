@@ -16,6 +16,7 @@ import { fileURLToPath } from "node:url";
 
 import { type DeviceProfile, isGestureDriven, loadDeviceProfile } from "./device-profile.ts";
 import { resolve as resolveTool } from "../resolve-tool.ts";
+import { screenShows } from "./ocr-match.ts";
 import { screensDiffer } from "./pixel-diff.ts";
 import { LinuxPlatform } from "./platform-linux.ts";
 import { MacosPlatform } from "./platform-macos.ts";
@@ -259,6 +260,37 @@ export class Simulator {
         this.platform.focus();
         await this.platform.holdMenu(holdMs);
         await this.waitForStable(this.settleMs, 100);
+    }
+
+    /**
+     * Presses `button` until `phrase` can be read on screen.
+     *
+     * A fixed number of presses is a button-device idiom: one press steps a
+     * menu highlight exactly one row, so "press down twice" reliably reaches
+     * the third item. A swipe does not step - it flings a touch list by a
+     * variable amount - so on venu3 the same two presses overscrolled a
+     * three-item menu into its bounce animation, and the screen read back as
+     * a smear ("wa A ,~ g oN") rather than as text.
+     *
+     * Scrolling until the target is actually visible works on both, and is
+     * what the tests meant in the first place.
+     */
+    async pressUntilVisible(button: Button, phrase: string, maxSteps = 6): Promise<string[]> {
+        let lines = await this.readText();
+        for (let step = 0; step < maxSteps; step += 1) {
+            if (screenShows(lines, phrase)) {
+                return lines;
+            }
+            await this.press(button);
+            lines = await this.readText();
+        }
+        if (screenShows(lines, phrase)) {
+            return lines;
+        }
+        throw new Error(
+            `"${phrase}" never became visible after ${String(maxSteps)} presses of "${button}"; ` +
+                `last read: ${JSON.stringify(lines)}`,
+        );
     }
 
     /** Screenshot of just the watch screen, not the device bezel. Its size is
