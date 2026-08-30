@@ -5,7 +5,9 @@ base.sourcePath = source
 # swingTuning is SwingTuningSearch.mc's grid search: too slow for routine
 # runs, opt-in only via `make tuning-search` (monkey.tuning.jungle).
 base.excludeAnnotations = offscreenRender;swingTuning
-# fenix5 (API 3.1, our oldest supported level) fails Activity.SPORT_TRAINING
-# at runtime even though it compiles fine - a pre-existing gap unrelated to
-# the live-session smoke test, which every other CI device runs fine.
-fenix5.excludeAnnotations = offscreenRender;liveSessionSmoke;swingTuning
+# fenix5 (API 3.1, our oldest supported level) used to be excluded from
+# liveSessionSmoke because Activity.SPORT_TRAINING (@since 3.2.0) threw at
+# runtime there. WorkoutSession.trainingSport() now falls back to the
+# ActivityRecording equivalents, so fenix5 runs the same live-session smoke
+# test as every other device - it is the only one in the CI matrix that
+# covers the 3.1 fallback path at all.
