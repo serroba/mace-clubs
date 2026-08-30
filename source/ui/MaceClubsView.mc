@@ -552,7 +552,9 @@ class MaceClubsView extends WatchUi.View {
                 cx,
                 h * (done ? 79 : 89) / 100,
                 Graphics.FONT_XTINY,
-                count > 1 ? "UP/DOWN sets" : "MENU discard",
+                count > 1
+                    ? Lang.format("$1$ sets", [DeviceInput.pageLabel()])
+                    : Lang.format("$1$ discard", [DeviceInput.menuLabel()]),
                 Graphics.TEXT_JUSTIFY_CENTER
             );
             return;
@@ -608,7 +610,7 @@ class MaceClubsView extends WatchUi.View {
                 cx,
                 h * (isFreeTraining ? 70 : 75) / 100,
                 Graphics.FONT_TINY,
-                "MENU opens settings",
+                Lang.format("$1$ opens settings", [DeviceInput.menuLabel()]),
                 Graphics.TEXT_JUSTIFY_CENTER
             );
             // Last comparable session's smoothness (with trend), so the score

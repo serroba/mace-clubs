@@ -141,7 +141,13 @@ class HistoryDetailView extends WatchUi.View {
             load = Lang.format("$1$ | L$2$", [load, LoadExposure.compactLabel(exposure)]);
         }
         dc.drawText(cx, h * 76 / 100, Graphics.FONT_XTINY, load, Graphics.TEXT_JUSTIFY_CENTER);
-        dc.drawText(cx, h * 88 / 100, Graphics.FONT_XTINY, "UP/DOWN: pages", Graphics.TEXT_JUSTIFY_CENTER);
+        dc.drawText(
+            cx,
+            h * 88 / 100,
+            Graphics.FONT_XTINY,
+            Lang.format("$1$: pages", [DeviceInput.pageLabel()]),
+            Graphics.TEXT_JUSTIFY_CENTER
+        );
     }
 
     private function formatSecs(total as Number) as String {
