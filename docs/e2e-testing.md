@@ -101,35 +101,69 @@ void describe("Some screen", () => {
 
 ## Running in CI
 
-Not wired up, deliberately - it needs more than a workflow file:
+The suite runs on **Linux**, headlessly, on GitHub-hosted runners -
+`.github/workflows/e2e-linux.yml`, on pushes to `main` and on demand. The
+same test files run on both platforms; only the driver's backend differs
+(see "Two platforms, one driver" below). Device fonts are fetched at job
+time through Garmin's own authenticated API (see
+`tools/e2e/linux/README.md`), so nothing proprietary lives in an image or
+this repo.
 
-- **A logged-in macOS GUI session.** The driver controls windows and sends
-  key events via AppleScript's `System Events`, which needs a real
-  WindowServer session, not a headless SSH-style shell.
-- **Screen Recording + Accessibility permission, pre-granted.** These are
-  per-machine TCC grants with no supported non-interactive way to approve
-  them - no profile or `tccutil` incantation grants them on a fresh,
-  ephemeral runner. A GitHub-hosted `macos-*` runner is torn down after
-  every job, so there's never a persistent grant to build on.
-- **The Connect IQ SDK and device files installed.** Unlike the Linux CI
-  jobs above, there's no prebuilt macOS image with these preinstalled
-  (`ghcr.io/matco/connectiq-tester` is Linux-only); the SDK Manager would
-  need to be scripted fresh, and slowly, on every run.
+It deliberately doesn't run on `pull_request`: fork PRs can't read the
+secrets the font fetch needs, and this suite is slower and more
+environment-sensitive than the rest of CI. Regressions are caught
+post-merge instead of gating every PR.
 
-The realistic path is a **self-hosted macOS runner** - a real, persistently
-logged-in Mac added to the repo's Actions runners - where Screen Recording
-and Accessibility are granted once by hand and then persist across runs the
-same way they do for local development. That's a standing piece of
-infrastructure to own (a dedicated always-on machine), not a config change,
-so it's out of scope until there's an actual need for it; this suite stays a
-local, pre-merge/manual-verification tool for now, same as
-`tools/visual_check.sh`.
+**macOS in CI is a different story** and remains out of scope - it would
+need a logged-in GUI session (AppleScript's `System Events` can't work over
+a headless shell), pre-granted Screen Recording and Accessibility TCC
+permissions (no supported non-interactive way to approve them, and a
+GitHub-hosted `macos-*` runner is torn down after every job), and a
+scripted SDK install (no prebuilt macOS image exists - the
+`connectiq-tester` one is Linux-only). That means a **self-hosted macOS
+runner**: standing infrastructure to own, not a config change. The Linux
+job covers the same assertions, so there's no need for it.
 
-Until then, the suite gates releases locally instead: the `pre-push` hook
-(`.githooks/pre-push`, enabled via `make install-hooks`) runs it whenever a
-`v*` tag is pushed - the push that triggers the release workflow - under
-`caffeinate` so the display can't sleep mid-run. It still needs the screen
-unlocked when the push starts.
+Releases are additionally gated locally: the `pre-push` hook
+(`.githooks/pre-push`, enabled via `make install-hooks`) runs the suite
+whenever a `v*` tag is pushed - the push that triggers the release
+workflow - under `caffeinate` so the display can't sleep mid-run. It still
+needs the screen unlocked when the push starts.
+
+## Two platforms, one driver
+
+`simulator.ts` holds the platform-agnostic orchestration (launch
+sequencing and retries, settle-waiting, press-until-changed) and delegates
+the OS-specific primitives to the `Platform` seam in `platform.ts`:
+
+| | macOS (`platform-macos.ts`) | Linux (`platform-linux.ts`) |
+|---|---|---|
+| Display | the real session | Xvfb + openbox |
+| Input | AppleScript `System Events` | `xdotool` |
+| Screenshot | `screencapture` | ImageMagick `import` |
+| OCR | Vision framework (`ocr.swift`) | Tesseract |
+
+Tests never see this: they use `Simulator` and the right backend is picked
+from `process.platform`. Three findings worth knowing if you touch either:
+
+- **Neither platform can hold a button with a key event.** The simulator
+  maps keyboard input to taps only, so `hold()` is a *mouse*
+  press-and-hold on the skin's UP-button hotspot on both. See
+  `mouse-hold.swift`'s header for the eight keyboard approaches ruled out.
+- **`xdotool`'s `--window` targeting works for mouse events but not key
+  events** - the app ignores window-targeted synthetic key events
+  entirely, so key presses go through `windowactivate` + a global press.
+- **Tesseract needs the screen inverted, upscaled, and thresholded** to
+  read it at all, and a Menu2's selected row is drawn already-inverted -
+  so `ocr()` runs both polarities and merges the lines. Details in
+  `platform-linux.ts`.
+
+Screenshot baselines are per-platform (`baselines/darwin/`,
+`baselines/linux/`) - macOS captures at Retina 2x with a different font
+rasterizer, so the two are not interchangeable. OCR text assertions are
+case-insensitive, since Vision and Tesseract disagree on the case of some
+glyphs and these assertions are about *what state the app is in*, not
+typography.
 
 ## Known flakiness
 

@@ -27,9 +27,9 @@ void describe("Choose equipment screen", () => {
 
         const lines = await sim.readText();
         const joined = lines.join(" ");
-        assert.match(joined, /Choose/);
-        assert.match(joined, /equipment/);
-        assert.match(joined, /Mace/);
+        assert.match(joined, /Choose/i);
+        assert.match(joined, /equipment/i);
+        assert.match(joined, /Mace/i);
 
         await expectScreenshotMatches(await sim.screenshot(), "equipment-picker");
     });

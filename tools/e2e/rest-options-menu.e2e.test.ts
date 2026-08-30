@@ -36,15 +36,15 @@ void describe("Rest options menu", () => {
         await sim.hold("menu");
 
         const joined = (await sim.readText()).join(" ");
-        assert.match(joined, /Rest options/);
-        assert.match(joined, /Move/);
-        assert.match(joined, /Side/);
+        assert.match(joined, /Rest options/i);
+        assert.match(joined, /Move/i);
+        assert.match(joined, /Side/i);
 
         // "Discard & go home" is the third item - below the fold on this
         // screen, so scroll down until it's visible before asserting it.
         await sim.press("down");
         await sim.press("down");
         const scrolled = (await sim.readText()).join(" ");
-        assert.match(scrolled, /Discard/);
+        assert.match(scrolled, /Discard/i);
     });
 });

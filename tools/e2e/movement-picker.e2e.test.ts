@@ -28,9 +28,9 @@ void describe("Choose movement screen", () => {
 
         const lines = await sim.readText();
         const joined = lines.join(" ");
-        assert.match(joined, /Choose/);
-        assert.match(joined, /movement/);
-        assert.match(joined, /360/);
+        assert.match(joined, /Choose/i);
+        assert.match(joined, /movement/i);
+        assert.match(joined, /360/i);
 
         await expectScreenshotMatches(await sim.screenshot(), "movement-picker");
     });

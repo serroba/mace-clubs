@@ -1,5 +1,5 @@
-# Feasibility image for running the Garmin BDD e2e suite headlessly on
-# Linux instead of the macOS-only driver in tools/e2e/simulator.ts.
+# Image for running the Garmin BDD e2e suite headlessly on
+# Linux (see tools/e2e/platform-linux.ts and README.md in this directory).
 #
 # Deliberately contains NO Garmin SDK content of its own - the base image
 # already bundles monkeyc/monkeydo/simulator/device files (a pre-existing
@@ -17,4 +17,13 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
         imagemagick \
         tesseract-ocr \
         openbox \
+        curl \
+        ca-certificates \
+    && rm -rf /var/lib/apt/lists/*
+
+# Node 22+ for the e2e driver itself (tools/e2e/*.ts, run with
+# --experimental-strip-types). The base image has no Node at all - it was
+# only ever meant to compile and unit-test Monkey C.
+RUN curl -fsSL https://deb.nodesource.com/setup_22.x | bash - \
+    && apt-get install -y --no-install-recommends nodejs \
     && rm -rf /var/lib/apt/lists/*
