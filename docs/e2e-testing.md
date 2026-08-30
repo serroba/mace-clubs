@@ -120,13 +120,16 @@ Two consequences worth knowing:
 
 - **Baselines are per platform *and* per device**, under
   `tools/e2e/baselines/<platform>/<device>/`. Screen sizes differ outright,
-  so they are not interchangeable. Adding a device is therefore two steps:
-  its first run *seeds* the baselines and compares nothing (the run says so,
-  as a `::warning::` in CI), and the CI job uploads them as the
-  `e2e-baselines-<device>` artifact - download and commit those, and from
-  then on the layout is actually checked. The macOS baselines for
-  instinct3solar45mm, fenix7 and venu3 are committed; their Linux
-  counterparts seed on the first CI run.
+  so they are not interchangeable. All three matrix devices have both their
+  macOS and Linux baselines committed.
+
+  Adding a *new* device is two steps, because its baselines do not exist yet:
+  the first run **seeds** them and compares nothing (it says so, as a
+  `::warning::` in CI), and the job uploads them as the
+  `e2e-baselines-<device>` artifact. Download that, look at the PNGs, and
+  commit them - only then is the layout actually being checked. Seeding is
+  deliberately loud precisely because a seeded run is a green run that
+  verified nothing.
 - **Tests that need MENU skip themselves** where the device has no MENU key
   (`deviceProfile().menuHotspot === null` - the venu 4 family, venux1,
   vivoactive6, the vivoactive3 variants). There is no hotspot to hold there;

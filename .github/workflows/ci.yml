@@ -3,6 +3,15 @@ name: CI
 permissions:
   contents: read
 
+# Supersede an in-flight run when the same ref is pushed again. Without this
+# a force-push leaves the old run grinding away on a commit that no longer
+# exists - observed here holding runner slots while its own replacement
+# queued behind it. Only for pull requests: a run on main or on a tag is the
+# record of what actually shipped, and nothing newer supersedes it.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
 on:
   pull_request:
   push:
