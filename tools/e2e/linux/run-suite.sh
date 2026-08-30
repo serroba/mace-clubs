@@ -11,6 +11,18 @@ set -euo pipefail
 export DISPLAY="${DISPLAY:-:1}"
 export HOME=/root
 
+# The driver imports pixelmatch/pngjs. A bind-mounted repo usually carries
+# the host's tools/node_modules along with it, which is why a local Docker
+# run can pass without this - a fresh CI checkout has none, so install when
+# they're absent rather than depending on what the mount happened to bring.
+# Probes for a package rather than the directory: an empty node_modules
+# (what masking the host's copy with an anonymous volume leaves behind)
+# exists but resolves nothing.
+if [ ! -d tools/node_modules/pixelmatch ]; then
+    echo "=== installing driver dependencies ==="
+    npm ci --prefix tools
+fi
+
 echo "=== building the app under test ==="
 mkdir -p bin
 openssl genrsa -out /tmp/key.pem 4096 2>/dev/null
