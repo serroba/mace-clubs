@@ -11,8 +11,9 @@
 // again itself, since either would trigger WorkoutSummaryDelegate's own
 // immediate exitApp().
 
-import assert from "node:assert/strict";
 import { after, before, describe, it } from "node:test";
+
+import { assertScreenShows } from "./ocr-match.ts";
 
 import { Simulator } from "./simulator.ts";
 
@@ -42,9 +43,9 @@ void describe("Workout summary screen", () => {
         await sim.press("select");
 
         const joined = (await sim.readText()).join(" ");
-        assert.match(joined, /SUMMARY/i);
-        assert.match(joined, /sets/i);
-        assert.match(joined, /work/i);
-        assert.match(joined, /BACK exit/i);
+        assertScreenShows(joined, "SUMMARY");
+        assertScreenShows(joined, "sets");
+        assertScreenShows(joined, "work");
+        assertScreenShows(joined, "BACK exit");
     });
 });

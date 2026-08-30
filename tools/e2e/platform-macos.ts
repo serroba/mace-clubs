@@ -11,9 +11,10 @@
 //   done as a mouse press-and-hold on the skin's button - see
 //   mouse-hold.swift's header for the eight keyboard approaches ruled out.
 // - The watch's actual screen sits at a fixed offset within the window:
-//   simulator.json's `display.location` gives {x:101, y:158, 176x176} within
-//   the device image, which itself starts 28pt below the window's top-left
-//   (a standard macOS title bar).
+//   simulator.json's `display.location` gives the rect within the device
+//   image, which itself starts 28pt below the window's top-left (a standard
+//   macOS title bar). Those numbers come from DeviceProfile now rather than
+//   being hardcoded for the Instinct, so any device with an SDK skin works.
 
 import { execFile, execFileSync, spawn, spawnSync } from "node:child_process";
 import { readFile, rm, writeFile } from "node:fs/promises";
@@ -22,26 +23,26 @@ import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { promisify } from "node:util";
 
+import type { DeviceProfile, Point } from "./device-profile.ts";
 import { resolve as resolveTool } from "../resolve-tool.ts";
-import { type Button, type Platform, SCREEN_SIZE } from "./platform.ts";
+import type { Button, Platform } from "./platform.ts";
 
 const execFileAsync = promisify(execFile);
 
 const OCR_SCRIPT = fileURLToPath(new URL("ocr.swift", import.meta.url));
 const MOUSE_HOLD_SCRIPT = fileURLToPath(new URL("mouse-hold.swift", import.meta.url));
+const MOUSE_SWIPE_SCRIPT = fileURLToPath(new URL("mouse-swipe.swift", import.meta.url));
 
 const SIMULATOR_PROCESS_PATTERN = "ConnectIQ.app/Contents/MacOS/simulator";
 const TITLE_BAR_POINTS = 28;
-const SCREEN_OFFSET = { x: 101, y: 158 } as const;
-// Center of the UP/MENU button's clickable hotspot on the device skin, from
-// simulator.json's `keys` array ({x:2, y:212, w:33, h:68} - the "up" and
-// "menu" entries share it, menu being the isHold variant).
-const MENU_BUTTON_CENTER = { x: 2 + 33 / 2, y: 212 + 68 / 2 } as const;
-// The device.png skin's native size (381x496) plus the app's own status
-// bar - the window can briefly report a different (e.g. zero/tiny) size
-// while macOS is still animating it open, which would make an early
-// screenshot capture garbage (window chrome instead of the watch screen).
-const EXPECTED_WINDOW_SIZE = { width: 381, height: 552 } as const;
+// Chrome the simulator adds around the skin image: the macOS title bar plus
+// the app's own status strip underneath the watch. Measured as the difference
+// between the window height and the skin PNG's height, and the same on every
+// device skin checked (instinct3solar45mm 552-496, venu3 938-882).
+const WINDOW_CHROME_POINTS = 56;
+// Where Menu2 draws its first item, as a fraction of screen height - measured
+// on venu3 and vivoactive6. Used only for the touch SELECT below.
+const FIRST_MENU_ROW_FRACTION = 0.37;
 
 const KEY_CODES: Record<Button, number> = {
     select: 36,
@@ -71,6 +72,22 @@ function tempPngPath(tag: string): string {
 
 export class MacosPlatform implements Platform {
     readonly name = "macos";
+    readonly device: DeviceProfile;
+
+    constructor(device: DeviceProfile) {
+        this.device = device;
+    }
+
+    /** The skin's native size plus the simulator's chrome. The window can
+     * briefly report something else (zero/tiny) while macOS is still
+     * animating it open, which would make an early screenshot capture window
+     * chrome instead of the watch screen - prepareWindow() forces it here. */
+    private expectedWindowSize(): { width: number; height: number } {
+        return {
+            width: this.device.skinSize.width,
+            height: this.device.skinSize.height + WINDOW_CHROME_POINTS,
+        };
+    }
 
     startSimulator(): void {
         const connectiqBin = resolveTool("connectiq", homedir(), process.env["PATH"] ?? "");
@@ -97,21 +114,32 @@ export class MacosPlatform implements Platform {
     }
 
     /** The window is a normal resizable macOS window - a previous session
-     * (or the user dragging it) can leave it at any size, which would break
-     * the fixed SCREEN_OFFSET math. Force it back to the size that math
-     * assumes rather than hoping for it. */
+     * (or the user dragging it) can leave it at any size or position, both of
+     * which break the crop and click maths. Force it back rather than hoping.
+     *
+     * The move to the origin is not cosmetic. A big skin is a big window
+     * (venu3's is 636x938pt against roughly 1512x982pt of usable display), so
+     * wherever the simulator happens to open it, part of it can hang off the
+     * screen - and a click at a coordinate with no display under it is
+     * silently dropped. That is exactly how it failed: screenshots still
+     * looked right because the watch face was on-screen, while every
+     * hold("menu") landed on the button hanging past the right edge and did
+     * nothing. `screencapture` names the condition outright if you ever crop
+     * there: "does not intersect any displays". */
     async prepareWindow(): Promise<void> {
+        const expected = this.expectedWindowSize();
         runAppleScript(`
             tell application "System Events"
                 tell process "simulator"
-                    set size of window 1 to {${String(EXPECTED_WINDOW_SIZE.width)}, ${String(EXPECTED_WINDOW_SIZE.height)}}
+                    set position of window 1 to {0, 0}
+                    set size of window 1 to {${String(expected.width)}, ${String(expected.height)}}
                 end tell
             end tell
         `);
         const deadline = Date.now() + 5000;
         while (Date.now() < deadline) {
             const bounds = this.windowBounds();
-            if (bounds.width === EXPECTED_WINDOW_SIZE.width && bounds.height === EXPECTED_WINDOW_SIZE.height) {
+            if (bounds.width === expected.width && bounds.height === expected.height) {
                 return;
             }
             await sleep(250);
@@ -133,25 +161,102 @@ export class MacosPlatform implements Platform {
     }
 
     async pressKey(button: Button): Promise<void> {
+        // 30 manifest devices have no UP/DOWN keys and drop the arrow-key
+        // event entirely; a swipe raises the same next/previous-page
+        // behaviour there. Verified on vivoactive6, where a swipe up cycles
+        // the preset exactly as DOWN does on the Instinct.
+        if (!this.device.hasUpDownKeys && this.device.isTouch) {
+            if (button === "up" || button === "down") {
+                await this.swipe(button);
+                return;
+            }
+            if (button === "select") {
+                await this.tapSelect();
+                return;
+            }
+            // Only BACK is left at this point.
+            const esc = this.device.escHotspot;
+            if (esc !== null) {
+                await this.clickHotspot(esc);
+                return;
+            }
+        }
         runAppleScript(`tell application "System Events" to key code ${String(KEY_CODES[button])}`);
-        return Promise.resolve();
+    }
+
+    /**
+     * SELECT as a screen tap, for touch devices with no UP/DOWN keys.
+     *
+     * Two things make this necessary rather than cosmetic. A Menu2 on those
+     * watches is touch-first: nothing is highlighted until you scroll, so
+     * ENTER confirms nothing and every test wedged on the equipment picker.
+     * And a tap anywhere on the watch face raises SELECT anyway, so one
+     * gesture covers both cases - on an ordinary screen it is a plain
+     * SELECT, on a menu it picks the row underneath.
+     *
+     * The row fraction is where Menu2 puts its first item (measured on venu3
+     * and vivoactive6), so "press select to accept the default" keeps meaning
+     * the first entry, as it does with a button.
+     */
+    /** A short click on one of the skin's physical buttons. Touch devices
+     * need this for BACK: their system dialogs are touch-first and a
+     * synthetic Escape leaves a Confirmation on screen, while clicking the
+     * real button dismisses it. */
+    private async clickHotspot(hotspot: Point): Promise<void> {
+        const bounds = this.windowBounds();
+        await execFileAsync("swift", [
+            MOUSE_HOLD_SCRIPT,
+            String(bounds.x + hotspot.x),
+            String(bounds.y + TITLE_BAR_POINTS + hotspot.y),
+            "60",
+        ]);
+    }
+
+    private async tapSelect(): Promise<void> {
+        const bounds = this.windowBounds();
+        const screen = this.device.screen;
+        const x = bounds.x + screen.x + screen.width / 2;
+        const y = bounds.y + TITLE_BAR_POINTS + screen.y + screen.height * FIRST_MENU_ROW_FRACTION;
+        await execFileAsync("swift", [MOUSE_HOLD_SCRIPT, String(x), String(y), "60"]);
+    }
+
+    /** DOWN (next page) is a swipe *up* the screen, and vice versa. */
+    private async swipe(button: "up" | "down"): Promise<void> {
+        const bounds = this.windowBounds();
+        const screen = this.device.screen;
+        const centreX = bounds.x + screen.x + screen.width / 2;
+        const top = bounds.y + TITLE_BAR_POINTS + screen.y + screen.height * 0.3;
+        const bottom = bounds.y + TITLE_BAR_POINTS + screen.y + screen.height * 0.7;
+        const [from, to] = button === "down" ? [bottom, top] : [top, bottom];
+        await execFileAsync("swift", [
+            MOUSE_SWIPE_SCRIPT,
+            String(centreX),
+            String(from),
+            String(centreX),
+            String(to),
+        ]);
     }
 
     async holdMenu(holdMs: number): Promise<void> {
+        const hotspot = this.device.menuHotspot;
+        if (hotspot === null) {
+            throw new Error(`device "${this.device.id}" has no MENU key - a test needing hold("menu") must skip it`);
+        }
         const bounds = this.windowBounds();
-        const x = bounds.x + MENU_BUTTON_CENTER.x;
-        const y = bounds.y + TITLE_BAR_POINTS + MENU_BUTTON_CENTER.y;
+        const x = bounds.x + hotspot.x;
+        const y = bounds.y + TITLE_BAR_POINTS + hotspot.y;
         await execFileAsync("swift", [MOUSE_HOLD_SCRIPT, String(x), String(y), String(holdMs)]);
     }
 
     async captureScreen(): Promise<Buffer> {
         const bounds = this.windowBounds();
-        const screenX = bounds.x + SCREEN_OFFSET.x;
-        const screenY = bounds.y + TITLE_BAR_POINTS + SCREEN_OFFSET.y;
+        const screen = this.device.screen;
+        const screenX = bounds.x + screen.x;
+        const screenY = bounds.y + TITLE_BAR_POINTS + screen.y;
         const tmpPath = tempPngPath("shot");
         await execFileAsync("screencapture", [
             "-x",
-            `-R${String(screenX)},${String(screenY)},${String(SCREEN_SIZE.width)},${String(SCREEN_SIZE.height)}`,
+            `-R${String(screenX)},${String(screenY)},${String(screen.width)},${String(screen.height)}`,
             tmpPath,
         ]);
         try {

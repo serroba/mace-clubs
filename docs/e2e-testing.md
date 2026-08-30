@@ -1,7 +1,7 @@
 # End-to-end UI testing
 
 A BDD-style e2e framework that drives the real Garmin Connect IQ simulator on
-macOS and asserts on what's actually on screen - not a render-logic unit
+macOS and Linux, across several watches, and asserts on what's actually on screen - not a render-logic unit
 test (see `MaceClubsViewRenderTest.mc`), a real running app. Lives in
 `tools/e2e/`, built on `node:test` (already used throughout `tools/`), plus
 two purpose-built pieces:
@@ -99,12 +99,48 @@ void describe("Some screen", () => {
   compare against it. Delete the baseline (or set `UPDATE_BASELINES=1`) to
   intentionally recapture it after a real UI change.
 
+## Choosing a device
+
+The driver is device-parametric. Set `MACE_E2E_DEVICE` to any device the
+SDK has files for:
+
+```sh
+MACE_E2E_DEVICE=venu3 npm run test:e2e --prefix tools
+```
+
+It defaults to `instinct3solar45mm`. Nothing about a device is hardcoded:
+`tools/e2e/device-profile.ts` reads the screenshot crop, the MENU button
+hotspot and the skin size out of that device's own `simulator.json`, which
+the SDK already ships. This is what makes the suite worth running at all
+beyond one watch - the layout defects it exists to catch (a footer whose
+labels overlap into `setrndshr`, a headline number drawn through its own
+caption) are invisible at the Instinct's 176px and obvious at 454px.
+
+Two consequences worth knowing:
+
+- **Baselines are per platform *and* per device**, under
+  `tools/e2e/baselines/<platform>/<device>/`. Screen sizes differ outright,
+  so they are not interchangeable. Adding a device is therefore two steps:
+  its first run *seeds* the baselines and compares nothing (the run says so,
+  as a `::warning::` in CI), and the CI job uploads them as the
+  `e2e-baselines-<device>` artifact - download and commit those, and from
+  then on the layout is actually checked. The macOS baselines for
+  instinct3solar45mm, fenix7 and venu3 are committed; their Linux
+  counterparts seed on the first CI run.
+- **Tests that need MENU skip themselves** where the device has no MENU key
+  (`deviceProfile().menuHotspot === null` - the venu 4 family, venux1,
+  vivoactive6, the vivoactive3 variants). There is no hotspot to hold there;
+  the app's on-screen tap target covers the same route on those watches.
+
 ## Running in CI
 
 The suite runs on **Linux**, headlessly, on GitHub-hosted runners -
-`.github/workflows/e2e-linux.yml`. The same test files run on both
-platforms; only the driver's backend differs (see "Two platforms, one
-driver" below). Device fonts are fetched at job time through Garmin's own
+`.github/workflows/e2e-linux.yml` - as a matrix over
+`instinct3solar45mm`, `fenix7` and `venu3`: one per layout class the app
+renders differently (semi-octagon with a subwindow, plain round MIP, large
+round AMOLED). The same test files run on every platform and device; only
+the driver's backend differs (see "Two platforms, one driver" below).
+Device fonts and skins are fetched at job time through Garmin's own
 authenticated API (see `tools/e2e/linux/README.md`), so nothing
 proprietary lives in an image or this repo.
 
@@ -174,9 +210,10 @@ from `process.platform`. Three findings worth knowing if you touch either:
   so `ocr()` runs both polarities and merges the lines. Details in
   `platform-linux.ts`.
 
-Screenshot baselines are per-platform (`baselines/darwin/`,
-`baselines/linux/`) - macOS captures at Retina 2x with a different font
-rasterizer, so the two are not interchangeable. OCR text assertions are
+Screenshot baselines are keyed by platform and device
+(`baselines/darwin/instinct3solar45mm/`, `baselines/linux/venu3/`, ...) -
+macOS captures at Retina 2x with a different font rasterizer, and screen
+sizes differ between devices, so none of them are interchangeable. OCR text assertions are
 case-insensitive, since Vision and Tesseract disagree on the case of some
 glyphs and these assertions are about *what state the app is in*, not
 typography.
@@ -203,9 +240,9 @@ slips past those (a `kill -9` on the runner itself, for instance).
 
 ## How `Simulator.hold()` works (and why it's a mouse event)
 
-MENU is a long-press of UP on this device, and `hold()` synthesizes it as
-a **mouse press-and-hold on the device skin's UP-button hotspot** (from
-the same `simulator.json` `keys` array the key mappings come from), via
+MENU is a long-press of UP on the Instinct, and `hold()` synthesizes it as
+a **mouse press-and-hold on the device skin's MENU hotspot** (from the same
+`simulator.json` `keys` array the crop geometry comes from), via
 `mouse-hold.swift`. That's not an implementation quirk - it's the only
 mechanism that works, because the simulator maps keyboard input to taps
 only. Ten approaches established this (a capturing `CGEventTap` listener
@@ -231,6 +268,8 @@ diffed against AppleScript's working `key code` events):
   hold.
 
 A human triggers MENU in the simulator by press-and-holding the mouse on
-the skin's button, so the driver does exactly that. The hotspot center
-(`MENU_BUTTON_CENTER` in `simulator.ts`) is device-skin-specific, like
-the screenshot geometry - the `launch()` device guard covers both.
+the skin's button, so the driver does exactly that. The hotspot is
+device-specific, like the screenshot geometry, and both come from
+`device-profile.ts` reading the device's `simulator.json`. Where a device
+has no MENU key at all the profile reports `menuHotspot === null` and the
+tests that need it skip.

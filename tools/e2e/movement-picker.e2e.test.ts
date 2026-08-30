@@ -3,8 +3,9 @@
 // on wall-clock time or elapsed counters), same pattern as
 // equipment-picker.e2e.test.ts - see docs/e2e-testing.md.
 
-import assert from "node:assert/strict";
 import { after, before, describe, it } from "node:test";
+
+import { assertScreenShows } from "./ocr-match.ts";
 
 import { expectScreenshotMatches } from "./screen-matcher.ts";
 import { Simulator } from "./simulator.ts";
@@ -28,9 +29,9 @@ void describe("Choose movement screen", () => {
 
         const lines = await sim.readText();
         const joined = lines.join(" ");
-        assert.match(joined, /Choose/i);
-        assert.match(joined, /movement/i);
-        assert.match(joined, /360/i);
+        assertScreenShows(joined, "Choose");
+        assertScreenShows(joined, "movement");
+        assertScreenShows(joined, "360");
 
         await expectScreenshotMatches(await sim.screenshot(), "movement-picker");
     });

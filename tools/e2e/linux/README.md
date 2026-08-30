@@ -56,3 +56,18 @@ substitute - is dead-ended by an upstream bug: loading any custom
 push (root-caused with a core dump on branch
 `explore/e2e-testfont-probe`). With real device fonts no custom
 `FontResource` is ever loaded, so that bug never comes into play.
+
+## Driving a different watch
+
+`MACE_E2E_DEVICE` selects the device, defaulting to `instinct3solar45mm`:
+
+```sh
+MACE_E2E_DEVICE=venu3 bash tools/e2e/linux/run-suite.sh
+```
+
+The device's own SDK files must be present under
+`$HOME/.Garmin/ConnectIQ/Devices/<id>/` - `run-suite.sh` compiles for that
+device and the driver reads its screenshot crop, MENU hotspot and skin size
+out of its `simulator.json`. In CI both the fonts and the device files come
+from the same `connect-iq-sdk-manager device download --include-fonts` call
+and are cached per device.

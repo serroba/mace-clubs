@@ -14,6 +14,7 @@ import { homedir } from "node:os";
 import { isAbsolute, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
+import { type DeviceProfile, loadDeviceProfile } from "./device-profile.ts";
 import { resolve as resolveTool } from "../resolve-tool.ts";
 import { screensDiffer } from "./pixel-diff.ts";
 import { LinuxPlatform } from "./platform-linux.ts";
@@ -30,20 +31,24 @@ export type { Button } from "./platform.ts";
 // repo root.
 const REPO_ROOT = fileURLToPath(new URL("../..", import.meta.url));
 
-// The screenshot crop geometry in each platform backend is specific to this
-// one device's skin - other devices' simulator.json report entirely
-// different display locations (fenix7 {x:77,y:146,260x260}, venu3
-// {x:91,y:206,454x454}), so supporting another device means finding and
-// adding its constants, not just passing an id. launch() fails fast rather
-// than silently cropping the wrong region.
+// Which device the suite runs against. Every backend's screenshot crop, MENU
+// hotspot and window size is read from that device's own simulator.json (see
+// device-profile.ts), so this is a real choice rather than the one skin the
+// geometry happened to be hardcoded for. MACE_E2E_DEVICE overrides it, which
+// is how CI fans the same tests out across screen sizes.
 const DEFAULT_DEVICE = "instinct3solar45mm";
 
-function createPlatform(): Platform {
+export function targetDevice(): string {
+    const override = process.env["MACE_E2E_DEVICE"];
+    return override !== undefined && override.length > 0 ? override : DEFAULT_DEVICE;
+}
+
+function createPlatform(device: DeviceProfile): Platform {
     switch (process.platform) {
         case "darwin":
-            return new MacosPlatform();
+            return new MacosPlatform(device);
         case "linux":
-            return new LinuxPlatform();
+            return new LinuxPlatform(device);
         default:
             throw new Error(`the e2e driver supports macOS and Linux, not "${process.platform}"`);
     }
@@ -51,7 +56,14 @@ function createPlatform(): Platform {
 
 /** Module-level so run-e2e.ts's signal handlers can clean up a simulator
  * left behind by a killed test process without constructing a driver. */
-const platform = createPlatform();
+const platform = createPlatform(loadDeviceProfile(targetDevice()));
+
+/** The device profile the suite is running against - tests use this to skip
+ * themselves on hardware that cannot reach what they check (hold("menu") on
+ * a device with no MENU key, for instance). */
+export function deviceProfile(): DeviceProfile {
+    return platform.device;
+}
 
 /** connectiq is launched `detached` (its own process group), so a Ctrl-C
  * during a hung test run won't reach it via the terminal's SIGINT - it'd be
@@ -85,7 +97,8 @@ async function waitFor(
 export interface SimulatorOptions {
     /** Path to the built .prg to load (e.g. `bin/mace-clubs.prg`). */
     prgPath: string;
-    /** Connect IQ device id. Defaults to the gyro-validated Instinct 3 Solar. */
+    /** Connect IQ device id. Defaults to targetDevice() - the gyro-validated
+     * Instinct 3 Solar unless MACE_E2E_DEVICE says otherwise. */
     device?: string;
     /** Max time to wait for the screen to stop changing after each
      * press()/hold(), not a flat delay - see waitForStable(). */
@@ -110,11 +123,12 @@ export class Simulator {
      * process restart is slower per test file but is the version of this
      * that has actually proven reliable. */
     static async launch(options: SimulatorOptions): Promise<Simulator> {
-        const device = options.device ?? DEFAULT_DEVICE;
-        if (device !== DEFAULT_DEVICE) {
+        const device = options.device ?? targetDevice();
+        if (device !== platform.device.id) {
             throw new Error(
-                `Simulator only supports device "${DEFAULT_DEVICE}" today - screenshot geometry is ` +
-                    `hardcoded to its skin. Passing "${device}" would silently crop the wrong region.`,
+                `this process is set up for device "${platform.device.id}" but launch() was passed ` +
+                    `"${device}". The platform backend reads its screenshot geometry once at import ` +
+                    `time, so set MACE_E2E_DEVICE instead of passing a different id.`,
             );
         }
         const prgPath = isAbsolute(options.prgPath) ? options.prgPath : join(REPO_ROOT, options.prgPath);
@@ -224,7 +238,8 @@ export class Simulator {
         await this.waitForStable(this.settleMs, 100);
     }
 
-    /** Screenshot of just the watch screen (176x176), not the device bezel. */
+    /** Screenshot of just the watch screen, not the device bezel. Its size is
+     * the device's own display rect, so it differs per device. */
     async screenshot(): Promise<Buffer> {
         return await this.platform.captureScreen();
     }

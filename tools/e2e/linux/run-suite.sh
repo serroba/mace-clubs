@@ -7,9 +7,17 @@
 # Needs device fonts present at /root/.Garmin/ConnectIQ/Fonts (mounted from
 # a locally-licensed install, or fetched in CI - see README.md). Xvfb and
 # openbox are started by the driver itself, not here.
+#
+# Set MACE_E2E_DEVICE to drive a watch other than the Instinct 3 Solar; the
+# device's own SDK files must be present for its skin and fonts.
 set -euo pipefail
 export DISPLAY="${DISPLAY:-:1}"
 export HOME=/root
+# Which watch to drive. The driver reads its screenshot crop, MENU hotspot
+# and window size from this device's own simulator.json, so the same suite
+# runs on any device the SDK has a skin for - CI fans it out across screen
+# sizes because that is where the layout defects actually show up.
+export MACE_E2E_DEVICE="${MACE_E2E_DEVICE:-instinct3solar45mm}"
 
 # The driver imports pixelmatch/pngjs. A bind-mounted repo usually carries
 # the host's tools/node_modules along with it, which is why a local Docker
@@ -23,11 +31,11 @@ if [ ! -d tools/node_modules/pixelmatch ]; then
     npm ci --prefix tools
 fi
 
-echo "=== building the app under test ==="
+echo "=== building the app under test for $MACE_E2E_DEVICE ==="
 mkdir -p bin
 openssl genrsa -out /tmp/key.pem 4096 2>/dev/null
 openssl pkcs8 -topk8 -inform PEM -outform DER -in /tmp/key.pem -out /tmp/key.der -nocrypt
-monkeyc -f monkey.jungle -d instinct3solar45mm -o bin/mace-clubs.prg -y /tmp/key.der -l 3
+monkeyc -f monkey.jungle -d "$MACE_E2E_DEVICE" -o bin/mace-clubs.prg -y /tmp/key.der -l 3
 
 echo "=== running the e2e suite ==="
 exec node --experimental-strip-types --disable-warning=ExperimentalWarning tools/e2e/run-e2e.ts

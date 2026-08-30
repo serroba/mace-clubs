@@ -10,12 +10,21 @@
 // test's job is to verify the safety gate exists and works, not to
 // discard one.
 
-import assert from "node:assert/strict";
 import { after, before, describe, it } from "node:test";
 
-import { Simulator } from "./simulator.ts";
+import { assertScreenLacks, assertScreenShows } from "./ocr-match.ts";
 
-void describe("Discard confirmation", () => {
+import { deviceProfile, Simulator } from "./simulator.ts";
+
+// MENU is a held button, and seven shipped devices have no MENU key at all
+// (the venu 4 family, venux1, vivoactive6, the vivoactive3 variants). On
+// those there is no hotspot to press and hold, so this file skips rather
+// than clicking empty bezel and failing on an OCR mismatch. DeviceInput's
+// on-screen tap target is what covers the same route there; it needs a
+// coordinate tap the driver does not model yet.
+const suite = deviceProfile().menuHotspot === null ? describe.skip : describe;
+
+void suite("Discard confirmation", () => {
     let sim: Simulator;
 
     before(async () => {
@@ -42,13 +51,13 @@ void describe("Discard confirmation", () => {
         await sim.hold("menu");
 
         const confirmLines = (await sim.readText()).join(" ");
-        assert.match(confirmLines, /Discard/i);
-        assert.match(confirmLines, /home/i);
+        assertScreenShows(confirmLines, "Discard");
+        assertScreenShows(confirmLines, "home");
 
         // BACK backs out of the confirmation without discarding - the
         // workout must still be running afterward.
         await sim.press("back");
         const afterLines = (await sim.readText()).join(" ");
-        assert.doesNotMatch(afterLines, /Discard/i, "confirmation should be dismissed");
+        assertScreenLacks(afterLines, "Discard", "confirmation should be dismissed");
     });
 });

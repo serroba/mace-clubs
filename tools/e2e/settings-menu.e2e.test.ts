@@ -4,12 +4,21 @@
 // settings gear, so this on-watch menu is the only way to reach most
 // settings - worth a direct regression check that it still opens at all.
 
-import assert from "node:assert/strict";
 import { after, before, describe, it } from "node:test";
 
-import { Simulator } from "./simulator.ts";
+import { assertScreenShows } from "./ocr-match.ts";
 
-void describe("Settings menu", () => {
+import { deviceProfile, Simulator } from "./simulator.ts";
+
+// MENU is a held button, and seven shipped devices have no MENU key at all
+// (the venu 4 family, venux1, vivoactive6, the vivoactive3 variants). On
+// those there is no hotspot to press and hold, so this file skips rather
+// than clicking empty bezel and failing on an OCR mismatch. DeviceInput's
+// on-screen tap target is what covers the same route there; it needs a
+// coordinate tap the driver does not model yet.
+const suite = deviceProfile().menuHotspot === null ? describe.skip : describe;
+
+void suite("Settings menu", () => {
     let sim: Simulator;
 
     before(async () => {
@@ -24,7 +33,7 @@ void describe("Settings menu", () => {
         await sim.hold("menu");
 
         const joined = (await sim.readText()).join(" ");
-        assert.match(joined, /Settings/i);
-        assert.match(joined, /History/i);
+        assertScreenShows(joined, "Settings");
+        assertScreenShows(joined, "History");
     });
 });

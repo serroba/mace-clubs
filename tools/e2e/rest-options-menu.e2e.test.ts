@@ -4,12 +4,21 @@
 // so the next set's movement/side can change without abandoning the
 // session). Builds on the same navigation as rest-screen.e2e.test.ts.
 
-import assert from "node:assert/strict";
 import { after, before, describe, it } from "node:test";
 
-import { Simulator } from "./simulator.ts";
+import { assertScreenShows } from "./ocr-match.ts";
 
-void describe("Rest options menu", () => {
+import { deviceProfile, Simulator } from "./simulator.ts";
+
+// MENU is a held button, and seven shipped devices have no MENU key at all
+// (the venu 4 family, venux1, vivoactive6, the vivoactive3 variants). On
+// those there is no hotspot to press and hold, so this file skips rather
+// than clicking empty bezel and failing on an OCR mismatch. DeviceInput's
+// on-screen tap target is what covers the same route there; it needs a
+// coordinate tap the driver does not model yet.
+const suite = deviceProfile().menuHotspot === null ? describe.skip : describe;
+
+void suite("Rest options menu", () => {
     let sim: Simulator;
 
     before(async () => {
@@ -36,15 +45,15 @@ void describe("Rest options menu", () => {
         await sim.hold("menu");
 
         const joined = (await sim.readText()).join(" ");
-        assert.match(joined, /Rest options/i);
-        assert.match(joined, /Move/i);
-        assert.match(joined, /Side/i);
+        assertScreenShows(joined, "Rest options");
+        assertScreenShows(joined, "Move");
+        assertScreenShows(joined, "Side");
 
         // "Discard & go home" is the third item - below the fold on this
         // screen, so scroll down until it's visible before asserting it.
         await sim.press("down");
         await sim.press("down");
         const scrolled = (await sim.readText()).join(" ");
-        assert.match(scrolled, /Discard/i);
+        assertScreenShows(scrolled, "Discard");
     });
 });
