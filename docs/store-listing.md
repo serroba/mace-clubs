@@ -1,7 +1,7 @@
 # Connect IQ Store listing — DRAFT (review before submitting)
 
 <!-- generated:upload -->
-Upload file: `mace-clubs.iq` from the v0.15.1 GitHub release.
+Upload file: `mace-clubs.iq` from the v0.16.0 GitHub release.
 <!-- /generated:upload -->
 
 Note: the store renders these fields as plain text — no markdown emphasis.
@@ -61,11 +61,11 @@ Also included:
   for private offline swing analysis
 
 <!-- generated:whatsnew -->
-## What's new — v0.15.1
+## What's new — v0.16.0
 
-- Add a gyro-tuning grid search against real recordings; document current findings
-- Restore full device support after the gyro-primary mace change
-- Add a recorded-fixture replay testing framework for on-device motion code
+- Stop the paused headline hiding behind the Instinct's subwindow
+- Make the app-drawn screens scale to the device, and adapt the controls to it
+- Fix the app crashing on workout start on every CIQ 3.1 device
 <!-- /generated:whatsnew -->
 
 ## Category

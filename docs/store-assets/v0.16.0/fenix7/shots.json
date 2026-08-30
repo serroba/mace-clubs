@@ -1,0 +1,41 @@
+{
+  "device": "fenix7",
+  "shots": [
+    {
+      "shot": "01-start-screen",
+      "listingItem": 1,
+      "file": "docs/store-assets/v0.16.0/fenix7/01-start-screen.png",
+      "bytes": 65540
+    },
+    {
+      "shot": "02-equipment-picker",
+      "listingItem": 2,
+      "file": "docs/store-assets/v0.16.0/fenix7/02-equipment-picker.png",
+      "bytes": 61272
+    },
+    {
+      "shot": "03-movement-picker",
+      "listingItem": 2,
+      "file": "docs/store-assets/v0.16.0/fenix7/03-movement-picker.png",
+      "bytes": 57100
+    },
+    {
+      "shot": "04-work-screen",
+      "listingItem": 3,
+      "file": "docs/store-assets/v0.16.0/fenix7/04-work-screen.png",
+      "bytes": 61007
+    },
+    {
+      "shot": "05-rest-screen",
+      "listingItem": 3,
+      "file": "docs/store-assets/v0.16.0/fenix7/05-rest-screen.png",
+      "bytes": 65310
+    },
+    {
+      "shot": "06-paused-summary",
+      "listingItem": 6,
+      "file": "docs/store-assets/v0.16.0/fenix7/06-paused-summary.png",
+      "bytes": 70209
+    }
+  ]
+}
