@@ -68,6 +68,12 @@ Also included:
 - Fix the app crashing on workout start on every CIQ 3.1 device
 <!-- /generated:whatsnew -->
 
+## Icon
+Upload `docs/brand/icon-1024.png` — the badge variant. Do not upload the app's
+launcher icon: it is a white silhouette on transparency, correct against the
+watch's black app list and invisible against the store's light grid. See
+[docs/brand.md](brand.md).
+
 ## Category
 Health & Fitness
 
