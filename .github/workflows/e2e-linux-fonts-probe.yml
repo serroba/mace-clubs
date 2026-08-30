@@ -1,0 +1,63 @@
+name: E2E Linux fonts probe (scratch)
+
+# Feasibility test for running the Linux e2e pipeline on a GitHub-hosted
+# runner with real device fonts fetched at job time - "option 1.5": no
+# self-hosted infrastructure, no fonts in any image or repo. Fonts come
+# through Garmin's own authenticated font API via connect-iq-sdk-manager-cli
+# (community CLI speaking the real SSO flow), using this repo's
+# GARMIN_USERNAME/GARMIN_PASSWORD secrets, and land on the runner's
+# ephemeral disk only. Cached between runs so credentials are exercised
+# once per cache key, not every run.
+#
+# Scratch workflow - runs only on this branch. Delete or promote once the
+# feasibility answer is in.
+on:
+  push:
+    branches: [explore/e2e-linux-fonts-ci]
+
+jobs:
+  probe:
+    name: Linux e2e probe with CLI-fetched fonts
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    container:
+      image: ghcr.io/matco/connectiq-tester:latest
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Install GUI automation deps
+        run: |
+          apt-get update -qq
+          apt-get install -y -qq --no-install-recommends xdotool imagemagick tesseract-ocr openbox
+
+      - name: Cache device fonts
+        id: fonts-cache
+        uses: actions/cache@v4
+        with:
+          path: /root/.Garmin/ConnectIQ/Fonts
+          key: ciq-fonts-instinct3solar45mm-cli-v0.8.4
+
+      - name: Fetch device fonts via Garmin's authenticated API
+        if: steps.fonts-cache.outputs.cache-hit != 'true'
+        env:
+          GARMIN_USERNAME: ${{ secrets.GARMIN_USERNAME }}
+          GARMIN_PASSWORD: ${{ secrets.GARMIN_PASSWORD }}
+        run: |
+          test -n "$GARMIN_USERNAME" || { echo "::error::GARMIN_USERNAME secret is not set"; exit 1; }
+          test -n "$GARMIN_PASSWORD" || { echo "::error::GARMIN_PASSWORD secret is not set"; exit 1; }
+          curl -sL "https://github.com/lindell/connect-iq-sdk-manager-cli/releases/download/v0.8.4/connect-iq-sdk-manager-cli_0.8.4_Linux_x86_64.tar.gz" \
+            | tar xz -C /tmp connect-iq-sdk-manager
+          export HOME=/root
+          # Hash of the agreement at developer.garmin.com/downloads/connect-iq/sdks/agreement.html,
+          # read and accepted by the repo owner (also previously accepted via
+          # the official SDK Manager). Re-read and bump when the CLI reports
+          # a hash mismatch.
+          /tmp/connect-iq-sdk-manager agreement accept -H CC737BBBA104D7740D5BBCF27D0F6382
+          /tmp/connect-iq-sdk-manager login
+          /tmp/connect-iq-sdk-manager device download -d instinct3solar45mm --include-fonts
+          echo "fonts downloaded: $(find /root/.Garmin/ConnectIQ/Fonts -type f | wc -l) files"
+          # The simulator only needs Fonts/; keep tokens off the cache path.
+          rm -f /root/.Garmin/ConnectIQ/token.json
+
+      - name: Run feasibility probe
+        run: bash tools/e2e/linux/probe.sh
