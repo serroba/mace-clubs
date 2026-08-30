@@ -10,6 +10,13 @@ name: E2E UI tests (Linux)
 # or a registry, and the fonts only ever touch the runner's ephemeral disk.
 # They're cached, so credentials are exercised once per cache key.
 #
+# The suite fans out across screen sizes. The driver reads each device's
+# screenshot crop, MENU hotspot and window size from its own simulator.json,
+# so one set of test files covers all of them. This matters because the
+# layout defects worth catching only appear off the Instinct: on a 454px
+# screen the footer labels used to overlap into "setrndshr" and the headline
+# number overdrew its own caption, both invisible at 176px.
+#
 # Runs on PRs from branches in this repo, on main, on release tags, and on
 # demand. Only *fork* PRs are excluded (the `if` below): GitHub withholds
 # secrets from them, so the font fetch can't work - they skip cleanly
@@ -48,7 +55,7 @@ on:
 
 jobs:
   e2e:
-    name: E2E UI suite (instinct3solar45mm)
+    name: E2E UI suite (${{ matrix.device }})
     # Fork PRs get no secrets, so the font fetch would fail - skip instead.
     # Always true for pushes and workflow_dispatch (no pull_request payload).
     if: >-
@@ -56,6 +63,16 @@ jobs:
       github.event.pull_request.head.repo.full_name == github.repository
     runs-on: ubuntu-latest
     timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        # One per layout class the app actually renders differently:
+        # semi-octagon with a subwindow, plain round MIP, and the large round
+        # AMOLED where the fixed-pixel layout used to break outright.
+        device:
+          - instinct3solar45mm
+          - fenix7
+          - venu3
     container:
       image: ghcr.io/matco/connectiq-tester:latest
     defaults:
@@ -78,14 +95,19 @@ jobs:
       - name: Install driver dependencies
         run: npm ci --prefix tools
 
-      - name: Cache device fonts
+      # Both the fonts and the device's own skin/metadata come from the same
+      # download, and both are needed: the fonts to draw anything at all, the
+      # simulator.json for the driver's crop geometry.
+      - name: Cache device files
         id: fonts-cache
         uses: actions/cache@v4
         with:
-          path: /root/.Garmin/ConnectIQ/Fonts
-          key: ciq-fonts-instinct3solar45mm-cli-v0.8.4
+          path: |
+            /root/.Garmin/ConnectIQ/Fonts
+            /root/.Garmin/ConnectIQ/Devices
+          key: ciq-device-${{ matrix.device }}-cli-v0.8.4
 
-      - name: Fetch device fonts via Garmin's authenticated API
+      - name: Fetch device files via Garmin's authenticated API
         if: steps.fonts-cache.outputs.cache-hit != 'true'
         env:
           GARMIN_USERNAME: ${{ secrets.GARMIN_USERNAME }}
@@ -102,13 +124,15 @@ jobs:
           # a hash mismatch.
           /tmp/connect-iq-sdk-manager agreement accept -H CC737BBBA104D7740D5BBCF27D0F6382
           /tmp/connect-iq-sdk-manager login
-          /tmp/connect-iq-sdk-manager device download -d instinct3solar45mm --include-fonts
+          /tmp/connect-iq-sdk-manager device download -d "${{ matrix.device }}" --include-fonts
           echo "fonts downloaded: $(find /root/.Garmin/ConnectIQ/Fonts -type f | wc -l) files"
           # The simulator only needs Fonts/; keep the session token out of
           # the cached path.
           rm -f /root/.Garmin/ConnectIQ/token.json
 
       - name: Run the e2e UI suite
+        env:
+          MACE_E2E_DEVICE: ${{ matrix.device }}
         run: bash tools/e2e/linux/run-suite.sh
 
       # Screenshots of whatever the driver last saw, for diagnosing a
@@ -117,6 +141,18 @@ jobs:
         if: failure()
         uses: actions/upload-artifact@v4
         with:
-          name: e2e-screenshot-diffs
+          name: e2e-screenshot-diffs-${{ matrix.device }}
           path: tools/e2e/.diffs/
+          if-no-files-found: ignore
+
+      # Always, not just on failure: when a device joins the matrix its Linux
+      # baselines do not exist yet, so the first run seeds them (and warns
+      # that it compared nothing). Download them from here and commit them so
+      # later runs actually check the layout.
+      - name: Upload screenshot baselines
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: e2e-baselines-${{ matrix.device }}
+          path: tools/e2e/baselines/linux/${{ matrix.device }}/
           if-no-files-found: ignore

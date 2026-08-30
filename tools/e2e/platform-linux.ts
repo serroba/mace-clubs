@@ -24,28 +24,32 @@ import { homedir, tmpdir } from "node:os";
 import { join } from "node:path";
 import { promisify } from "node:util";
 
+import { type DeviceProfile, isGestureDriven } from "./device-profile.ts";
 import { resolve as resolveTool } from "../resolve-tool.ts";
-import { type Button, type Platform, SCREEN_SIZE } from "./platform.ts";
+import type { Button, Platform } from "./platform.ts";
 
 const execFileAsync = promisify(execFile);
 
 const SIMULATOR_PROCESS_PATTERN = "bin/simulator";
 const WINDOW_NAME = "CIQ Simulator";
 const DISPLAY = process.env["DISPLAY"] ?? ":1";
-const SCREEN_SIZE_STR = `${String(SCREEN_SIZE.width)}x${String(SCREEN_SIZE.height)}`;
-
-// The skin's own display.location is {x:101, y:158}; `import -window` output
-// carries the window manager's decoration on top of that, measured at
-// +1x/+31y. Verified by OCR against real screens (tools/e2e/linux/probe.sh).
+// `import -window` output carries the window manager's decoration on top of
+// the skin's own coordinates, measured at +1x/+31y. Verified by OCR against
+// real screens (tools/e2e/linux/probe.sh). It is a property of openbox, not
+// of the device, so it applies to every skin. xdotool mousemove --window
+// measures from the decorated origin too, so the same offset applies there.
 const DECORATION_OFFSET = { x: 1, y: 31 } as const;
-const SCREEN_OFFSET = { x: 101 + DECORATION_OFFSET.x, y: 158 + DECORATION_OFFSET.y } as const;
-// Center of the UP/MENU button's hotspot from simulator.json's `keys` array
-// ({x:2, y:212, w:33, h:68}), in the same decorated-window coordinate space
-// (xdotool mousemove --window measures from the decorated origin too).
-const MENU_BUTTON_CENTER = {
-    x: 2 + 33 / 2 + DECORATION_OFFSET.x,
-    y: 212 + 68 / 2 + DECORATION_OFFSET.y,
-} as const;
+
+// Big enough for the largest device skin the SDK ships plus decoration
+// (descentmk351mm is 847x1089, so its window is 847x1145). A skin that does
+// not fit the virtual display gets a window clipped at the edge, and clicks
+// on a button past that edge go nowhere - the same failure that made
+// hold("menu") a silent no-op on venu3 under macOS.
+const XVFB_GEOMETRY = "1400x1400x24";
+
+// Where Menu2 draws its first item, as a fraction of screen height - measured
+// on venu3 and vivoactive6. Used only for the touch SELECT below.
+const FIRST_MENU_ROW_FRACTION = 0.37;
 
 const KEYSYMS: Record<Button, string> = {
     select: "Return",
@@ -64,7 +68,12 @@ function isProcessRunning(pattern: string): boolean {
 
 export class LinuxPlatform implements Platform {
     readonly name = "linux";
+    readonly device: DeviceProfile;
     private readonly env = { ...process.env, DISPLAY };
+
+    constructor(device: DeviceProfile) {
+        this.device = device;
+    }
 
     /** Brings up Xvfb and a window manager if they aren't already running,
      * then the simulator itself. A window manager is not optional here: it's
@@ -72,7 +81,7 @@ export class LinuxPlatform implements Platform {
      * is silently dropped). */
     startSimulator(): void {
         if (!isProcessRunning(`Xvfb ${DISPLAY}`)) {
-            spawn("Xvfb", [DISPLAY, "-screen", "0", "1280x1024x24"], {
+            spawn("Xvfb", [DISPLAY, "-screen", "0", XVFB_GEOMETRY], {
                 detached: true,
                 stdio: "ignore",
             }).unref();
@@ -112,10 +121,85 @@ export class LinuxPlatform implements Platform {
      * window-targeted key events entirely. focus() has already activated the
      * window, so a plain global key press lands on it. */
     async pressKey(button: Button): Promise<void> {
+        // 30 manifest devices have no UP/DOWN keys and drop the arrow-key
+        // event entirely; a swipe raises the same next/previous-page
+        // behaviour there. Verified on vivoactive6, where a swipe up cycles
+        // the preset exactly as DOWN does on the Instinct.
+        if (isGestureDriven(this.device)) {
+            if (button === "up" || button === "down") {
+                await this.swipe(button);
+                return;
+            }
+            if (button === "select") {
+                await this.tapSelect();
+                return;
+            }
+            // Only BACK is left at this point.
+            const esc = this.device.escHotspot;
+            if (esc !== null) {
+                await execFileAsync(
+                    "xdotool",
+                    [
+                        "mousemove",
+                        "--window",
+                        this.requireWindow(),
+                        String(Math.round(esc.x + DECORATION_OFFSET.x)),
+                        String(Math.round(esc.y + DECORATION_OFFSET.y)),
+                        "click",
+                        "1",
+                    ],
+                    { env: this.env },
+                );
+                return;
+            }
+        }
         await execFileAsync("xdotool", ["key", "--clearmodifiers", KEYSYMS[button]], { env: this.env });
     }
 
+    /** SELECT as a screen tap - see platform-macos.ts's tapSelect for why a
+     * touch device with no UP/DOWN keys needs one. */
+    private async tapSelect(): Promise<void> {
+        const window = this.requireWindow();
+        const screen = this.device.screen;
+        const x = Math.round(screen.x + DECORATION_OFFSET.x + screen.width / 2);
+        const y = Math.round(screen.y + DECORATION_OFFSET.y + screen.height * FIRST_MENU_ROW_FRACTION);
+        await execFileAsync("xdotool", ["mousemove", "--window", window, String(x), String(y), "click", "1"], {
+            env: this.env,
+        });
+    }
+
+    /** DOWN (next page) is a swipe *up* the screen, and vice versa. The
+     * intermediate mousemove steps matter: without the pointer visibly
+     * travelling, a down/up pair at two points is just a click at the
+     * second one. */
+    private async swipe(button: "up" | "down"): Promise<void> {
+        const window = this.requireWindow();
+        const screen = this.device.screen;
+        const x = Math.round(screen.x + DECORATION_OFFSET.x + screen.width / 2);
+        const top = Math.round(screen.y + DECORATION_OFFSET.y + screen.height * 0.3);
+        const bottom = Math.round(screen.y + DECORATION_OFFSET.y + screen.height * 0.7);
+        const [from, to] = button === "down" ? [bottom, top] : [top, bottom];
+
+        const move = async (y: number): Promise<void> => {
+            await execFileAsync("xdotool", ["mousemove", "--window", window, String(x), String(y)], {
+                env: this.env,
+            });
+        };
+        await move(from);
+        await execFileAsync("xdotool", ["mousedown", "1"], { env: this.env });
+        const steps = 14;
+        for (let step = 1; step <= steps; step += 1) {
+            await move(Math.round(from + ((to - from) * step) / steps));
+            await sleep(12);
+        }
+        await execFileAsync("xdotool", ["mouseup", "1"], { env: this.env });
+    }
+
     async holdMenu(holdMs: number): Promise<void> {
+        const hotspot = this.device.menuHotspot;
+        if (hotspot === null) {
+            throw new Error(`device "${this.device.id}" has no MENU key - a test needing hold("menu") must skip it`);
+        }
         const window = this.requireWindow();
         await execFileAsync(
             "xdotool",
@@ -123,8 +207,8 @@ export class LinuxPlatform implements Platform {
                 "mousemove",
                 "--window",
                 window,
-                String(MENU_BUTTON_CENTER.x),
-                String(MENU_BUTTON_CENTER.y),
+                String(hotspot.x + DECORATION_OFFSET.x),
+                String(hotspot.y + DECORATION_OFFSET.y),
                 "mousedown",
                 "1",
             ],
@@ -140,11 +224,13 @@ export class LinuxPlatform implements Platform {
         const rawPath = join(dir, "raw.png");
         const cropPath = join(dir, "crop.png");
         try {
+            const screen = this.device.screen;
             await execFileAsync("import", ["-window", window, rawPath], { env: this.env });
             await execFileAsync("convert", [
                 rawPath,
                 "-crop",
-                `${SCREEN_SIZE_STR}+${String(SCREEN_OFFSET.x)}+${String(SCREEN_OFFSET.y)}`,
+                `${String(screen.width)}x${String(screen.height)}` +
+                    `+${String(screen.x + DECORATION_OFFSET.x)}+${String(screen.y + DECORATION_OFFSET.y)}`,
                 cropPath,
             ]);
             return await readFile(cropPath);

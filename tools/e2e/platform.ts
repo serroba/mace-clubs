@@ -8,18 +8,25 @@
 // There is no official automation API for this app on either platform;
 // every mechanic behind these implementations was found empirically and is
 // documented at the top of the file that implements it.
+//
+// Neither backend hardcodes a device any more: the screen crop, the MENU
+// button hotspot and the expected window size all come from the SDK's own
+// simulator.json via DeviceProfile, so the same suite runs on any device the
+// SDK has a skin for.
+
+import type { DeviceProfile } from "./device-profile.ts";
 
 export type Button = "select" | "back" | "up" | "down";
-
-/** The watch's own screen within the simulator window, excluding the device
- * bezel art around it - so screenshots and baselines contain only app
- * pixels. Both platforms crop to the same 176x176 region of the same skin;
- * only the offset differs (Linux's window-manager decoration shifts it). */
-export const SCREEN_SIZE = { width: 176, height: 176 } as const;
 
 export interface Platform {
     /** For error messages and skip conditions. */
     readonly name: string;
+
+    /** The device this backend was built for. Screenshot geometry, the MENU
+     * hotspot and the window size all come from its profile, so a test can
+     * ask what it is running on - `menuHotspot === null` means the device has
+     * no MENU key and anything needing hold("menu") should skip. */
+    readonly device: DeviceProfile;
 
     /** Start the simulator GUI, detached, plus any display server it needs.
      * Does not wait for it to finish booting. */
@@ -48,8 +55,8 @@ export interface Platform {
      * synthesized key event of any kind produces a hold. */
     holdMenu(holdMs: number): Promise<void>;
 
-    /** PNG of just the watch screen (SCREEN_SIZE), not the surrounding
-     * device bezel or window chrome. */
+    /** PNG of just the watch screen (this device's `screen` rect), not the
+     * surrounding device bezel or window chrome. */
     captureScreen(): Promise<Buffer>;
 
     /** One string per recognized line of on-screen text. */

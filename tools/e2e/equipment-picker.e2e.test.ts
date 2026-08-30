@@ -5,8 +5,9 @@
 // content check. Both approaches are demonstrated across these two files;
 // see docs/e2e-testing.md for when to reach for which.
 
-import assert from "node:assert/strict";
 import { after, before, describe, it } from "node:test";
+
+import { assertScreenShows } from "./ocr-match.ts";
 
 import { expectScreenshotMatches } from "./screen-matcher.ts";
 import { Simulator } from "./simulator.ts";
@@ -27,9 +28,9 @@ void describe("Choose equipment screen", () => {
 
         const lines = await sim.readText();
         const joined = lines.join(" ");
-        assert.match(joined, /Choose/i);
-        assert.match(joined, /equipment/i);
-        assert.match(joined, /Mace/i);
+        assertScreenShows(joined, "Choose");
+        assertScreenShows(joined, "equipment");
+        assertScreenShows(joined, "Mace");
 
         await expectScreenshotMatches(await sim.screenshot(), "equipment-picker");
     });

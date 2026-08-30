@@ -4,16 +4,17 @@
 // uses internally for this), and writes a diff image on mismatch.
 //
 // First run for a given name writes the baseline instead of comparing -
-// review it once (open tools/e2e/baselines/<platform>/<name>.png), then
-// commit it. To intentionally update a baseline after a real UI change,
+// review it once (open tools/e2e/baselines/<platform>/<device>/<name>.png),
+// then commit it. To intentionally update a baseline after a real UI change,
 // delete the file (or set UPDATE_BASELINES=1) and rerun.
 //
-// Baselines are per-platform because they are not interchangeable: macOS
-// captures the screen at Retina 2x (352x352 for this device's 176x176
-// screen) while Linux captures at 1x, and the two use entirely different
-// font rasterizers on top of that. A shared file would fail on dimensions
-// alone, and forcing one to match the other would only hide real
-// regressions on whichever platform didn't own the baseline.
+// Baselines are keyed by platform *and* device, because neither axis is
+// interchangeable. macOS captures at Retina 2x (352x352 for a 176x176 screen)
+// while Linux captures at 1x, and the two use entirely different font
+// rasterizers; different devices have different screen sizes outright (176px
+// Instinct against 454px Venu 3). A shared file would fail on dimensions
+// alone, and forcing one to match another would only hide real regressions on
+// whichever combination didn't own the baseline.
 
 import { existsSync } from "node:fs";
 import { mkdir, readFile, writeFile } from "node:fs/promises";
@@ -23,7 +24,13 @@ import { fileURLToPath } from "node:url";
 import pixelmatch from "pixelmatch";
 import { PNG } from "pngjs";
 
-const BASELINE_DIR = join(fileURLToPath(new URL("baselines", import.meta.url)), process.platform);
+import { targetDevice } from "./simulator.ts";
+
+const BASELINE_DIR = join(
+    fileURLToPath(new URL("baselines", import.meta.url)),
+    process.platform,
+    targetDevice(),
+);
 const DIFF_DIR = fileURLToPath(new URL(".diffs", import.meta.url));
 const DEFAULT_MAX_DIFF_PIXELS = 40; // font hinting / AA noise between runs is normal
 
@@ -41,7 +48,14 @@ export async function expectScreenshotMatches(
 
     if (process.env["UPDATE_BASELINES"] === "1" || !existsSync(baselinePath)) {
         await writeFile(baselinePath, actualPng);
-        console.log(`[baseline] wrote ${baselinePath} - review it, then commit it`);
+        // Seeding is not a comparison, so say so loudly. This matters most in
+        // CI when a device joins the matrix: the platform/device baseline
+        // directory is empty, the test writes it and passes, and it would keep
+        // passing without ever checking anything until the file is committed.
+        // The workflow uploads the baselines directory so the seeded file can
+        // be pulled from the run and committed - see docs/e2e-testing.md.
+        const notice = `[baseline] SEEDED ${baselinePath} - nothing was compared this run`;
+        console.log(process.env["CI"] === "true" ? `::warning::${notice}` : `${notice}; review, then commit it`);
         return;
     }
 

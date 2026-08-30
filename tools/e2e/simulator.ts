@@ -14,7 +14,9 @@ import { homedir } from "node:os";
 import { isAbsolute, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
+import { type DeviceProfile, isGestureDriven, loadDeviceProfile } from "./device-profile.ts";
 import { resolve as resolveTool } from "../resolve-tool.ts";
+import { screenShows } from "./ocr-match.ts";
 import { screensDiffer } from "./pixel-diff.ts";
 import { LinuxPlatform } from "./platform-linux.ts";
 import { MacosPlatform } from "./platform-macos.ts";
@@ -30,20 +32,30 @@ export type { Button } from "./platform.ts";
 // repo root.
 const REPO_ROOT = fileURLToPath(new URL("../..", import.meta.url));
 
-// The screenshot crop geometry in each platform backend is specific to this
-// one device's skin - other devices' simulator.json report entirely
-// different display locations (fenix7 {x:77,y:146,260x260}, venu3
-// {x:91,y:206,454x454}), so supporting another device means finding and
-// adding its constants, not just passing an id. launch() fails fast rather
-// than silently cropping the wrong region.
+// Which device the suite runs against. Every backend's screenshot crop, MENU
+// hotspot and window size is read from that device's own simulator.json (see
+// device-profile.ts), so this is a real choice rather than the one skin the
+// geometry happened to be hardcoded for. MACE_E2E_DEVICE overrides it, which
+// is how CI fans the same tests out across screen sizes.
 const DEFAULT_DEVICE = "instinct3solar45mm";
 
-function createPlatform(): Platform {
+// How long a swiped list keeps gliding after the gesture ends, and how far
+// apart to sample once it has. Both only apply to gesture-driven devices; a
+// key press stops the moment it lands, so it keeps the tighter timing.
+const GESTURE_GLIDE_MS = 600;
+const GESTURE_POLL_MS = 300;
+
+export function targetDevice(): string {
+    const override = process.env["MACE_E2E_DEVICE"];
+    return override !== undefined && override.length > 0 ? override : DEFAULT_DEVICE;
+}
+
+function createPlatform(device: DeviceProfile): Platform {
     switch (process.platform) {
         case "darwin":
-            return new MacosPlatform();
+            return new MacosPlatform(device);
         case "linux":
-            return new LinuxPlatform();
+            return new LinuxPlatform(device);
         default:
             throw new Error(`the e2e driver supports macOS and Linux, not "${process.platform}"`);
     }
@@ -51,7 +63,14 @@ function createPlatform(): Platform {
 
 /** Module-level so run-e2e.ts's signal handlers can clean up a simulator
  * left behind by a killed test process without constructing a driver. */
-const platform = createPlatform();
+const platform = createPlatform(loadDeviceProfile(targetDevice()));
+
+/** The device profile the suite is running against - tests use this to skip
+ * themselves on hardware that cannot reach what they check (hold("menu") on
+ * a device with no MENU key, for instance). */
+export function deviceProfile(): DeviceProfile {
+    return platform.device;
+}
 
 /** connectiq is launched `detached` (its own process group), so a Ctrl-C
  * during a hung test run won't reach it via the terminal's SIGINT - it'd be
@@ -85,7 +104,8 @@ async function waitFor(
 export interface SimulatorOptions {
     /** Path to the built .prg to load (e.g. `bin/mace-clubs.prg`). */
     prgPath: string;
-    /** Connect IQ device id. Defaults to the gyro-validated Instinct 3 Solar. */
+    /** Connect IQ device id. Defaults to targetDevice() - the gyro-validated
+     * Instinct 3 Solar unless MACE_E2E_DEVICE says otherwise. */
     device?: string;
     /** Max time to wait for the screen to stop changing after each
      * press()/hold(), not a flat delay - see waitForStable(). */
@@ -110,11 +130,12 @@ export class Simulator {
      * process restart is slower per test file but is the version of this
      * that has actually proven reliable. */
     static async launch(options: SimulatorOptions): Promise<Simulator> {
-        const device = options.device ?? DEFAULT_DEVICE;
-        if (device !== DEFAULT_DEVICE) {
+        const device = options.device ?? targetDevice();
+        if (device !== platform.device.id) {
             throw new Error(
-                `Simulator only supports device "${DEFAULT_DEVICE}" today - screenshot geometry is ` +
-                    `hardcoded to its skin. Passing "${device}" would silently crop the wrong region.`,
+                `this process is set up for device "${platform.device.id}" but launch() was passed ` +
+                    `"${device}". The platform backend reads its screenshot geometry once at import ` +
+                    `time, so set MACE_E2E_DEVICE instead of passing a different id.`,
             );
         }
         const prgPath = isAbsolute(options.prgPath) ? options.prgPath : join(REPO_ROOT, options.prgPath);
@@ -194,6 +215,23 @@ export class Simulator {
         // Wait for the redraw to finish rather than a fixed delay - some
         // transitions (e.g. a reveal animation) take longer than others,
         // and a fixed sleep either wastes time or races a slow one.
+        //
+        // A swipe needs more patience than a key press. On a gesture-driven
+        // device UP/DOWN is a swipe (see isGestureDriven), and a touch list
+        // does not stop when the finger lifts - it glides. waitForStable
+        // looks for two consecutive similar frames, and mid-glide two frames
+        // sampled 100ms apart can easily be similar enough to pass, so the
+        // next step runs against a list that is still moving. That is exactly
+        // how venu3 failed in CI: two press("down") calls to scroll "Discard
+        // & go home" into view, then an OCR read of "d ' _ A te" - a smear of
+        // a moving screen, not wrong text. So after a gesture, let the glide
+        // get going, then sample far enough apart that "unchanged" means
+        // stopped rather than briefly slow.
+        if (isGestureDriven(this.platform.device) && (button === "up" || button === "down")) {
+            await sleep(GESTURE_GLIDE_MS);
+            await this.waitForStable(this.settleMs * 2, GESTURE_POLL_MS);
+            return;
+        }
         await this.waitForStable(this.settleMs, 100);
     }
 
@@ -224,7 +262,39 @@ export class Simulator {
         await this.waitForStable(this.settleMs, 100);
     }
 
-    /** Screenshot of just the watch screen (176x176), not the device bezel. */
+    /**
+     * Presses `button` until `phrase` can be read on screen.
+     *
+     * A fixed number of presses is a button-device idiom: one press steps a
+     * menu highlight exactly one row, so "press down twice" reliably reaches
+     * the third item. A swipe does not step - it flings a touch list by a
+     * variable amount - so on venu3 the same two presses overscrolled a
+     * three-item menu into its bounce animation, and the screen read back as
+     * a smear ("wa A ,~ g oN") rather than as text.
+     *
+     * Scrolling until the target is actually visible works on both, and is
+     * what the tests meant in the first place.
+     */
+    async pressUntilVisible(button: Button, phrase: string, maxSteps = 6): Promise<string[]> {
+        let lines = await this.readText();
+        for (let step = 0; step < maxSteps; step += 1) {
+            if (screenShows(lines, phrase)) {
+                return lines;
+            }
+            await this.press(button);
+            lines = await this.readText();
+        }
+        if (screenShows(lines, phrase)) {
+            return lines;
+        }
+        throw new Error(
+            `"${phrase}" never became visible after ${String(maxSteps)} presses of "${button}"; ` +
+                `last read: ${JSON.stringify(lines)}`,
+        );
+    }
+
+    /** Screenshot of just the watch screen, not the device bezel. Its size is
+     * the device's own display rect, so it differs per device. */
     async screenshot(): Promise<Buffer> {
         return await this.platform.captureScreen();
     }
