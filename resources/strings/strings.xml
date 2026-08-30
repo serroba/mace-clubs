@@ -1,5 +1,13 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <strings>
+    <!--
+      The launcher label is the one place the wordmark cannot be "Mace & Clubs":
+      monkeyc rejects an application name resource containing an XML entity
+      reference ("Invalid application name resource. Please remove the XML
+      entity reference '&'"), so "and" is spelled out here and in the store
+      listing's App name field. Everywhere the app draws its own text -
+      SettingsMenu.aboutLabel(), for one - uses the ampersand. See docs/brand.md.
+    -->
     <string id="AppName">Mace and Clubs</string>
     <string id="SettingDefaultBpm">Default tempo (bpm)</string>
     <string id="SettingTrainingMode">Training mode</string>

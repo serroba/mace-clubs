@@ -3,6 +3,8 @@
 ## Code changes
 
 Small, focused PRs — one feature or concern per PR, stacked when they depend on each other.
+Anything user-facing — the app's name, the icon, the device-support claim, the voice —
+follows [docs/brand.md](docs/brand.md) rather than being decided per file.
 `make check` (format, lint, build, unit tests, FIT schema validation) and `make simulator-test`
 should both pass. See the [PR template](.github/PULL_REQUEST_TEMPLATE.md) for what a PR
 description should cover.
