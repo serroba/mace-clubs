@@ -23,11 +23,27 @@ name: E2E UI tests (Linux)
 permissions:
   contents: read
 
+# Path-filtered to changes that can actually alter what's on the watch
+# screen (or how it's driven) - this suite takes ~8 minutes and most PRs
+# here touch the FIT/report tooling, docs, or video analysis instead.
+# Release tags deliberately carry no filter: GitHub skips path evaluation
+# for tag pushes entirely, so a tagged release always gets a full run
+# whatever the tagged commit happened to touch.
 on:
   pull_request:
+    paths: &ui-paths
+      - "source/**" # the app itself
+      - "resources/**" # strings, drawables, layouts
+      - "manifest.xml" # target devices and permissions
+      - "*.jungle" # what gets compiled in
+      - "tools/e2e/**" # the driver and the tests
+      - "tools/package.json" # the driver's own dependencies
+      - "tools/package-lock.json"
+      - ".github/workflows/e2e-linux.yml"
   push:
     branches: [main]
     tags: ["v*"]
+    paths: *ui-paths
   workflow_dispatch:
 
 jobs:

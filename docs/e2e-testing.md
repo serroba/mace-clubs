@@ -102,19 +102,33 @@ void describe("Some screen", () => {
 ## Running in CI
 
 The suite runs on **Linux**, headlessly, on GitHub-hosted runners -
-`.github/workflows/e2e-linux.yml`, on PRs, on pushes to `main`, on release
-tags, and on demand. The same test files run on both platforms; only the
-driver's backend differs (see "Two platforms, one driver" below). Device
-fonts are fetched at job time through Garmin's own authenticated API (see
-`tools/e2e/linux/README.md`), so nothing proprietary lives in an image or
-this repo.
+`.github/workflows/e2e-linux.yml`. The same test files run on both
+platforms; only the driver's backend differs (see "Two platforms, one
+driver" below). Device fonts are fetched at job time through Garmin's own
+authenticated API (see `tools/e2e/linux/README.md`), so nothing
+proprietary lives in an image or this repo.
 
-Only PRs **from forks** are excluded: GitHub withholds secrets from them,
-so the font fetch can't work. They skip cleanly via the job's `if` rather
-than failing on a missing credential. The release-tag run is
-informational - `release.yml` triggers on the same tag and runs alongside
-it, so it can't gate a release that's already tagged; the `pre-push` hook
-below is the actual gate.
+When it runs:
+
+- **PRs and pushes to `main`**, but only when the change can actually
+  affect what's on the watch screen or how it's driven - `source/`,
+  `resources/`, `manifest.xml`, the jungles, `tools/e2e/`, the driver's
+  dependencies, or the workflow itself. The suite takes ~8 minutes and
+  most changes here are to the FIT/report tooling, docs, or video
+  analysis, which can't move a pixel on the watch.
+- **Every `v*` tag push, unfiltered.** GitHub skips path evaluation
+  entirely for tag pushes, so a tagged release always gets a full run
+  whatever its commit touched - which is the behavior we want, and worth
+  knowing before adding path filters anywhere else.
+- **On demand** via `workflow_dispatch`.
+
+PRs **from forks** are the one exclusion: GitHub withholds secrets from
+them, so the font fetch can't work, and they skip cleanly via the job's
+`if` rather than failing on a missing credential.
+
+The release-tag run is informational, not a gate - `release.yml` triggers
+on the same tag and runs alongside it, so it can't stop a release that's
+already tagged. The `pre-push` hook below is the actual gate.
 
 **macOS in CI is a different story** and remains out of scope - it would
 need a logged-in GUI session (AppleScript's `System Events` can't work over
