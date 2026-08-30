@@ -4,20 +4,18 @@
 // goes straight to this confirmation rather than the settings menu).
 //
 // Only asserts the confirmation appears and can be dismissed without
-// discarding (pressing "down" for No) - the destructive Yes path isn't
-// exercised here, since confirming it ends the workout and this test's
-// job is to verify the safety gate exists and works, not to discard one.
-//
-// Skipped: Simulator.hold() doesn't actually hold anything yet - see
-// docs/e2e-testing.md's "Known issue: Simulator.hold() doesn't actually
-// hold" section for everything tried so far.
+// discarding (BACK backs out of a Confirmation on this device; UP/DOWN
+// only move focus between Cancel/Confirm) - the destructive Confirm path
+// isn't exercised here, since confirming it ends the workout and this
+// test's job is to verify the safety gate exists and works, not to
+// discard one.
 
 import assert from "node:assert/strict";
 import { after, before, describe, it } from "node:test";
 
 import { Simulator } from "./simulator.ts";
 
-void describe.skip("Discard confirmation", () => {
+void describe("Discard confirmation", () => {
     let sim: Simulator;
 
     before(async () => {
@@ -47,8 +45,9 @@ void describe.skip("Discard confirmation", () => {
         assert.match(confirmLines, /Discard/);
         assert.match(confirmLines, /home/);
 
-        // Dismiss with No - the workout must still be running afterward.
-        await sim.press("down");
+        // BACK backs out of the confirmation without discarding - the
+        // workout must still be running afterward.
+        await sim.press("back");
         const afterLines = (await sim.readText()).join(" ");
         assert.doesNotMatch(afterLines, /Discard/, "confirmation should be dismissed");
     });

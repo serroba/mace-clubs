@@ -145,49 +145,36 @@ fix (wake and unlock, not free memory).
 manual `pkill` in practice - it's there as the fallback for anything that
 slips past those (a `kill -9` on the runner itself, for instance).
 
-## Known issue: `Simulator.hold()` doesn't actually hold
+## How `Simulator.hold()` works (and why it's a mouse event)
 
-`hold()` is supposed to synthesize a real held button-press (MENU is a
-long-press of UP on this device - see `simulator.ts`'s comment), but its
-current implementation - AppleScript's `key down`/`key up` commands - is a
-silent no-op against this app. Confirmed with a deliberately unambiguous
-test (Select, whose single-press effect - advancing off the idle screen -
-is used and proven by every other passing test): a `key down 36` / `key up
-36` pair produces literally no effect, while the working `press()`'s
-single `key code 36` command reliably advances the screen every time.
+MENU is a long-press of UP on this device, and `hold()` synthesizes it as
+a **mouse press-and-hold on the device skin's UP-button hotspot** (from
+the same `simulator.json` `keys` array the key mappings come from), via
+`mouse-hold.swift`. That's not an implementation quirk - it's the only
+mechanism that works, because the simulator maps keyboard input to taps
+only. Ten approaches established this (a capturing `CGEventTap` listener
+script was the diagnostic turning point - it showed synthetic keyboard
+events were reaching the window server all along and let their fields be
+diffed against AppleScript's working `key code` events):
 
-Eight approaches were tried and ruled out, all with the same "zero
-observable effect" result except where noted:
+- AppleScript's `key down`/`key up` commands: silent no-op, confirmed
+  with an unambiguous single-tap test (Select).
+- Raw `CGEventPost` keyboard events (any tap point, any event source,
+  with or without an explicit Unicode string, targeted globally or at the
+  simulator's own PID): silently dropped by the app **unless the
+  arrow-key modifier flags (`fn`+`numericPad`, `0xa00000`) are set** -
+  `CGEventCreateKeyboardEvent` doesn't populate those the way
+  AppleScript's `key code` does, and the app discards arrow-key events
+  without them. With the flags set and posted to `.cghidEventTap`, a
+  *fast* down/up pair does land - but only ever as a tap.
+- Any down/up pair held longer (with or without an OS-style autorepeat
+  train between them): ignored outright, not even a tap. The simulator
+  simply has no keyboard path to a hold.
+- Rapidly repeating the working `key code` command: 20 discrete taps
+  (observably - it cycled the idle preset selector 20 times), never a
+  hold.
 
-- AppleScript `key down`/`key up` (the current, broken implementation).
-- Raw `CGEventPost` to `.cghidEventTap`, both as a single down/up pair and
-  as a repeated keyDown "autorepeat train" (in case the app's hold
-  detection watches for the OS's real autorepeat mechanism rather than
-  wall-clock time between one down and one up).
-- The same repeat-train approach against `.cgSessionEventTap`.
-- `CGEventPostToPid`, targeting the simulator's own process directly
-  (Java/AWT apps have a history of only reliably picking up synthetic
-  input targeted at their own PID rather than posted to whatever the OS
-  considers globally frontmost) - still nothing.
-- The same, with the event's Unicode string explicitly set to the arrow
-  keys' NSEvent function-key codepoints (`0xF700`/`0xF701`) - a
-  bare `CGEventCreateKeyboardEvent` doesn't populate this the way
-  AppleScript's `key code` does, and some AWT input paths need it to
-  translate an event at all - still nothing.
-- The same, with an explicit `.combinedSessionState` event source instead
-  of the default - still nothing.
-- Rapidly repeating the *working* `key code` command in a tight loop, on
-  the theory that the app might treat a fast-enough burst as a hold: it
-  doesn't - confirmed observably, since 20 rapid `key code 126` presses
-  cycled the idle preset selector 20 separate times (each one a discrete
-  tap-and-release), never triggering the hold-only Settings menu.
-
-So `key code` (AppleScript's own synthesized press) is the only mechanism
-proven to reach this app at all, and it only ever produces a tap, never a
-hold - `discard-confirmation.e2e.test.ts`, `rest-options-menu.e2e.test.ts`,
-and `settings-menu.e2e.test.ts` are written and typecheck-clean but
-currently skipped (`describe.skip`) pending a real fix. Worth trying next:
-comparing exactly what fields/state AppleScript's `key code` sets on its
-underlying event (e.g. via a capturing `CGEventTap` listener script) against
-what a manually-constructed one has, since something concrete is clearly
-different between the two and blind parameter guessing didn't find it.
+A human triggers MENU in the simulator by press-and-holding the mouse on
+the skin's button, so the driver does exactly that. The hotspot center
+(`MENU_BUTTON_CENTER` in `simulator.ts`) is device-skin-specific, like
+the screenshot geometry - the `launch()` device guard covers both.

@@ -3,17 +3,13 @@
 // paused routes to RestOptionsMenu rather than the discard confirmation,
 // so the next set's movement/side can change without abandoning the
 // session). Builds on the same navigation as rest-screen.e2e.test.ts.
-//
-// Skipped: Simulator.hold() doesn't actually hold anything yet - see
-// docs/e2e-testing.md's "Known issue: Simulator.hold() doesn't actually
-// hold" section for everything tried so far.
 
 import assert from "node:assert/strict";
 import { after, before, describe, it } from "node:test";
 
 import { Simulator } from "./simulator.ts";
 
-void describe.skip("Rest options menu", () => {
+void describe("Rest options menu", () => {
     let sim: Simulator;
 
     before(async () => {
@@ -43,6 +39,12 @@ void describe.skip("Rest options menu", () => {
         assert.match(joined, /Rest options/);
         assert.match(joined, /Move/);
         assert.match(joined, /Side/);
-        assert.match(joined, /Discard/);
+
+        // "Discard & go home" is the third item - below the fold on this
+        // screen, so scroll down until it's visible before asserting it.
+        await sim.press("down");
+        await sim.press("down");
+        const scrolled = (await sim.readText()).join(" ");
+        assert.match(scrolled, /Discard/);
     });
 });

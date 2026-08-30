@@ -34,6 +34,7 @@ import { resolve as resolveTool } from "../resolve-tool.ts";
 import { screensDiffer } from "./pixel-diff.ts";
 
 const OCR_SCRIPT = fileURLToPath(new URL("ocr.swift", import.meta.url));
+const MOUSE_HOLD_SCRIPT = fileURLToPath(new URL("mouse-hold.swift", import.meta.url));
 // tools/e2e/ -> tools/ -> repo root. `prgPath` is resolved against this,
 // not process.cwd(), so a caller's working directory never matters -
 // run-e2e.ts spawns each test file with cwd set to this directory, which
@@ -55,6 +56,11 @@ const TITLE_BAR_POINTS = 28;
 // wrong region for any other device.
 const SCREEN_OFFSET = { x: 101, y: 158 } as const;
 const SCREEN_SIZE = { width: 176, height: 176 } as const;
+// Center of the UP/MENU button's clickable hotspot on the device skin, from
+// the same simulator.json's `keys` array ({x:2, y:212, w:33, h:68} - the
+// "up" and "menu" entries share it, menu being the isHold variant). Like
+// SCREEN_OFFSET, specific to this one device's skin.
+const MENU_BUTTON_CENTER = { x: 2 + 33 / 2, y: 212 + 68 / 2 } as const;
 // The device.png skin's native size (381x496) plus the app's own status
 // bar - the window can briefly report a different (e.g. zero/tiny) size
 // while macOS is still animating it open, which would make an early
@@ -319,17 +325,19 @@ export class Simulator {
         throw new Error(`screen did not change after ${String(maxAttempts)} presses of "${button}"`);
     }
 
-    /** MENU is the only held button this device exposes (a long-press of UP). */
+    /** MENU is the only held button this device exposes (a long-press of UP).
+     *
+     * Implemented as a mouse press-and-hold on the skin's UP-button hotspot
+     * (MENU_BUTTON_CENTER), because the simulator maps keyboard input to
+     * taps only - no keyboard event can produce a hold, no matter how it's
+     * synthesized. See mouse-hold.swift's header for the approaches that
+     * were tried and ruled out before landing here. */
     async hold(_button: "menu", holdMs = 1200): Promise<void> {
         this.focus();
-        const code = KEY_CODES.up;
-        runAppleScript(`
-            tell application "System Events"
-                key down ${String(code)}
-                delay ${String(holdMs / 1000)}
-                key up ${String(code)}
-            end tell
-        `);
+        const bounds = this.windowBounds();
+        const x = bounds.x + MENU_BUTTON_CENTER.x;
+        const y = bounds.y + TITLE_BAR_POINTS + MENU_BUTTON_CENTER.y;
+        await execFileAsync("swift", [MOUSE_HOLD_SCRIPT, String(x), String(y), String(holdMs)]);
         await this.waitForStable(this.settleMs, 100);
     }
 
