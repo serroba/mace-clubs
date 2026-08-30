@@ -28,42 +28,25 @@ import Toybox.Test;
 // Screen size is read from DeviceSettings, not from a Dc: a full-screen
 // buffered bitmap would be 403KB on a 454px 16bpp device, more than venusq's
 // entire 128KB app memory, so the offscreen Dc the render tests use stays
-// small. Font *heights* come from the module-level Graphics.getFontHeight and
-// need no Dc, which is what lets the first two tests run everywhere including
-// CI's Linux simulator. Text *widths* have no Dc-free equivalent, so the
-// collision test carries :offscreenRender and runs only where a Dc can
-// rasterize device fonts - locally, not on Linux (see RenderTestSupport).
+// small.
+//
+// The split between the two annotations is about *device fonts*, not about
+// drawing. CI's unit-test container ships none at all, and every font query
+// throws "Invalid Font Specified" there - the module-level
+// Graphics.getFontHeight included, not just Dc methods. So anything touching
+// font metrics carries :offscreenRender and runs where the fonts exist
+// (locally, and the Linux e2e job which downloads them); the pure geometry -
+// column spread, the round-screen chord, the clamp - runs on every device in
+// the CI matrix, which is where the cross-device coverage comes from.
 
-// Vertical geometry: nothing the free-training screen stacks may overlap what
-// sits below it, at this device's real font sizes.
+// Screen geometry that needs no font metrics, so it runs on every device in
+// the CI unit-test matrix.
 (:test)
 function testLayoutFitsThisScreen(logger as Test.Logger) as Boolean {
     var settings = System.getDeviceSettings();
     var w = settings.screenWidth;
     var h = settings.screenHeight;
-    var topY = h * 32 / 100;
     var footerY = h * 68 / 100;
-    var captionHeight = Graphics.getFontHeight(Graphics.FONT_TINY);
-
-    // Whichever face fitFont settles on, its caption must start below it.
-    var fonts = Layout.numberFonts();
-    for (var i = 0; i < fonts.size(); i++) {
-        Test.assertMessage(
-            topY + Graphics.getFontHeight(fonts[i]) <= Layout.labelBelow(w, topY, fonts[i]),
-            Lang.format("headline face $1$ overruns its own caption", [i])
-        );
-    }
-
-    // And some face has to be small enough to leave room for the caption too.
-    var available = footerY - topY - captionHeight - Layout.scaled(w, Layout.LABEL_GAP);
-    var smallest = Graphics.getFontHeight(fonts[fonts.size() - 1]);
-    Test.assertMessage(
-        smallest <= available,
-        Lang.format(
-            "smallest headline face is $1$px against a $2$px slot on a $3$px screen",
-            [smallest, available, w]
-        )
-    );
 
     // The footer must spread with the screen rather than huddle in the middle:
     // the reference screen spans 100 of 176px (56%), and a footer squeezed
@@ -197,6 +180,29 @@ function testRenderedTextDoesNotCollide(logger as Test.Logger) as Boolean {
             previousRight = boxRight;
         }
     }
+
+    // Every candidate headline face must leave its caption clear, and the
+    // smallest must fit the slot at all - the venu3 defect was
+    // FONT_NUMBER_HOT at 131px against a 109px slot, drawn through "bpm".
+    var fonts = Layout.numberFonts();
+    for (var f = 0; f < fonts.size(); f++) {
+        Test.assertMessage(
+            h * 32 / 100 + Graphics.getFontHeight(fonts[f]) <= Layout.labelBelow(w, h * 32 / 100, fonts[f]),
+            Lang.format("headline face $1$ overruns its own caption", [f])
+        );
+    }
+    var slotForSmallest = h * 68 / 100
+        - h * 32 / 100
+        - Graphics.getFontHeight(Graphics.FONT_TINY)
+        - Layout.scaled(w, Layout.LABEL_GAP);
+    var smallest = Graphics.getFontHeight(fonts[fonts.size() - 1]);
+    Test.assertMessage(
+        smallest <= slotForSmallest,
+        Lang.format(
+            "smallest headline face is $1$px against a $2$px slot on a $3$px screen",
+            [smallest, slotForSmallest, w]
+        )
+    );
 
     // The headline face fitFont picks must fit its slot by width as well as
     // height, for the numeric values and the lettered rest-page ones alike.
