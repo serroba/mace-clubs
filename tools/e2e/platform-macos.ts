@@ -59,7 +59,11 @@ interface Bounds {
 }
 
 function runAppleScript(script: string): string {
-    return execFileSync("osascript", [], { input: script, encoding: "utf8" });
+    // stderr is piped rather than inherited: windowExists() calls this while
+    // the simulator may legitimately not be running, and osascript's
+    // "Can't get process \"simulator\"" would otherwise print over the top of
+    // the caller's own, clearer diagnosis.
+    return execFileSync("osascript", [], { input: script, encoding: "utf8", stdio: ["pipe", "pipe", "pipe"] });
 }
 
 async function sleep(ms: number): Promise<void> {

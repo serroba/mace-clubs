@@ -9,11 +9,11 @@
 // next one sidesteps that scheduling entirely, which is worth the small
 // extra process-spawn overhead for a suite this size.
 
-import { spawn } from "node:child_process";
+import { execFileSync, spawn } from "node:child_process";
 import { readdir } from "node:fs/promises";
 import { fileURLToPath } from "node:url";
 
-import { killSimulatorProcess } from "./simulator.ts";
+import { killSimulatorProcess, simulatorWindowExists } from "./simulator.ts";
 
 const E2E_DIR = fileURLToPath(new URL(".", import.meta.url));
 
@@ -43,6 +43,54 @@ async function runFile(fileName: string): Promise<number> {
     });
 }
 
+/**
+ * Seconds since the last real keyboard or mouse input. A large value means
+ * the display has very likely slept or locked, which is the usual reason the
+ * simulator never paints a window - see docs/e2e-testing.md.
+ */
+function displayIdleSeconds(): number | null {
+    if (process.platform !== "darwin") {
+        return null;
+    }
+    try {
+        const out = execFileSync("ioreg", ["-c", "IOHIDSystem"], { encoding: "utf8" });
+        const match = /"HIDIdleTime"\s*=\s*(\d+)/.exec(out);
+        return match?.[1] === undefined ? null : Math.round(Number(match[1]) / 1e9);
+    } catch {
+        return null;
+    }
+}
+
+/**
+ * Explains a failure that is about this machine rather than about the app,
+ * and returns true if the run should stop.
+ *
+ * Without this the suite ploughs on: a locked screen fails every file
+ * identically at the 30s launch timeout, so `make release-*` and the release
+ * tag hook spend five minutes to tell you something the first failure already
+ * knew. Checked only after a real failure, so it cannot misfire on a healthy
+ * run that simply has an idle display.
+ */
+function abortsForEnvironment(): boolean {
+    if (simulatorWindowExists()) {
+        return false;
+    }
+    const idle = displayIdleSeconds();
+    console.error("\nThe simulator has no window, so no further test file can pass.");
+    if (idle !== null && idle > 300) {
+        console.error(
+            `The display has been idle for ${String(idle)}s and has very likely slept or locked. ` +
+                "caffeinate keeps an awake display awake but cannot unlock one - unlock it and rerun.",
+        );
+    } else {
+        console.error(
+            "Check that the simulator can start and that the display is awake and unlocked " +
+                "(see docs/e2e-testing.md, \"Known flakiness\").",
+        );
+    }
+    return true;
+}
+
 async function main(): Promise<void> {
     const files = (await readdir(E2E_DIR)).filter((name) => name.endsWith(".e2e.test.ts")).sort();
     if (files.length === 0) {
@@ -57,6 +105,11 @@ async function main(): Promise<void> {
         const code = await runFile(file);
         if (code !== 0) {
             failures += 1;
+            if (abortsForEnvironment()) {
+                console.error(`Stopped after ${file}; ${String(files.length - failures)} file(s) not run.`);
+                process.exitCode = 1;
+                return;
+            }
         }
     }
 
