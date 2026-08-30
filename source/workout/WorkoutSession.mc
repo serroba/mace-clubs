@@ -175,14 +175,32 @@ class WorkoutSession {
         return _equipmentWeightGrams;
     }
 
+    // Activity.SPORT_TRAINING / SUB_SPORT_STRENGTH_TRAINING are @since 3.2.0,
+    // but the manifest's minApiLevel is 3.1.0 - on the twelve 3.1 devices we
+    // ship (fenix5/5s/5x, fenixchronos, fr935, fr645, the d2delta family,
+    // descentmk1, vivoactive3, vivoactive3mlte) the symbol lookup throws at
+    // start()'s first line and takes the whole app down. It compiles clean
+    // everywhere, so only a real device or simulator run catches it.
+    // ActivityRecording's equivalents are deprecated but carry the identical
+    // values (10 / 20) and have existed since 1.0.0, so they are the fallback.
+    private function trainingSport() as Activity.Sport {
+        if (Activity has :SPORT_TRAINING) {
+            return Activity.SPORT_TRAINING;
+        }
+        return ActivityRecording.SPORT_TRAINING as Activity.Sport;
+    }
+
+    private function strengthSubSport() as Activity.SubSport {
+        if (Activity has :SUB_SPORT_STRENGTH_TRAINING) {
+            return Activity.SUB_SPORT_STRENGTH_TRAINING;
+        }
+        return ActivityRecording.SUB_SPORT_STRENGTH_TRAINING as Activity.SubSport;
+    }
+
     function start() as Void {
         if (_session == null) {
             var session = ActivityRecording.createSession(
-                {
-                    :name     => getEquipmentLabel(),
-                    :sport    => Activity.SPORT_TRAINING,
-                    :subSport => Activity.SUB_SPORT_STRENGTH_TRAINING
-                }
+                {:name => getEquipmentLabel(), :sport => trainingSport(), :subSport => strengthSubSport()}
             );
             // Equipment can change while idle (reloadEquipment doesn't touch
             // the counter), so rebuild it now that the session - and the
