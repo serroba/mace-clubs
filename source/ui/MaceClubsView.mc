@@ -691,6 +691,14 @@ class MaceClubsView extends WatchUi.View {
                     Graphics.TEXT_JUSTIFY_CENTER
                 );
             }
+            // Work is the only line on this screen that changes meaning rather
+            // than value, so it is the one thing worth a colour: which phase
+            // you are in should be readable from a glance mid-swing, without
+            // reading a word. Rest stays white. On a two-colour display both
+            // resolve to white and the screen is unchanged - see Palette.
+            if (phase != Intervals.PHASE_REST) {
+                dc.setColor(Palette.ACCENT, Palette.BACKGROUND);
+            }
             dc.drawText(
                 cx,
                 h * 30 / 100,
@@ -701,6 +709,7 @@ class MaceClubsView extends WatchUi.View {
                 ),
                 Graphics.TEXT_JUSTIFY_CENTER
             );
+            dc.setColor(Palette.TEXT, Palette.BACKGROUND);
             // No caption under this one, so the countdown may use the whole
             // gap down to the footer row - but still only as much of it as
             // the chosen face actually needs.
