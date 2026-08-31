@@ -17,11 +17,15 @@ import Toybox.Graphics;
 // very watch the app is built around.
 module Palette {
     // A warm brass, matching the project's own accent, and light enough that
-    // both plausible mappings a two-colour panel could use - nearest colour by
-    // RGB distance, or a luminance threshold - land on white rather than
-    // black. PaletteTest asserts the first of those; the second follows from
-    // the same brightness. What no test can settle is which rule the hardware
-    // actually applies, so this wants one look on a real Instinct.
+    // a two-colour panel resolves it to white. That is measured, not argued:
+    // tools/e2e/linux/capture-work-screen.sh drives the running screen under
+    // Xvfb and reads the phase line's pixels back, and the same build gives
+    //
+    //   instinct3solar45mm (2 colour) -> #fdfdfd   i.e. exactly as before
+    //   fenix7             (colour)   -> #ffaa55   i.e. the accent
+    //
+    // PaletteTest guards the property that makes that work, so a moodier
+    // accent fails there rather than on someone's wrist.
     const ACCENT = 0xE8B45F;
     const TEXT = Graphics.COLOR_WHITE;
     const BACKGROUND = Graphics.COLOR_BLACK;
