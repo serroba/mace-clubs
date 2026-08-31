@@ -12,7 +12,7 @@ RAFIKI ?= $(shell $(TOOL_RESOLVER) rafiki)
 JAVA_PATH := $(if $(findstring /,$(JAVA)),$(dir $(JAVA)):,)
 export PATH := $(JAVA_PATH)$(PATH)
 
-.PHONY: check pre-commit install-hooks doctor tools-check tool-resolver-test manifest-check xml fit-schema format format-check lint build test-build simulator-test tuning-search coverage clean release-docs release-shots release-assets release-check
+.PHONY: check pre-commit install-hooks doctor tools-check tool-resolver-test manifest-check xml fit-schema format format-check lint build test-build simulator-test tuning-search coverage clean brand-assets release-docs release-shots release-assets release-check
 
 check: doctor tools-check xml fit-schema format-check lint build test-build
 
@@ -95,6 +95,13 @@ tuning-search: $(DEVELOPER_KEY) | $(BIN_DIR)
 coverage: $(DEVELOPER_KEY) | $(BIN_DIR)
 	@command -v "$(RAFIKI)" >/dev/null || { echo "rafiki is not on PATH"; exit 1; }
 	"$(RAFIKI)" coverage test -d $(DEVICE) -y $(DEVELOPER_KEY) --start-simulator source
+
+# Brand assets rendered from tools/brand-mark.ts: the SVG master, the store
+# icon, and the site's favicons. Does not touch the app's launcher icon -
+# brand-mark.test.ts pins the geometry to that bitmap instead. Commit what it
+# produces; it is deterministic, so a re-run on an unchanged mark is a no-op.
+brand-assets:
+	$(NODE_TS) tools/render-brand-assets.ts
 
 # Release paperwork. Both take VERSION=x.y.z and write into docs/; commit
 # what they produce, then tag. The pre-push hook refuses a v* tag whose docs
