@@ -22,12 +22,26 @@ module SwingSeries {
             _events.add(event);
             _windowTotal += event;
             if (_events.size() > WINDOW_SECONDS) {
-                var removed = _events[0];
-                _events.remove(0);
-                _windowTotal -= removed;
+                // slice, not remove: Array.remove() takes a VALUE, so
+                // remove(0) deleted the first *zero* in the window rather than
+                // the oldest second. _windowTotal was decremented by the
+                // oldest value while a different element left the array, so it
+                // drifted below the array's real sum and went negative - which
+                // the UINT8 swing_cadence field then wrapped to ~255. Every
+                // recording shipped a cadence trace that was mostly garbage.
+                _windowTotal -= _events[0];
+                _events = _events.slice(1, null);
             }
             var seconds = _events.size();
             var cadence = seconds == 0 ? 0 : _windowTotal * 60 / seconds;
+            // swing_cadence is a UINT8. A count can legitimately exceed one per
+            // second (the club detector counts movements), so clamp rather than
+            // let the field wrap silently the way it just did.
+            if (cadence < 0) {
+                cadence = 0;
+            } else if (cadence > 255) {
+                cadence = 255;
+            }
             return {:total => total, :event => event, :cadence => cadence};
         }
 
