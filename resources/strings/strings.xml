@@ -90,6 +90,7 @@
     <string id="FitSwingTotal">Swing total</string>
     <string id="FitSwingTotalChart">Cumulative swings</string>
     <string id="FitSwingEvent">Swing detected</string>
+    <string id="FitSwingEventChart">Swing detections</string>
     <string id="FitSwingCadence">Swing cadence</string>
     <string id="FitSwingCadenceChart">Swing cadence</string>
     <string id="FitActiveSeconds">Active time</string>
