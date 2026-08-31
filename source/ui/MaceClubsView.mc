@@ -463,6 +463,28 @@ class MaceClubsView extends WatchUi.View {
         return Lang.format("set $1$: $2$ ($3$s)", [count, score, workout.getSetSmoothnessWindows(index)]);
     }
 
+    // Which phase you are in is the only thing on a running screen that
+    // changes meaning rather than value, so it is the one thing worth a
+    // colour: work should be readable from a glance mid-swing without reading
+    // the word. Rest stays white, and so does everything else. On a
+    // two-colour panel the accent resolves to white and the screen is exactly
+    // what it is today - see Palette for why that is the whole strategy.
+    private function drawPhaseLine(
+        dc as Dc,
+        x as Number,
+        y as Number,
+        font as Graphics.FontDefinition,
+        text as String,
+        justify as Number,
+        working as Boolean
+    ) as Void {
+        if (working) {
+            dc.setColor(Palette.ACCENT, Palette.BACKGROUND);
+        }
+        dc.drawText(x, y, font, text, justify);
+        dc.setColor(Palette.TEXT, Palette.BACKGROUND);
+    }
+
     function onUpdate(dc as Dc) as Void {
         dc.setColor(Graphics.COLOR_WHITE, Graphics.COLOR_BLACK);
         dc.clear();
@@ -691,7 +713,8 @@ class MaceClubsView extends WatchUi.View {
                     Graphics.TEXT_JUSTIFY_CENTER
                 );
             }
-            dc.drawText(
+            drawPhaseLine(
+                dc,
                 cx,
                 h * 30 / 100,
                 Graphics.FONT_SMALL,
@@ -699,7 +722,8 @@ class MaceClubsView extends WatchUi.View {
                     "SET $1$/$2$  $3$",
                     [s[:set], p.getSets(), phase == Intervals.PHASE_REST ? "REST" : "WORK"]
                 ),
-                Graphics.TEXT_JUSTIFY_CENTER
+                Graphics.TEXT_JUSTIFY_CENTER,
+                phase != Intervals.PHASE_REST
             );
             // No caption under this one, so the countdown may use the whole
             // gap down to the footer row - but still only as much of it as
@@ -810,7 +834,15 @@ class MaceClubsView extends WatchUi.View {
                 formatSecs(timerMs / 1000),
                 Graphics.TEXT_JUSTIFY_LEFT
             );
-            dc.drawText(w * 10 / 100, h * 20 / 100, Graphics.FONT_TINY, phaseLine, Graphics.TEXT_JUSTIFY_LEFT);
+            drawPhaseLine(
+                dc,
+                w * 10 / 100,
+                h * 20 / 100,
+                Graphics.FONT_TINY,
+                phaseLine,
+                Graphics.TEXT_JUSTIFY_LEFT,
+                !freeResting
+            );
             dc.drawText(cx, h * 36 / 100, Graphics.FONT_MEDIUM, mainValue, Graphics.TEXT_JUSTIFY_CENTER);
             dc.drawText(cx, h * 52 / 100, Graphics.FONT_TINY, mainLabel, Graphics.TEXT_JUSTIFY_CENTER);
             drawMetricRow(
@@ -829,7 +861,15 @@ class MaceClubsView extends WatchUi.View {
             formatSecs(timerMs / 1000),
             Graphics.TEXT_JUSTIFY_CENTER
         );
-        dc.drawText(cx, h * 18 / 100, Graphics.FONT_SMALL, phaseLine, Graphics.TEXT_JUSTIFY_CENTER);
+        drawPhaseLine(
+            dc,
+            cx,
+            h * 18 / 100,
+            Graphics.FONT_SMALL,
+            phaseLine,
+            Graphics.TEXT_JUSTIFY_CENTER,
+            !freeResting
+        );
         drawHeadline(dc, h * 32 / 100, h * 68 / 100, mainValue, mainLabel, comboWorking || restPageActive);
         drawMetricRow(
             dc,
