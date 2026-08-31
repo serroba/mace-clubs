@@ -19,6 +19,19 @@ release is actually ready before letting it through.
 | `make release-assets VERSION=x.y.z` | both |
 | `make release-check VERSION=x.y.z` | what the hook runs, so you can check before tagging |
 
+**`make release-check` compares, it doesn't just count.** It asks
+`release-docs.ts --check` whether the committed paperwork still matches what
+the generator produces, so a change to the generator makes every release it
+owns fail the gate until they are regenerated. Checking only that the files
+existed is how v0.16.0's product update kept the title "Mace and Clubs" after
+the generator had started writing "Mace & Clubs".
+
+**Regenerating an old release is safe.** Its date comes from the tag rather
+than from today, and only files carrying the generator's own trailer are
+rewritten — the six product updates that predate the generator are narrative
+writing and are left alone, with `make release-docs` saying so. Delete one
+first if you genuinely want a generated changelog in its place.
+
 **What the store's "What's new" says** comes from each watch-facing change's
 `Release-note:` trailer, not from its commit subject. Commit subjects are
 written for whoever maintains this repo and should stay that way — "Stop the
