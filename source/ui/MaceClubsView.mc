@@ -443,11 +443,11 @@ class MaceClubsView extends WatchUi.View {
             return "";
         }
         if (!workout.hasSmoothnessDelta()) {
-            return Lang.format("smooth $1$", [score]);
+            return Lang.format("rhythm $1$", [score]);
         }
         var delta = workout.getSmoothnessDelta();
         var change = delta > 0 ? Lang.format("+$1$", [delta]) : delta.toString();
-        return Lang.format("smooth $1$ ($2$)", [score, change]);
+        return Lang.format("rhythm $1$ ($2$)", [score, change]);
     }
 
     private function lastSetSmoothnessText() as String {
@@ -784,7 +784,7 @@ class MaceClubsView extends WatchUi.View {
             } else {
                 phaseLine = SummaryText.smoothness(workout, lastIndex);
                 if (phaseLine.equals("")) {
-                    phaseLine = "smooth --";
+                    phaseLine = "rhythm --";
                 }
                 mainValue = SummaryText.load(workout, lastIndex);
                 if (mainValue.equals("")) {

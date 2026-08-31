@@ -1,4 +1,10 @@
-# Local smoothness score: physics and interpretation
+# The Rhythm Score: physics and interpretation
+
+> **Naming.** Users see this as the **Rhythm Score**. In the code it is still
+> smoothness — `Smoothness.mc`, `SmoothnessLog.mc`, `smoothnessEnabled`,
+> `FitSmoothness` — because that is what the quantity is, and renaming the
+> internals buys nothing. This document is about the quantity, so it says
+> smoothness throughout. See [brand.md](brand.md).
 
 ## Purpose and privacy boundary
 

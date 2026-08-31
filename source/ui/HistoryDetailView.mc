@@ -66,7 +66,7 @@ class HistoryDetailView extends WatchUi.View {
             cx,
             h * 43 / 100,
             Graphics.FONT_SMALL,
-            score < 0 ? "smooth --" : Lang.format("smooth $1$", [score]),
+            score < 0 ? "rhythm --" : Lang.format("rhythm $1$", [score]),
             Graphics.TEXT_JUSTIFY_CENTER
         );
         if (SmoothnessLog.hasDetails(_rec)) {
@@ -131,7 +131,7 @@ class HistoryDetailView extends WatchUi.View {
             cx,
             h * 65 / 100,
             Graphics.FONT_TINY,
-            score < 0 ? "smooth --" : Lang.format("smooth $1$", [score]),
+            score < 0 ? "rhythm --" : Lang.format("rhythm $1$", [score]),
             Graphics.TEXT_JUSTIFY_CENTER
         );
         var swings = SmoothnessLog.blockSwingsOf(_rec, _index);
