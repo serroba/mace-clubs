@@ -11,7 +11,9 @@ been validated against labelled real-workout recordings.
 
 ## Features
 
-- Records a "Mace & Clubs" activity to Garmin Connect (sport: Training / Strength)
+- Records to Garmin Connect (sport: Training / Strength) under the implement and
+  weight you chose — `Mace 4kg`, `Clubs 2x1kg` — with Mace & Clubs as the
+  recording app
 - Configurable metronome (5–240 bpm) with tone and vibration cues
 - Five-second start delay and advance warning before each new work interval
 - Optional on-watch smoothness score with a 12-session local trend; no account,

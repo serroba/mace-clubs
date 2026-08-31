@@ -13,7 +13,7 @@ Mace and Clubs
 Metronome, interval timer, and swing tracking for mace, club, and bulava training.
 
 ## Description
-Keep your swing cadence without watching the screen. Mace and Clubs is a
+Keep your swing cadence without watching the screen. Mace & Clubs is a
 metronome and interval timer built for steel mace, Indian club, and bulava
 training, shaped by the way these implements are traditionally trained.
 

@@ -154,7 +154,7 @@ export function renderReleaseNotes(
     const since = from ?? "the first commit";
 
     const parts = [
-        `# Mace and Clubs v${version}: ${headline(changes)}`,
+        `# Mace & Clubs v${version}: ${headline(changes)}`,
         "",
         `${String(changes.length)} change${changes.length === 1 ? "" : "s"} since ${since} (${date}).`,
         "",
