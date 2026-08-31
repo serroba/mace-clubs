@@ -57,10 +57,21 @@ test("the social card is declared with the dimensions it actually has", () => {
   );
 });
 
-test("images carry alt text", () => {
+test("images carry alt text, or are marked decorative", () => {
   // The captures are the argument the page is making; a screen reader that
   // gets "image" learns nothing about what the app looks like.
+  //
+  // An empty alt is the exception, and it is a deliberate one: the mark beside
+  // the wordmark in the nav says nothing the wordmark does not already say, so
+  // describing it makes a screen reader announce the name twice. What is not
+  // acceptable is a missing alt attribute, or a one-word placeholder.
   for (const tag of html().match(/<img\b[^>]*>/g) ?? []) {
-    assert.match(tag, /\balt="[^"]{10,}"/, `<img> without meaningful alt text: ${tag.slice(0, 80)}`);
+    const alt = /\balt="([^"]*)"/.exec(tag)?.[1];
+    assert.ok(alt !== undefined, `<img> with no alt attribute at all: ${tag.slice(0, 80)}`);
+    if (alt === "") continue;
+    assert.ok(
+      alt.length >= 10,
+      `<img> with placeholder alt text: ${tag.slice(0, 80)}`,
+    );
   }
 });
