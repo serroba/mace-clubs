@@ -23,262 +23,388 @@
 <meta name="twitter:description" content="A Garmin watch app for steel mace, Indian club, and bulava training. Holds your tempo, calls the traditional sequences, counts your swings, and records every movement block.">
 <meta name="twitter:image" content="https://serroba.github.io/mace-clubs/brand/og-image.jpg">
 <style>
+  /*
+    "The lamplit pit". The subject is older than the watch: a heavy implement
+    swung in rhythm on a dirt floor. In the Persian zurkhaneh a drummer sits
+    above the pit and sets the tempo for every club that swings, and Indian
+    akharas share the shape of it. So the page is one dim room lit by a single
+    lamp rather than a stack of alternating panels - sections are separated by
+    a brass hairline and a struck-bell lozenge, and the brightest thing on the
+    page is the beat.
+
+    Colour is clay underfoot, brass for lamplight and bells, chalk for the
+    powder that goes on the hands. Type is a humanist serif set in wide-tracked
+    caps, which is how letters get cut into stone. No webfont is loaded.
+  */
   :root {
-    --paper: #f0eadc;
-    --ink: #17211c;
-    --forest: #1f382d;
-    --moss: #66815d;
-    --ember: #db542f;
-    --sand: #d8c9ad;
-    --cream: #fffaf0;
-    --line: rgba(23, 33, 28, .18);
-    --display: Georgia, "Times New Roman", serif;
-    --sans: Inter, ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-    --mono: "SFMono-Regular", Consolas, "Liberation Mono", monospace;
+    --pit: #16100B;
+    --pit-raised: #1F1710;
+    --brass: #C08A3E;
+    --lamp: #E8B45F;
+    --chalk: #E8DCC8;
+    --ash: #9A8B78;
+    --rule: rgba(107, 58, 36, .55);
+
+    --carved: "Iowan Old Style", Palatino, "Book Antiqua", "Palatino Linotype", Baskerville, serif;
+    --body: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    --data: ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
+
+    /* 50 bpm is the app's own default tempo, and the hero beats at it. */
+    --beat: 1.2s;
   }
 
   * { box-sizing: border-box; }
   html { scroll-behavior: smooth; }
+  /*
+    Grid and flex items default to min-width: auto, so they refuse to shrink
+    below their content. The controls table sets min-width: 540px and lives in
+    a scroll container, but without this the container could not shrink either
+    and the table dragged the whole document wider than a phone viewport -
+    every line of copy on the page then laid out off-screen.
+  */
+  .hero > *, .tradition > *, .rhythm > *, .build > * { min-width: 0; }
+  .table-wrap { max-width: 100%; }
   body {
+    position: relative;
     margin: 0;
-    background: var(--paper);
-    color: var(--ink);
-    font: 17px/1.55 var(--sans);
+    background: var(--pit);
+    color: var(--chalk);
+    font: 17px/1.65 var(--body);
+    -webkit-font-smoothing: antialiased;
   }
+  /*
+    The one lamp in the room. Anchored to the top of the page rather than to
+    the viewport, so it hangs over the hero and the room gets darker as you
+    go down it - a fixed glow would re-light every section identically.
+  */
+  body::before {
+    content: "";
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 1150px;
+    background: radial-gradient(46rem 34rem at 72% 22%, rgba(192, 138, 62, .17), transparent 70%);
+    pointer-events: none;
+    z-index: 0;
+  }
+  body > * { position: relative; z-index: 1; }
+
   a { color: inherit; }
-  a:focus-visible, button:focus-visible { outline: 3px solid var(--ember); outline-offset: 4px; }
-  .shell { width: min(1180px, calc(100% - 40px)); margin: 0 auto; }
+  a:focus-visible { outline: 2px solid var(--lamp); outline-offset: 4px; }
+  .shell { width: min(1140px, calc(100% - 44px)); margin: 0 auto; }
+  .section { padding: 96px 0; }
+
+  h1, h2, h3 {
+    font-family: var(--carved);
+    font-weight: 400;
+    text-transform: uppercase;
+    margin: 0;
+  }
+  h1 { font-size: clamp(2.1rem, 4.4vw, 3.5rem); line-height: 1.12; letter-spacing: .15em; }
+  h2 { font-size: clamp(1.55rem, 2.8vw, 2.3rem); line-height: 1.2; letter-spacing: .14em; }
+  h3 { font-size: .96rem; line-height: 1.35; letter-spacing: .1em; }
+
+  /* Eyebrows name the lineage or the section's job; never decoration. */
+  .eyebrow {
+    margin: 0 0 20px;
+    color: var(--brass);
+    font-family: var(--data);
+    font-size: .68rem;
+    letter-spacing: .22em;
+    text-transform: uppercase;
+  }
+
+  /* A struck bell on a brass wire: the only ornament, and it earns its place
+     by replacing four alternating background colours. */
+  .divider { position: relative; height: 1px; background: linear-gradient(90deg, transparent, var(--rule) 18%, var(--rule) 82%, transparent); }
+  .divider::after {
+    content: "";
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    width: 7px;
+    height: 7px;
+    background: var(--brass);
+    transform: translate(-50%, -50%) rotate(45deg);
+  }
 
   .nav {
-    min-height: 76px;
+    min-height: 82px;
     display: flex;
     align-items: center;
     justify-content: space-between;
     gap: 24px;
-    border-bottom: 1px solid var(--line);
+    border-bottom: 1px solid var(--rule);
   }
-  .brand { font: 700 1rem/1 var(--sans); letter-spacing: .08em; text-transform: uppercase; text-decoration: none; }
-  .brand span { color: var(--ember); }
-  .nav-links { display: flex; align-items: center; gap: 24px; font-size: .88rem; font-weight: 700; }
-  .nav-links a { text-decoration: none; }
-  .nav-links a:hover { color: var(--ember); }
+  .brand {
+    display: inline-flex;
+    align-items: center;
+    gap: 12px;
+    font-family: var(--carved);
+    font-size: .95rem;
+    letter-spacing: .2em;
+    text-transform: uppercase;
+    text-decoration: none;
+  }
+  .nav-links { display: flex; align-items: center; gap: 26px; font-family: var(--data); font-size: .72rem; letter-spacing: .13em; text-transform: uppercase; }
+  .nav-links a { color: var(--ash); text-decoration: none; }
+  .nav-links a:hover { color: var(--lamp); }
 
   .hero {
-    min-height: 680px;
-    padding: 72px 0 84px;
+    padding: 84px 0 96px;
     display: grid;
-    grid-template-columns: minmax(0, 1.1fr) minmax(340px, .9fr);
+    grid-template-columns: minmax(0, 1.05fr) minmax(320px, .95fr);
     align-items: center;
-    gap: 72px;
+    gap: 68px;
   }
-  .eyebrow { margin: 0 0 18px; color: var(--ember); font-size: .78rem; font-weight: 800; letter-spacing: .17em; text-transform: uppercase; }
-  h1, h2 { font-family: var(--display); font-weight: 400; }
-  h1 { margin: 0; max-width: 700px; font-size: clamp(4rem, 8vw, 7.5rem); line-height: .82; letter-spacing: -.065em; }
-  h1 em { color: var(--ember); font-weight: 400; }
-  .lede { margin: 30px 0 0; max-width: 590px; font-size: clamp(1.1rem, 2vw, 1.38rem); color: rgba(23, 33, 28, .72); }
-  .actions { display: flex; flex-wrap: wrap; gap: 12px; margin-top: 34px; }
+  .lede { margin: 26px 0 0; max-width: 34em; color: var(--ash); font-size: 1.06rem; }
+  .lede b { color: var(--chalk); font-weight: 600; }
+  .actions { display: flex; flex-wrap: wrap; gap: 14px; margin-top: 34px; }
   .button {
     display: inline-flex;
     align-items: center;
-    justify-content: center;
-    min-height: 50px;
-    padding: 0 21px;
-    border: 1px solid var(--ink);
-    border-radius: 999px;
-    font-size: .92rem;
-    font-weight: 800;
+    min-height: 48px;
+    padding: 0 24px;
+    border: 1px solid var(--brass);
+    color: var(--chalk);
+    font-family: var(--data);
+    font-size: .74rem;
+    letter-spacing: .16em;
+    text-transform: uppercase;
     text-decoration: none;
-    transition: transform .18s ease, background .18s ease, color .18s ease;
+    transition: background .2s ease, color .2s ease;
   }
-  .button:hover { transform: translateY(-2px); }
-  .button-primary { background: var(--ink); color: var(--cream); }
-  .button-primary:hover { background: var(--ember); border-color: var(--ember); }
+  .button-primary { background: var(--brass); color: #17100A; font-weight: 700; }
+  .button-primary:hover { background: var(--lamp); }
+  .button-ghost:hover { background: rgba(192, 138, 62, .14); }
 
-  /* Tall enough to clear the straps, which overhang the watch by 76px each
-     way, so the caption below them isn't sitting on one. */
-  .watch-stage { position: relative; margin: 0; display: grid; place-items: center; min-height: 570px; }
-  .orbit { position: absolute; width: 420px; height: 420px; border: 1px solid var(--moss); border-radius: 50%; opacity: .42; }
-  .orbit::before, .orbit::after { content: ""; position: absolute; border-radius: 50%; background: var(--ember); }
-  .orbit::before { width: 13px; height: 13px; top: 34px; left: 54px; }
-  .orbit::after { width: 8px; height: 8px; right: 11px; bottom: 114px; }
+  /* --- The signature: a ring that beats --------------------------------- */
+  /*
+    Everything in here is sized against the stage rather than in fixed pixels.
+    The rings are absolutely positioned, so a hard 470px width pushed the
+    document wider than a phone viewport and scrolled the whole page sideways.
+  */
+  .pit-stage { position: relative; margin: 0; display: grid; place-items: center; min-height: 520px; max-width: 100%; }
+  .beat-ring,
+  .pit-edge { position: absolute; aspect-ratio: 1; border-radius: 50%; pointer-events: none; }
+  .pit-edge { width: min(470px, 100%); border: 1px solid rgba(107, 58, 36, .5); }
+  /*
+    Four beats at 50 bpm with the first one accented, which is exactly what the
+    app's "accent first beat of each round" setting does. The animation reports
+    the product's behaviour rather than decorating the page.
+  */
+  .beat-ring {
+    width: min(392px, 84%);
+    border: 1px solid var(--brass);
+    animation: beat calc(var(--beat) * 4) linear infinite;
+  }
+  @keyframes beat {
+    0%   { transform: scale(1);     opacity: .95; border-color: var(--lamp); }
+    7%   { transform: scale(1.055); opacity: .18; border-color: var(--lamp); }
+    22%  { transform: scale(1);     opacity: .55; border-color: var(--brass); }
+    25%  { transform: scale(1);     opacity: .6; }
+    32%  { transform: scale(1.028); opacity: .14; }
+    47%  { transform: scale(1);     opacity: .55; }
+    50%  { transform: scale(1);     opacity: .6; }
+    57%  { transform: scale(1.028); opacity: .14; }
+    72%  { transform: scale(1);     opacity: .55; }
+    75%  { transform: scale(1);     opacity: .6; }
+    82%  { transform: scale(1.028); opacity: .14; }
+    97%  { transform: scale(1);     opacity: .55; border-color: var(--brass); }
+    100% { transform: scale(1);     opacity: .95; border-color: var(--lamp); }
+  }
+
   .watch {
     position: relative;
-    width: 314px;
-    height: 354px;
+    width: min(300px, 64%);
+    aspect-ratio: 300 / 340;
     display: grid;
     place-items: center;
-    background: var(--ink);
-    border: 14px solid #38463f;
+    background: #0E0A07;
+    border: 12px solid #2E2620;
     border-radius: 30% 30% 32% 32%;
-    box-shadow: 0 35px 80px rgba(23, 33, 28, .25), inset 0 0 0 6px #111915;
-    transform: rotate(3deg);
+    box-shadow: 0 34px 74px rgba(0, 0, 0, .66), inset 0 0 0 4px #060403, 0 0 0 1px rgba(192, 138, 62, .22);
   }
-  .watch::before, .watch::after { content: ""; position: absolute; z-index: -1; width: 138px; height: 88px; background: #344139; left: 50%; transform: translateX(-50%); }
-  .watch::before { top: -76px; border-radius: 24px 24px 6px 6px; }
-  .watch::after { bottom: -76px; border-radius: 6px 6px 24px 24px; }
-  /* The real 176x176 capture, scaled into the bezel; image-rendering keeps the
-     watch's own hinted pixels crisp instead of smearing them. The Instinct 3
-     Solar's display shape is "semi-octagon" (the SDK's own simulator.json says
-     so), not a circle - which is why the app draws its bottom line nearly edge
-     to edge, and why masking it round clipped real content. */
+  .watch::before, .watch::after {
+    content: "";
+    position: absolute;
+    z-index: -1;
+    width: 43%;
+    height: 25%;
+    background: #4C382A;
+    left: 50%;
+    transform: translateX(-50%);
+  }
+  .watch::before { top: -21%; border-radius: 20px 20px 5px 5px; }
+  .watch::after { bottom: -21%; border-radius: 5px 5px 20px 20px; }
+  /* The Instinct 3 Solar's display shape is "semi-octagon" (the SDK's own
+     simulator.json says so), not a circle - which is why the app draws its
+     bottom line nearly edge to edge, and why masking it round clips content. */
   .face {
-    width: 252px;
-    height: 252px;
-    clip-path: polygon(
-      20% 0, 80% 0, 100% 20%, 100% 80%,
-      80% 100%, 20% 100%, 0 80%, 0 20%
-    );
-    background: #050806;
+    width: 80%;
+    height: auto;
+    aspect-ratio: 1;
+    clip-path: polygon(20% 0, 80% 0, 100% 20%, 100% 80%, 80% 100%, 20% 100%, 0 80%, 0 20%);
+    background: #050403;
     object-fit: contain;
     image-rendering: crisp-edges;
   }
-  .watch-stage figcaption {
+  .pit-stage figcaption {
     position: absolute;
-    bottom: 0;
-    color: rgba(23, 33, 28, .5);
-    font-size: .74rem;
-    letter-spacing: .06em;
+    bottom: 8px;
+    color: var(--brass);
+    font-family: var(--data);
+    font-size: .68rem;
+    letter-spacing: .18em;
     text-transform: uppercase;
   }
 
-  .tradition { display: grid; grid-template-columns: .8fr 1.2fr; gap: 90px; align-items: start; }
-  .tradition h2 { margin: 0; font-size: clamp(2.6rem, 4.6vw, 4.2rem); line-height: .95; letter-spacing: -.045em; }
-  .tradition-copy p { margin: 0 0 22px; max-width: 620px; color: rgba(23, 33, 28, .72); font-size: 1.08rem; }
-  .tradition-copy p:last-child { margin-bottom: 0; }
+  /* --- Why it is built this way ----------------------------------------- */
+  .tradition { display: grid; grid-template-columns: .82fr 1.18fr; gap: 76px; align-items: start; }
+  .tradition-copy p { margin: 0 0 22px; max-width: 40em; color: var(--ash); }
   .tag {
     padding: 2px 8px;
-    border: 1px solid var(--line);
-    background: var(--cream);
-    font-family: var(--mono);
-    font-size: .86em;
+    border: 1px solid var(--rule);
+    background: var(--pit-raised);
+    color: var(--brass);
+    font-family: var(--data);
+    font-size: .84em;
   }
 
-  .dark { background: var(--forest); color: var(--cream); }
-  .section { padding: 108px 0; }
-  .section-head { display: grid; grid-template-columns: .7fr 1.3fr; gap: 50px; align-items: end; margin-bottom: 58px; }
-  .section-head h2 { margin: 0; font-size: clamp(2.8rem, 5vw, 5rem); line-height: .95; letter-spacing: -.04em; }
-  .section-head p { margin: 0; max-width: 590px; color: rgba(255, 250, 240, .68); }
-  .features { display: grid; grid-template-columns: repeat(3, 1fr); border-top: 1px solid rgba(255,255,255,.2); }
-  .feature { padding: 30px 28px 4px 0; border-right: 1px solid rgba(255,255,255,.2); }
-  .feature:not(:nth-child(3n+1)) { padding-left: 28px; }
-  .feature:nth-child(3n) { border-right: 0; }
-  .feature:nth-child(n+4) { border-top: 1px solid rgba(255,255,255,.2); }
-  .feature b { display: block; margin-bottom: 44px; color: #f27750; font: 400 2.8rem/1 var(--display); }
-  .feature h3 { margin: 0 0 12px; font-size: 1rem; }
-  .feature p { margin: 0; color: rgba(255, 250, 240, .62); font-size: .9rem; }
+  /*
+    The one place a numbered list is honest: the bulava combo really is
+    ordered, and the metronome calls it in this order. The feature grid below
+    is not a sequence, so it carries no numbers.
+  */
+  .combo { display: flex; flex-wrap: wrap; align-items: center; margin: 30px 0 0; padding: 0; list-style: none; }
+  .combo li { display: flex; align-items: baseline; gap: 9px; padding: 9px 18px 9px 0; font-family: var(--data); font-size: .78rem; letter-spacing: .1em; text-transform: uppercase; }
+  .combo li + li { padding-left: 18px; border-left: 1px solid var(--rule); }
+  .combo span { color: var(--brass); font-size: .72rem; }
+  .combo .switch { color: var(--brass); }
 
-  /* Real captures, not a mockup: the app's own 176x176 frames, upscaled with
-     nearest-neighbour so the watch's hinted pixels stay legible. */
-  .screens { display: grid; grid-template-columns: repeat(3, 1fr); gap: 32px; margin-top: 56px; }
+  /* --- Features ---------------------------------------------------------- */
+  .section-head { max-width: 52em; margin-bottom: 56px; }
+  .section-head p { margin: 18px 0 0; color: var(--ash); }
+  .features { display: grid; grid-template-columns: repeat(3, 1fr); gap: 44px 40px; }
+  /* A short brass cut above each heading, in place of the 01/02/03 that used
+     to imply an order these six do not have. */
+  .feature h3::before { content: ""; display: block; width: 26px; height: 2px; margin-bottom: 16px; background: var(--brass); }
+  .feature p { margin: 10px 0 0; color: var(--ash); font-size: .92rem; }
+
+  .screens { display: grid; grid-template-columns: repeat(3, 1fr); gap: 36px; margin-top: 72px; }
   .screens figure { margin: 0; }
   .screens img {
     width: 100%;
-    max-width: 208px;
+    max-width: 200px;
     height: auto;
     aspect-ratio: 1;
-    clip-path: polygon(
-      20% 0, 80% 0, 100% 20%, 100% 80%,
-      80% 100%, 20% 100%, 0 80%, 0 20%
-    );
-    background: #050806;
+    clip-path: polygon(20% 0, 80% 0, 100% 20%, 100% 80%, 80% 100%, 20% 100%, 0 80%, 0 20%);
+    background: #050403;
     image-rendering: crisp-edges;
   }
-  .screens figcaption { margin-top: 16px; max-width: 208px; color: rgba(255, 250, 240, .55); font-size: .82rem; }
-  .screens figcaption b { display: block; margin-bottom: 4px; color: var(--cream); font-weight: 700; }
+  .screens figcaption { margin-top: 16px; max-width: 220px; color: var(--ash); font-size: .86rem; }
+  .screens figcaption b { display: block; margin-bottom: 5px; color: var(--chalk); font-family: var(--data); font-size: .72rem; letter-spacing: .12em; text-transform: uppercase; }
 
   .support-note {
-    margin: 44px 0 0;
-    max-width: 780px;
-    padding-left: 20px;
-    border-left: 2px solid var(--ember);
-    color: rgba(255, 250, 240, .62);
-    font-size: .88rem;
+    margin: 68px 0 0;
+    max-width: 62em;
+    padding: 22px 26px;
+    border-left: 2px solid var(--brass);
+    background: var(--pit-raised);
+    color: var(--ash);
+    font-size: .9rem;
   }
-  .support-note strong { display: block; margin-bottom: 8px; color: var(--cream); }
-  .support-note a { color: #f27750; text-underline-offset: 3px; }
+  .support-note strong { display: block; margin-bottom: 9px; color: var(--chalk); }
+  .support-note a { color: var(--brass); }
 
-  .rhythm { display: grid; grid-template-columns: .8fr 1.2fr; gap: 90px; align-items: start; }
-  .rhythm h2 { margin: 0; font-size: clamp(3.2rem, 6vw, 6rem); line-height: .9; letter-spacing: -.055em; }
-  .rhythm-copy { padding-top: 8px; }
-  .rhythm-copy > p { margin: 0 0 34px; max-width: 610px; color: rgba(23, 33, 28, .68); font-size: 1.12rem; }
-  .block-note { margin-top: 28px; padding: 24px; border: 1px solid var(--line); background: var(--cream); }
-  .block-note strong { display: block; margin-bottom: 6px; font-family: var(--display); font-size: 1.35rem; font-weight: 400; }
-  .block-note p { margin: 0; color: rgba(23, 33, 28, .68); font-size: .92rem; }
+  /* --- Controls ---------------------------------------------------------- */
+  .rhythm { display: grid; grid-template-columns: .82fr 1.18fr; gap: 76px; align-items: start; }
+  .rhythm-copy > p { margin: 0 0 32px; max-width: 40em; color: var(--ash); }
   .controls { width: 100%; border-collapse: collapse; }
-  .controls th, .controls td { padding: 15px 8px; border-bottom: 1px solid var(--line); text-align: left; font-size: .88rem; }
-  .controls th { color: rgba(23, 33, 28, .52); text-transform: uppercase; letter-spacing: .08em; font-size: .7rem; }
-  .controls td:first-child { color: var(--ember); font-family: var(--mono); font-weight: 800; }
+  .controls th, .controls td { padding: 14px 10px; border-bottom: 1px solid var(--rule); text-align: left; font-size: .88rem; }
+  .controls th { color: var(--ash); font-family: var(--data); font-size: .66rem; font-weight: 400; letter-spacing: .16em; text-transform: uppercase; }
+  .controls td { color: var(--ash); }
+  .controls td:first-child { color: var(--brass); font-family: var(--data); font-size: .76rem; letter-spacing: .08em; }
+  .block-note { margin-top: 32px; padding: 22px 26px; border: 1px solid var(--rule); background: var(--pit-raised); }
+  .block-note strong { display: block; margin-bottom: 8px; font-family: var(--carved); font-size: 1rem; font-weight: 400; letter-spacing: .1em; text-transform: uppercase; }
+  .block-note p { margin: 0; color: var(--ash); font-size: .9rem; }
 
-  .community { background: var(--sand); }
-  .community-intro { max-width: 720px; margin-bottom: 56px; }
-  .community h2 { margin: 0 0 18px; font-size: clamp(3.2rem, 6vw, 6rem); line-height: .9; letter-spacing: -.05em; }
-  .community-intro p { margin: 0; color: rgba(23, 33, 28, .65); }
-  .link-list { border-top: 1px solid var(--ink); }
+  /* --- Community --------------------------------------------------------- */
+  .community-intro { max-width: 46em; margin-bottom: 48px; }
+  .community-intro p { margin: 18px 0 0; color: var(--ash); }
+  .link-list { border-top: 1px solid var(--rule); }
   .resource {
     display: grid;
-    grid-template-columns: 64px 1fr auto;
-    gap: 25px;
+    grid-template-columns: 1fr auto;
+    gap: 24px;
     align-items: center;
-    padding: 25px 0;
-    border-bottom: 1px solid var(--ink);
+    padding: 22px 0;
+    border-bottom: 1px solid var(--rule);
     text-decoration: none;
   }
-  .resource .number { color: var(--ember); font-family: var(--mono); font-size: .78rem; }
-  .resource strong { display: block; font: 400 clamp(1.5rem, 3vw, 2.5rem)/1 var(--display); }
-  .resource small { color: rgba(23, 33, 28, .58); }
-  .resource .arrow { font-size: 1.8rem; transition: transform .18s ease; }
-  .resource:hover .arrow { transform: translate(5px, -5px); }
+  .resource strong { display: block; font-family: var(--carved); font-size: 1.06rem; font-weight: 400; letter-spacing: .1em; text-transform: uppercase; transition: color .2s ease; }
+  .resource small { display: block; margin-top: 6px; color: var(--ash); font-size: .85rem; }
+  .resource .arrow { color: var(--brass); font-size: 1.1rem; transition: transform .2s ease; }
+  .resource:hover strong { color: var(--lamp); }
+  .resource:hover .arrow { transform: translate(4px, -4px); }
 
-  .build { display: grid; grid-template-columns: .72fr 1.28fr; gap: 80px; }
-  .build h2 { margin: 0; font-size: clamp(2.8rem, 5vw, 4.5rem); line-height: .95; }
-  .build p { margin: 0 0 24px; color: rgba(255,250,240,.68); }
-  .build p a { color: var(--ember); text-decoration: underline; text-underline-offset: 3px; }
-  .build p a:hover { color: #f0714a; }
-  pre { margin: 0; padding: 24px; overflow-x: auto; border: 1px solid rgba(255,255,255,.2); border-radius: 4px; background: #14251e; color: #dbe2d7; font: .78rem/1.75 var(--mono); }
+  /* --- Build ------------------------------------------------------------- */
+  .build { display: grid; grid-template-columns: .72fr 1.28fr; gap: 72px; }
+  .build p { margin: 0 0 22px; color: var(--ash); }
+  .build p a { color: var(--brass); }
+  pre {
+    margin: 0 0 22px;
+    padding: 22px;
+    overflow-x: auto;
+    border: 1px solid var(--rule);
+    background: var(--pit-raised);
+    color: var(--chalk);
+    font: .78rem/1.8 var(--data);
+  }
 
-  footer { padding: 38px 0; background: var(--ink); color: rgba(255,250,240,.62); font-size: .78rem; }
-  .footer-row { display: flex; justify-content: space-between; gap: 30px; }
+  footer { padding: 34px 0; border-top: 1px solid var(--rule); color: var(--ash); font-family: var(--data); font-size: .7rem; letter-spacing: .08em; }
+  .footer-row { display: flex; justify-content: space-between; gap: 28px; }
   footer p { margin: 0; }
 
-  @media (max-width: 900px) {
-    .hero { grid-template-columns: 1fr; padding-top: 58px; gap: 76px; }
-    .watch-stage { min-height: 430px; }
-    .section-head, .rhythm, .build, .tradition { grid-template-columns: 1fr; gap: 38px; }
-    .features { grid-template-columns: 1fr 1fr; }
-    .feature:nth-child(2n+1) { padding-left: 0; border-right: 1px solid rgba(255,255,255,.2); }
-    .feature:nth-child(2n) { padding-left: 28px; }
-    .feature:nth-child(2n) { border-right: 0; }
-    .feature:nth-child(n+3) { border-top: 1px solid rgba(255,255,255,.2); }
+  @media (max-width: 940px) {
+    .hero, .tradition, .rhythm, .build { grid-template-columns: 1fr; gap: 46px; }
+    .features, .screens { grid-template-columns: 1fr 1fr; }
+    .pit-stage { min-height: 500px; }
   }
   @media (max-width: 620px) {
-    .shell { width: min(100% - 28px, 1180px); }
-    .nav { min-height: 66px; }
+    .shell { width: min(100% - 30px, 1140px); }
+    .nav { min-height: 68px; }
     .nav-links a:not(:last-child) { display: none; }
-    .hero { min-height: auto; padding-bottom: 72px; }
-    h1 { font-size: clamp(3.6rem, 20vw, 5.2rem); }
-    .watch-stage { min-height: 380px; transform: scale(.85); margin: -30px 0; }
-    .section { padding: 76px 0; }
-    .features { grid-template-columns: 1fr; }
-    .screens { grid-template-columns: 1fr; justify-items: center; gap: 40px; }
+    .section { padding: 68px 0; }
+    .hero { padding: 56px 0 68px; }
+    .features, .screens { grid-template-columns: 1fr; }
+    .screens { justify-items: center; }
     .screens figcaption { text-align: center; }
-    .feature, .feature + .feature { padding: 25px 0; border-right: 0; border-top: 1px solid rgba(255,255,255,.2); }
-    .feature b { margin-bottom: 16px; }
+    .pit-stage { min-height: 400px; }
+    h1 { font-size: 1.75rem; letter-spacing: .1em; }
+    h2 { font-size: 1.32rem; letter-spacing: .1em; }
+    .combo { gap: 0 22px; }
+    .combo li, .combo li + li { padding-left: 0; border-left: 0; }
     .table-wrap { overflow-x: auto; }
-    .controls { min-width: 560px; }
-    .resource { grid-template-columns: 38px 1fr auto; gap: 10px; }
-    .resource small { display: block; margin-top: 5px; }
+    .controls { min-width: 540px; }
     .footer-row { flex-direction: column; }
   }
   @media (prefers-reduced-motion: reduce) {
     html { scroll-behavior: auto; }
-    .button, .resource .arrow { transition: none; }
+    /* Hold the ring lit rather than beating. */
+    .beat-ring { animation: none; opacity: .6; }
+    .button, .resource .arrow, .resource strong { transition: none; }
   }
 </style>
 </head>
 <body>
 <header class="shell">
   <nav class="nav" aria-label="Main navigation">
-    <a class="brand" href="#top">Mace <span>&amp;</span> Clubs</a>
+    <a class="brand" href="#top">
+      <img src="brand/mace-clubs-icon.svg" width="26" height="26" alt="">
+      Mace &amp; Clubs
+    </a>
     <div class="nav-links">
       <a href="#tradition">Why</a>
       <a href="#features">Features</a>
@@ -292,87 +418,101 @@
 <main id="top">
   <section class="hero shell">
     <div>
-      <p class="eyebrow">Garmin Connect IQ · Steel mace · Indian clubs · Bulava</p>
-      <h1>Train in <em>rhythm.</em></h1>
-      <p class="lede">A wrist-first training companion that keeps your swings on tempo, calls traditional sequences, counts your swings in timed challenges, and records each movement block while you stay in motion.</p>
+      <p class="eyebrow">Steel mace · Indian clubs · Bulava · Garmin Connect IQ</p>
+      <h1>Train in rhythm</h1>
+      <p class="lede">In the zurkhaneh a drummer sits above the pit and sets the tempo for every club that swings. <b>This does that job from your wrist</b> — holding your cadence, calling the traditional sequences, counting your swings, and keeping the record of what you actually did.</p>
       <div class="actions">
-        <a class="button button-primary" href="https://github.com/serroba/mace-clubs/releases">Get the latest build</a>
-        <a class="button" href="#how-it-works">See how it works</a>
+        <a class="button button-primary" href="https://github.com/serroba/mace-clubs/releases">Download the app</a>
+        <a class="button button-ghost" href="#how-it-works">See how it works</a>
       </div>
     </div>
-    <figure class="watch-stage">
-      <div class="orbit" aria-hidden="true"></div>
+    <figure class="pit-stage">
+      <div class="pit-edge" aria-hidden="true"></div>
+      <div class="beat-ring" aria-hidden="true"></div>
       <div class="watch">
         <img class="face" width="176" height="176" loading="eager"
              src="store-assets/v0.16.0/instinct3solar45mm/01-start-screen.png"
              alt="The Mace &amp; Clubs start screen on an Instinct 3 Solar: the mace-and-club mark above &ldquo;50 bpm | fixed 4&rdquo;, &ldquo;SELECT to start&rdquo;, and &ldquo;MENU opens settings&rdquo;.">
       </div>
-      <figcaption>Instinct 3 Solar 45&nbsp;mm &middot; captured from the app</figcaption>
+      <figcaption>50 bpm &middot; accent on 1</figcaption>
     </figure>
   </section>
+
+  <div class="shell"><div class="divider"></div></div>
 
   <section class="section shell" id="tradition">
     <div class="tradition">
       <div>
         <p class="eyebrow">Why it is built this way</p>
-        <h2>A timer doesn't know what a mill is.</h2>
+        <h2>A timer doesn't know what a mill is</h2>
       </div>
       <div class="tradition-copy">
         <p>Any app can count down two minutes. What none of them know is that the bulava combo runs mill, reverse mill, bullwhip on one hand and then the other; that the gada challenge is five or ten minutes of unbroken swinging because that is how it has always been contested; or that a set on the left is owed a set on the right.</p>
         <p>Mace &amp; Clubs knows all three, and records them. Your movement and working side are saved with every work block, the metronome calls the combo's changes and hand switches out loud, and the summary shows an <span class="tag">L3/R2</span> balance so you can see at a glance whether the hands are even.</p>
+        <ol class="combo">
+          <li><span>1</span>Mill</li>
+          <li><span>2</span>Reverse mill</li>
+          <li><span>3</span>Bullwhip</li>
+          <li class="switch"><span>↔</span>Other hand</li>
+        </ol>
       </div>
     </div>
   </section>
 
-  <section class="dark section" id="features">
-    <div class="shell">
-      <div class="section-head">
-        <h2>Built for the swing.</h2>
-        <p>No crowded dashboards. Just the cues and context that matter when both hands are on the mace: tempo, work, recovery, movement, side, and a clean Garmin activity when you finish.</p>
-      </div>
-      <div class="features">
-        <article class="feature"><b>01</b><h3>Feel the tempo</h3><p>A drift-resistant 5–240 BPM metronome that also calls the bulava combo: a pulse on each movement change, a double pulse to switch hands.</p></article>
-        <article class="feature"><b>02</b><h3>Separate work &amp; rest</h3><p>SELECT moves Free training between work and recorded recovery, and the rest menu switches movement or side for the next set.</p></article>
-        <article class="feature"><b>03</b><h3>Name the movement</h3><p>Each implement offers its own canon — 360s and 10-to-2s, mills and casts, or the bulava combo — and the summary tallies your left/right balance.</p></article>
-        <article class="feature"><b>04</b><h3>Count the challenge</h3><p>Five or ten minutes of continuous mace swinging, scored live from wrist rotation by the gyroscope-primary counter and saved with every set.</p></article>
-        <article class="feature"><b>05</b><h3>Look back on the watch</h3><p>Your last twenty sessions stay on the wrist: browse them from Settings, scroll the per-set Rhythm Score, and see the last comparable score before you start.</p></article>
-        <article class="feature"><b>06</b><h3>Measure the exposure</h3><p>An optional per-set record of wrist motion — exposure, peak, active seconds, and weight-volume — kept as transparent measurements, not a single invented score.</p></article>
-      </div>
-      <div class="screens">
-        <figure>
-          <img width="176" height="176" loading="lazy"
-               src="store-assets/v0.16.0/instinct3solar45mm/03-movement-picker.png"
-               alt="A movement picker listing 360 and 10-to-2, the mace-and-club mark in the corner.">
-          <figcaption><b>Pick the movement</b>The list follows the implement you chose.</figcaption>
-        </figure>
-        <figure>
-          <img width="176" height="176" loading="lazy"
-               src="store-assets/v0.16.0/instinct3solar45mm/04-work-screen.png"
-               alt="A work screen showing elapsed time, WORK 0:01, 50 bpm, and counters for sets and heart rate.">
-          <figcaption><b>Work the interval</b>Tempo, rounds and heart rate, nothing else.</figcaption>
-        </figure>
-        <figure>
-          <img width="176" height="176" loading="lazy"
-               src="store-assets/v0.16.0/instinct3solar45mm/06-paused-summary.png"
-               alt="A paused summary reading one set, both hands 1/1, work and rest durations, and the save, resume and discard controls.">
-          <figcaption><b>Read the set back</b>Durations, and the left/right balance.</figcaption>
-        </figure>
-      </div>
-      <p class="support-note">
-        <strong>Runs on 120 Connect IQ watches. Swing counting is validated on the Instinct 3 Solar 45&nbsp;mm.</strong>
-        Everything above behaves the same on all of them. Swing counting is the exception — its detector is
-        tuned against labelled recordings from that one watch and its 25&nbsp;Hz gyroscope. Elsewhere it still
-        runs, falling back to the accelerometer where there is no gyroscope, but the counts have not been
-        checked against known-correct numbers.
-        <a href="https://github.com/serroba/mace-clubs/blob/main/CONTRIBUTING.md#calibration-recordings">Contributing a recording</a>
-        from your own watch is what changes that.
-      </p>
+  <div class="shell"><div class="divider"></div></div>
+
+  <section class="section shell" id="features">
+    <div class="section-head">
+      <h2>Built for the swing</h2>
+      <p>No crowded dashboards. Just the cues and context that matter when both hands are on the mace: tempo, work, recovery, movement, side, and a clean Garmin activity when you finish.</p>
     </div>
+    <div class="features">
+      <article class="feature"><h3>Feel the tempo</h3><p>A drift-resistant 5–240 bpm metronome that also calls the bulava combo: a pulse on each movement change, a double pulse to switch hands.</p></article>
+      <article class="feature"><h3>Separate work &amp; rest</h3><p>SELECT moves free training between work and recorded recovery, and the rest menu switches movement or side for the next set.</p></article>
+      <article class="feature"><h3>Name the movement</h3><p>Each implement offers its own canon — 360s and 10-to-2s, mills and casts, or the bulava combo — and the summary tallies your left/right balance.</p></article>
+      <article class="feature"><h3>Count the challenge</h3><p>Five or ten minutes of continuous mace swinging, scored live from wrist rotation by the gyroscope-primary counter and saved with every set.</p></article>
+      <article class="feature"><h3>Look back on the watch</h3><p>Your last twenty sessions stay on the wrist: browse them from Settings, scroll the per-set Rhythm Score, and see the last comparable score before you start.</p></article>
+      <article class="feature"><h3>Measure the exposure</h3><p>An optional per-set record of wrist motion — exposure, peak, active seconds, and weight-volume — kept as transparent measurements, not a single invented score.</p></article>
+    </div>
+    <div class="screens">
+      <figure>
+        <img width="176" height="176" loading="lazy"
+             src="store-assets/v0.16.0/instinct3solar45mm/03-movement-picker.png"
+             alt="A movement picker listing 360 and 10-to-2, the mace-and-club mark in the corner.">
+        <figcaption><b>Pick the movement</b>The list follows the implement you chose.</figcaption>
+      </figure>
+      <figure>
+        <img width="176" height="176" loading="lazy"
+             src="store-assets/v0.16.0/instinct3solar45mm/04-work-screen.png"
+             alt="A work screen showing elapsed time, WORK 0:01, 50 bpm, and counters for sets and heart rate.">
+        <figcaption><b>Work the interval</b>Tempo, rounds and heart rate, nothing else.</figcaption>
+      </figure>
+      <figure>
+        <img width="176" height="176" loading="lazy"
+             src="store-assets/v0.16.0/instinct3solar45mm/06-paused-summary.png"
+             alt="A paused summary reading one set, both hands 1/1, work and rest durations, and the save, resume and discard controls.">
+        <figcaption><b>Read the set back</b>Durations, and the left/right balance.</figcaption>
+      </figure>
+    </div>
+    <p class="support-note">
+      <strong>Runs on 120 Connect IQ watches. Swing counting is validated on the Instinct 3 Solar 45&nbsp;mm.</strong>
+      Everything above behaves the same on all of them. Swing counting is the exception — its detector is
+      tuned against labelled recordings from that one watch and its 25&nbsp;Hz gyroscope. Elsewhere it still
+      runs, falling back to the accelerometer where there is no gyroscope, but the counts have not been
+      checked against known-correct numbers.
+      <a href="https://github.com/serroba/mace-clubs/blob/main/CONTRIBUTING.md#calibration-recordings">Contributing a recording</a>
+      from your own watch is what changes that.
+    </p>
   </section>
+
+  <div class="shell"><div class="divider"></div></div>
 
   <section class="section shell" id="how-it-works">
     <div class="rhythm">
-      <h2>Your rhythm.<br>Your session.</h2>
+      <div>
+        <p class="eyebrow">Four buttons</p>
+        <h2>Your rhythm.<br>Your session.</h2>
+      </div>
       <div class="rhythm-copy">
         <p>Choose your implement and movement, then free training, an interval preset, or a timed challenge — set your tempo and start swinging. Mace &amp; Clubs owns the movement-block record while Garmin records the activity.</p>
         <div class="table-wrap">
@@ -381,41 +521,45 @@
             <tbody>
               <tr><td>SELECT</td><td>Start workout</td><td>Work ↔ rest</td><td>Save &amp; exit</td></tr>
               <tr><td>BACK</td><td>Quit</td><td>Pause</td><td>Resume</td></tr>
-              <tr><td>UP / DOWN</td><td>Choose preset</td><td>Tempo ±5 BPM</td><td>Browse sets</td></tr>
+              <tr><td>UP / DOWN</td><td>Choose preset</td><td>Tempo ±5 bpm</td><td>Browse sets</td></tr>
               <tr><td>MENU</td><td>Settings</td><td>Rest: move &amp; side · else discard</td><td>Discard safely</td></tr>
             </tbody>
           </table>
         </div>
         <aside class="block-note">
-          <strong>Built around movement blocks—not generic gym reps.</strong>
+          <strong>Movement blocks, not generic gym reps</strong>
           <p>Every completed block keeps its work and rest duration, implement weight, movement, working side, watch wrist, Rhythm Score, swing count, and — when load exposure is on — its motion exposure, peak, active seconds, and weight-volume. FIT laps carry that meaning into exported activity data.</p>
         </aside>
       </div>
     </div>
   </section>
 
-  <section class="community section" id="community">
-    <div class="shell">
-      <div class="community-intro">
-        <p class="eyebrow">Keep learning</p>
-        <h2>People who move the practice forward.</h2>
-        <p>Explore training, education, and equipment from organisations working across mace, gada, mudgar, and Indian club traditions.</p>
-      </div>
-      <div class="link-list">
-        <a class="resource" href="https://portal.vahvafitness.com/this-is-iron-king-method/" target="_blank" rel="noopener noreferrer"><span class="number">01</span><span><strong>Iron King Method</strong><small>Steel mace, Indian club, and old-school functional-strength training</small></span><span class="arrow" aria-hidden="true">↗</span></a>
-        <a class="resource" href="https://dutchflowacademy.com/" target="_blank" rel="noopener noreferrer"><span class="number">02</span><span><strong>Dutch Flow Academy</strong><small>Courses and events for mace flow, gada flow, and club training</small></span><span class="arrow" aria-hidden="true">↗</span></a>
-        <a class="resource" href="https://www.dangerouslyfit.com.au/" target="_blank" rel="noopener noreferrer"><span class="number">03</span><span><strong>Dangerously Fit</strong><small>Australian functional-strength education, programs, and equipment</small></span><span class="arrow" aria-hidden="true">↗</span></a>
-        <a class="resource" href="https://shop.tagdaraho.in/" target="_blank" rel="noopener noreferrer"><span class="number">04</span><span><strong>Tagda Raho</strong><small>Made-in-India mudgar, gada, samtola, shena boards, and guided training</small></span><span class="arrow" aria-hidden="true">↗</span></a>
-        <a class="resource" href="https://www.mudgarclub.com/" target="_blank" rel="noopener noreferrer"><span class="number">05</span><span><strong>Mudgar Club</strong><small>Handcrafted mudgar, gada, samtola, shena boards, and Indian clubs</small></span><span class="arrow" aria-hidden="true">↗</span></a>
-        <a class="resource" href="https://www.steelmace.com.au/" target="_blank" rel="noopener noreferrer"><span class="number">06</span><span><strong>Steel Mace Australia</strong><small>Australian steel mace education, programs, and equipment</small></span><span class="arrow" aria-hidden="true">↗</span></a>
-        <a class="resource" href="https://github.com/serroba/mace-clubs/releases/tag/v0.15.0"><span class="number">07</span><span><strong>What changed in v0.15.0</strong><small>Gyroscope-primary mace swing counting</small></span><span class="arrow" aria-hidden="true">→</span></a>
-      </div>
+  <div class="shell"><div class="divider"></div></div>
+
+  <section class="section shell" id="community">
+    <div class="community-intro">
+      <p class="eyebrow">Keep learning</p>
+      <h2>People who move the practice forward</h2>
+      <p>Training, education, and equipment from organisations working across mace, gada, mudgar, and Indian club traditions.</p>
+    </div>
+    <div class="link-list">
+      <a class="resource" href="https://portal.vahvafitness.com/this-is-iron-king-method/" target="_blank" rel="noopener noreferrer"><span><strong>Iron King Method</strong><small>Steel mace, Indian club, and old-school functional-strength training</small></span><span class="arrow" aria-hidden="true">↗</span></a>
+      <a class="resource" href="https://dutchflowacademy.com/" target="_blank" rel="noopener noreferrer"><span><strong>Dutch Flow Academy</strong><small>Courses and events for mace flow, gada flow, and club training</small></span><span class="arrow" aria-hidden="true">↗</span></a>
+      <a class="resource" href="https://www.dangerouslyfit.com.au/" target="_blank" rel="noopener noreferrer"><span><strong>Dangerously Fit</strong><small>Australian functional-strength education, programs, and equipment</small></span><span class="arrow" aria-hidden="true">↗</span></a>
+      <a class="resource" href="https://shop.tagdaraho.in/" target="_blank" rel="noopener noreferrer"><span><strong>Tagda Raho</strong><small>Made-in-India mudgar, gada, samtola, shena boards, and guided training</small></span><span class="arrow" aria-hidden="true">↗</span></a>
+      <a class="resource" href="https://www.mudgarclub.com/" target="_blank" rel="noopener noreferrer"><span><strong>Mudgar Club</strong><small>Handcrafted mudgar, gada, samtola, shena boards, and Indian clubs</small></span><span class="arrow" aria-hidden="true">↗</span></a>
+      <a class="resource" href="https://www.steelmace.com.au/" target="_blank" rel="noopener noreferrer"><span><strong>Steel Mace Australia</strong><small>Australian steel mace education, programs, and equipment</small></span><span class="arrow" aria-hidden="true">↗</span></a>
     </div>
   </section>
 
-  <section class="dark section" id="build">
-    <div class="shell build">
-      <div><p class="eyebrow">Open source</p><h2>Build it.<br>Shape it.<br>Swing it.</h2></div>
+  <div class="shell"><div class="divider"></div></div>
+
+  <section class="section shell" id="build">
+    <div class="build">
+      <div>
+        <p class="eyebrow">Open source</p>
+        <h2>Build it.<br>Shape it.<br>Swing it.</h2>
+      </div>
       <div>
         <p>Mace &amp; Clubs is MIT-licensed and built in the open. <a href="https://github.com/serroba/mace-clubs/releases/latest">Download the latest release</a> or compile it with the Garmin Connect IQ SDK — it runs on 120 Connect IQ watches.</p>
         <pre>git clone https://github.com/serroba/mace-clubs.git
