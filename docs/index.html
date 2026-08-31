@@ -141,6 +141,18 @@
     text-transform: uppercase;
   }
 
+  .tradition { display: grid; grid-template-columns: .8fr 1.2fr; gap: 90px; align-items: start; }
+  .tradition h2 { margin: 0; font-size: clamp(2.6rem, 4.6vw, 4.2rem); line-height: .95; letter-spacing: -.045em; }
+  .tradition-copy p { margin: 0 0 22px; max-width: 620px; color: rgba(23, 33, 28, .72); font-size: 1.08rem; }
+  .tradition-copy p:last-child { margin-bottom: 0; }
+  .tag {
+    padding: 2px 8px;
+    border: 1px solid var(--line);
+    background: var(--cream);
+    font-family: var(--mono);
+    font-size: .86em;
+  }
+
   .dark { background: var(--forest); color: var(--cream); }
   .section { padding: 108px 0; }
   .section-head { display: grid; grid-template-columns: .7fr 1.3fr; gap: 50px; align-items: end; margin-bottom: 58px; }
@@ -231,7 +243,7 @@
   @media (max-width: 900px) {
     .hero { grid-template-columns: 1fr; padding-top: 58px; gap: 76px; }
     .watch-stage { min-height: 430px; }
-    .section-head, .rhythm, .build { grid-template-columns: 1fr; gap: 38px; }
+    .section-head, .rhythm, .build, .tradition { grid-template-columns: 1fr; gap: 38px; }
     .features { grid-template-columns: 1fr 1fr; }
     .feature:nth-child(2n+1) { padding-left: 0; border-right: 1px solid rgba(255,255,255,.2); }
     .feature:nth-child(2n) { padding-left: 28px; }
@@ -268,6 +280,7 @@
   <nav class="nav" aria-label="Main navigation">
     <a class="brand" href="#top">Mace <span>&amp;</span> Clubs</a>
     <div class="nav-links">
+      <a href="#tradition">Why</a>
       <a href="#features">Features</a>
       <a href="#how-it-works">How it works</a>
       <a href="#community">Community</a>
@@ -296,6 +309,19 @@
       </div>
       <figcaption>Instinct 3 Solar 45&nbsp;mm &middot; captured from the app</figcaption>
     </figure>
+  </section>
+
+  <section class="section shell" id="tradition">
+    <div class="tradition">
+      <div>
+        <p class="eyebrow">Why it is built this way</p>
+        <h2>A timer doesn't know what a mill is.</h2>
+      </div>
+      <div class="tradition-copy">
+        <p>Any app can count down two minutes. What none of them know is that the bulava combo runs mill, reverse mill, bullwhip on one hand and then the other; that the gada challenge is five or ten minutes of unbroken swinging because that is how it has always been contested; or that a set on the left is owed a set on the right.</p>
+        <p>Mace &amp; Clubs knows all three, and records them. Your movement and working side are saved with every work block, the metronome calls the combo's changes and hand switches out loud, and the summary shows an <span class="tag">L3/R2</span> balance so you can see at a glance whether the hands are even.</p>
+      </div>
+    </div>
   </section>
 
   <section class="dark section" id="features">
