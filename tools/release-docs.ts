@@ -32,6 +32,12 @@ export interface Change {
     /** Squash-merge subjects end in "(#123)"; direct commits have no PR. */
     pull: number | null;
     watchFacing: boolean;
+    /**
+     * What to tell a user this change did, from a `Release-note:` trailer.
+     * Null when the commit has none, in which case `subject` stands in and
+     * the generator says so.
+     */
+    releaseNote: string | null;
 }
 
 function git(args: string[]): string {
@@ -92,9 +98,37 @@ function collectChanges(from: string | null, to: string): Change[] {
                 subject,
                 pull,
                 watchFacing: files.some((path) => WATCH_PATHS.some((prefix) => path.startsWith(prefix))),
+                releaseNote: releaseNoteOf(body),
             };
         })
         .filter((change) => !isReleaseMechanics(change.subject));
+}
+
+/**
+ * A commit's `Release-note:` trailer, if it has one - what the change did, in
+ * the words a user would use.
+ *
+ *     Release-note: Fixed the paused screen on Instinct watches.
+ *
+ * Commit subjects are written for whoever maintains this repo, and they should
+ * stay that way: "Stop the paused headline hiding behind the Instinct's
+ * subwindow" is an excellent commit subject and a useless line in a store
+ * listing. This is how the two stop being the same sentence. Optional - a
+ * change with no trailer falls back to its subject, and the generator lists
+ * which ones did.
+ */
+export function releaseNoteOf(body: string): string | null {
+    for (const line of body.split("\n")) {
+        const match = /^\s*Release-note:\s*(.*)$/i.exec(line);
+        // Trim after capturing rather than inside the pattern: a lazy group
+        // against a trailing \s* happily matches a single space, so
+        // "Release-note:   " would come back as " " instead of nothing.
+        const note = match?.[1]?.trim();
+        if (note !== undefined && note.length > 0) {
+            return note;
+        }
+    }
+    return null;
 }
 
 /**
@@ -129,18 +163,26 @@ export function isReleaseMechanics(subject: string): boolean {
  * watch-facing change says so plainly instead of dressing up tooling work.
  */
 export function headline(changes: Change[]): string {
-    const first = changes.find((change) => change.watchFacing)?.subject;
+    const watchFacing = changes.find((change) => change.watchFacing);
+    const first = watchFacing?.releaseNote ?? watchFacing?.subject;
     if (first === undefined) {
         return "tooling and test coverage";
     }
     return first.charAt(0).toLowerCase() + first.slice(1);
 }
 
-function bullet(change: Change): string {
+/**
+ * `userWords` picks the Release-note trailer over the commit subject. On for
+ * the watch-facing section, which people read to find out what changed for
+ * them; off for tooling, which only makes sense in the repo's own vocabulary.
+ * The PR link carries whoever wants the detail either way.
+ */
+function bullet(change: Change, userWords = false): string {
+    const text = userWords ? (change.releaseNote ?? change.subject) : change.subject;
     if (change.pull === null) {
-        return `- ${change.subject}`;
+        return `- ${text}`;
     }
-    return `- ${change.subject} ([#${String(change.pull)}](${REPO_URL}/pull/${String(change.pull)}))`;
+    return `- ${text} ([#${String(change.pull)}](${REPO_URL}/pull/${String(change.pull)}))`;
 }
 
 export function renderReleaseNotes(
@@ -165,11 +207,11 @@ export function renderReleaseNotes(
     if (onWatch.length === 0) {
         parts.push("Nothing in this release changes the watch UI or behaviour.", "");
     } else {
-        parts.push(...onWatch.map(bullet), "");
+        parts.push(...onWatch.map((change) => bullet(change, true)), "");
     }
 
     if (behind.length > 0) {
-        parts.push("## Tooling and tests", "", ...behind.map(bullet), "");
+        parts.push("## Tooling and tests", "", ...behind.map((change) => bullet(change)), "");
     }
 
     parts.push(
@@ -202,15 +244,16 @@ export function replaceRegion(document: string, name: string, replacement: strin
     return document.slice(0, start + open.length) + "\n" + replacement + "\n" + document.slice(end);
 }
 
-function renderWhatsNew(version: string, changes: Change[]): string {
+export function renderWhatsNew(version: string, changes: Change[]): string {
     const onWatch = changes.filter((change) => change.watchFacing);
     const lines = [`## What's new — v${version}`, ""];
     if (onWatch.length === 0) {
         lines.push("Maintenance release: no changes to the watch UI or behaviour.");
     } else {
         // Store copy is plain text - no markdown links, per the note at the
-        // top of store-listing.md.
-        lines.push(...onWatch.map((change) => `- ${change.subject}`));
+        // top of store-listing.md. The user-facing wording wins here; the
+        // commit subject is only the fallback.
+        lines.push(...onWatch.map((change) => `- ${change.releaseNote ?? change.subject}`));
     }
     return lines.join("\n");
 }
@@ -235,6 +278,22 @@ function main(): void {
     mkdirSync(dirname(notesPath), { recursive: true });
     writeFileSync(notesPath, renderReleaseNotes(version, date, from, changes) + "\n");
     console.log(`wrote ${notesPath} (${String(changes.length)} changes since ${from ?? "the beginning"})`);
+
+    // The store listing goes to actual users, so a watch-facing change with no
+    // Release-note trailer means the store gets a commit subject. Not fatal -
+    // the fallback is honest, just written for the wrong reader - but the one
+    // moment anyone can still fix it is now, before the tag.
+    const unworded = changes.filter((change) => change.watchFacing && change.releaseNote === null);
+    if (unworded.length > 0) {
+        console.warn(
+            `\n${String(unworded.length)} watch-facing change${unworded.length === 1 ? "" : "s"} ` +
+                "had no Release-note: trailer, so the store listing will quote the commit subject:",
+        );
+        for (const change of unworded) {
+            console.warn(`  - ${change.subject}`);
+        }
+        console.warn("Edit docs/store-listing.md's What's new by hand, or see docs/releasing.md.\n");
+    }
 
     const listingPath = join(REPO_ROOT, "docs", "store-listing.md");
     if (existsSync(listingPath)) {

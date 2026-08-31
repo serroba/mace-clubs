@@ -12,12 +12,24 @@ import {
     isReleaseMechanics,
     parseSubject,
     previousTag,
+    releaseNoteOf,
     renderReleaseNotes,
+    renderWhatsNew,
     replaceRegion,
 } from "./release-docs.ts";
 
-const watch = (subject: string, pull: number | null = null): Change => ({ subject, pull, watchFacing: true });
-const tooling = (subject: string, pull: number | null = null): Change => ({ subject, pull, watchFacing: false });
+const watch = (subject: string, pull: number | null = null, releaseNote: string | null = null): Change => ({
+    subject,
+    pull,
+    watchFacing: true,
+    releaseNote,
+});
+const tooling = (subject: string, pull: number | null = null): Change => ({
+    subject,
+    pull,
+    watchFacing: false,
+    releaseNote: null,
+});
 
 void describe("previousTag", () => {
     const tags = ["v0.14.0", "v0.14.1", "v0.15.0", "v0.15.1", "v0.9.1", "v0.10.0"];
@@ -151,5 +163,48 @@ void describe("replaceRegion", () => {
 
     it("refuses a document without the markers rather than guessing", () => {
         assert.throws(() => replaceRegion("no markers here", "x", "new"), /missing the/);
+    });
+});
+
+void describe("Release-note trailers", () => {
+    it("reads the trailer out of a commit body", () => {
+        assert.equal(
+            releaseNoteOf("Some detail.\n\nRelease-note: Fixed the paused screen on Instinct watches.\n"),
+            "Fixed the paused screen on Instinct watches.",
+        );
+    });
+
+    it("is absent when the commit has no trailer", () => {
+        assert.equal(releaseNoteOf("Just a body.\n\nCo-Authored-By: Someone\n"), null);
+        assert.equal(releaseNoteOf(""), null);
+        assert.equal(releaseNoteOf("Release-note:   \n"), null);
+    });
+
+    it("prefers user wording in the store listing, and falls back to the subject", () => {
+        const changes = [
+            watch("Stop the paused headline hiding behind the Instinct's subwindow", 149, "Fixed the paused screen on Instinct watches."),
+            watch("Make the app-drawn screens scale to the device", 145),
+        ];
+        const listing = replaceRegion(
+            "<!-- generated:whatsnew -->\nold\n<!-- /generated:whatsnew -->",
+            "whatsnew",
+            renderWhatsNew("0.17.0", changes),
+        );
+        assert.match(listing, /Fixed the paused screen on Instinct watches\./);
+        assert.doesNotMatch(listing, /subwindow/);
+        // No trailer, so the commit subject stands in rather than nothing.
+        assert.match(listing, /Make the app-drawn screens scale to the device/);
+    });
+
+    it("uses user wording for the headline and the on-watch bullets", () => {
+        const notes = renderReleaseNotes("0.17.0", "2026-08-30", "v0.16.0", [
+            watch("Stop the paused headline hiding behind the Instinct's subwindow", 149, "Fixed the paused screen on Instinct watches."),
+            tooling("Run the e2e UI suite on Linux in CI", 141),
+        ]);
+        assert.match(notes, /# Mace & Clubs v0\.17\.0: fixed the paused screen on Instinct watches\./);
+        // The bullet reads in user words but keeps its PR link.
+        assert.match(notes, /- Fixed the paused screen on Instinct watches\. \(\[#149\]/);
+        // Tooling keeps the repo's own vocabulary.
+        assert.match(notes, /- Run the e2e UI suite on Linux in CI \(\[#141\]/);
     });
 });

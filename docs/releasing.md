@@ -19,6 +19,16 @@ release is actually ready before letting it through.
 | `make release-assets VERSION=x.y.z` | both |
 | `make release-check VERSION=x.y.z` | what the hook runs, so you can check before tagging |
 
+**What the store's "What's new" says** comes from each watch-facing change's
+`Release-note:` trailer, not from its commit subject. Commit subjects are
+written for whoever maintains this repo and should stay that way — "Stop the
+paused headline hiding behind the Instinct's subwindow" is a good commit
+subject and a useless line in a store listing. A change with no trailer falls
+back to its subject, and `make release-docs` prints which ones did, so the last
+chance to fix the wording is the moment before tagging. Fixing it means either
+amending the trailer or editing `docs/store-listing.md`'s generated region by
+hand before you commit the paperwork.
+
 **The website shows those captures directly**, from the versioned path
 `store-assets/vx.y.z/instinct3solar45mm/`. After `make release-shots`, point
 `docs/index.html`'s three `.screens` figures and its hero `img` at the new
