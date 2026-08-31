@@ -215,40 +215,123 @@
     100% { transform: scale(1);     opacity: .95; border-color: var(--lamp); }
   }
 
-  .watch {
+  /*
+    The watch, drawn rather than photographed. Modelled on the Instinct 3 Solar
+    the app is validated against: a chunky near-square case with a deep bezel,
+    a hex screw at each corner, three buttons left and two right, and the
+    accent bars the Instinct carries above and below its display. Garmin's
+    wordmark is deliberately absent - the shape is recognisable without
+    borrowing their trademark, and the accent bars are brass rather than
+    Garmin's orange so the device reads as part of this page.
+
+    Size comes from --device, so the hero and the small captures below share
+    one component. Everything inside scales off it.
+  */
+  .device {
+    --device: 300px;
     position: relative;
-    width: min(300px, 64%);
-    aspect-ratio: 300 / 340;
+    width: var(--device);
+    max-width: 100%;
+    aspect-ratio: 1;
     display: grid;
     place-items: center;
-    background: #0E0A07;
-    border: 12px solid #2E2620;
-    border-radius: 30% 30% 32% 32%;
-    box-shadow: 0 34px 74px rgba(0, 0, 0, .66), inset 0 0 0 4px #060403, 0 0 0 1px rgba(192, 138, 62, .22);
   }
-  .watch::before, .watch::after {
+  /* Strap lugs. The Instinct's strap is integral to the case, and without them
+     the body reads as a floating tile rather than something worn. */
+  .device::before,
+  .device::after {
     content: "";
     position: absolute;
     z-index: -1;
-    width: 43%;
-    height: 25%;
-    background: #4C382A;
     left: 50%;
+    width: 42%;
+    height: 34%;
+    background: linear-gradient(90deg, #1C1510, #33271D 30%, #33271D 70%, #1C1510);
     transform: translateX(-50%);
   }
-  .watch::before { top: -21%; border-radius: 20px 20px 5px 5px; }
-  .watch::after { bottom: -21%; border-radius: 5px 5px 20px 20px; }
-  /* The Instinct 3 Solar's display shape is "semi-octagon" (the SDK's own
-     simulator.json says so), not a circle - which is why the app draws its
-     bottom line nearly edge to edge, and why masking it round clips content. */
-  .face {
-    width: 80%;
+  /* Faded at the far end so the strap leaves the frame rather than stopping. */
+  .device::before {
+    top: -27%;
+    border-radius: 14px 14px 3px 3px;
+    -webkit-mask-image: linear-gradient(to top, #000 46%, transparent);
+    mask-image: linear-gradient(to top, #000 46%, transparent);
+  }
+  .device::after {
+    bottom: -27%;
+    border-radius: 3px 3px 14px 14px;
+    -webkit-mask-image: linear-gradient(to bottom, #000 46%, transparent);
+    mask-image: linear-gradient(to bottom, #000 46%, transparent);
+  }
+
+  .device__case {
+    position: relative;
+    width: 100%;
+    height: 100%;
+    display: grid;
+    place-items: center;
+    /* Painted in layers, back to front: two brass accent bars, four corner
+       screws, then the case body and its bevel. */
+    background-image:
+      linear-gradient(var(--brass), var(--brass)),
+      linear-gradient(var(--brass), var(--brass)),
+      radial-gradient(circle, #4E4133 40%, #241C15 44%),
+      radial-gradient(circle, #4E4133 40%, #241C15 44%),
+      radial-gradient(circle, #4E4133 40%, #241C15 44%),
+      radial-gradient(circle, #4E4133 40%, #241C15 44%),
+      linear-gradient(155deg, #3B3025 0%, #241C15 52%, #1A140F 100%);
+    background-repeat: no-repeat;
+    background-size:
+      13% 1.6%, 13% 1.6%,
+      7% 7%, 7% 7%, 7% 7%, 7% 7%,
+      100% 100%;
+    background-position:
+      50% 4.5%, 50% 95.5%,
+      10.5% 10.5%, 89.5% 10.5%, 10.5% 89.5%, 89.5% 89.5%,
+      0 0;
+    border-radius: 31%;
+    box-shadow:
+      0 30px 66px rgba(0, 0, 0, .62),
+      inset 0 2px 0 rgba(232, 220, 200, .13),
+      inset 0 0 0 1px rgba(0, 0, 0, .5);
+  }
+  /* Button rails: one element per side, each carrying its buttons as extra
+     box-shadows so the markup stays three elements per device. */
+  .device__case::before,
+  .device__case::after {
+    content: "";
+    position: absolute;
+    width: 3.4%;
+    height: 13%;
+    border-radius: 3px;
+    background: #4A3D30;
+  }
+  .device__case::before {
+    left: -2.2%;
+    top: 27%;
+    box-shadow:
+      0 calc(var(--device) * .175) 0 #4A3D30,
+      0 calc(var(--device) * .350) 0 #4A3D30;
+  }
+  .device__case::after {
+    right: -2.2%;
+    top: 30%;
+    box-shadow: 0 calc(var(--device) * .285) 0 #4A3D30;
+  }
+  /*
+    The display. The captures are the app's own 176x176 frame and already carry
+    the device's black corners and its orange subwindow ring, so this only
+    rounds the aperture - an octagon mask cut into the app's own text, because
+    the app draws closer to the edge than the physical chamfer allows.
+  */
+  .device__screen {
+    width: 64%;
     height: auto;
     aspect-ratio: 1;
-    clip-path: polygon(20% 0, 80% 0, 100% 20%, 100% 80%, 80% 100%, 20% 100%, 0 80%, 0 20%);
+    border-radius: 13%;
     background: #050403;
     object-fit: contain;
     image-rendering: crisp-edges;
+    box-shadow: 0 0 0 2px #100C08, 0 0 14px rgba(0, 0, 0, .8);
   }
   .pit-stage figcaption {
     position: absolute;
@@ -429,11 +512,14 @@
     <figure class="pit-stage">
       <div class="pit-edge" aria-hidden="true"></div>
       <div class="beat-ring" aria-hidden="true"></div>
-      <div class="watch">
-        <img class="face" width="176" height="176" loading="eager"
-             src="store-assets/v0.16.0/instinct3solar45mm/01-start-screen.png"
-             alt="The Mace &amp; Clubs start screen on an Instinct 3 Solar: the mace-and-club mark above &ldquo;50 bpm | fixed 4&rdquo;, &ldquo;SELECT to start&rdquo;, and &ldquo;MENU opens settings&rdquo;.">
+      <div class="device device--hero">
+        <div class="device__case">
+          <img class="device__screen" width="176" height="176" loading="eager"
+               src="store-assets/v0.16.0/instinct3solar45mm/01-start-screen.png"
+               alt="The Mace &amp; Clubs start screen on an Instinct 3 Solar: the mace-and-club mark above &ldquo;50 bpm | fixed 4&rdquo;, &ldquo;SELECT to start&rdquo;, and &ldquo;MENU opens settings&rdquo;.">
+        </div>
       </div>
+    </div>
       <figcaption>50 bpm &middot; accent on 1</figcaption>
     </figure>
   </section>
@@ -476,24 +562,37 @@
     </div>
     <div class="screens">
       <figure>
-        <img width="176" height="176" loading="lazy"
-             src="store-assets/v0.16.0/instinct3solar45mm/03-movement-picker.png"
-             alt="A movement picker listing 360 and 10-to-2, the mace-and-club mark in the corner.">
+        <div class="device device--small">
+          <div class="device__case">
+            <img class="device__screen" width="176" height="176" loading="lazy"
+                 src="store-assets/v0.16.0/instinct3solar45mm/03-movement-picker.png"
+                 alt="A movement picker listing 360 and 10-to-2, the mace-and-club mark in the corner.">
+          </div>
+        </div>
         <figcaption><b>Pick the movement</b>The list follows the implement you chose.</figcaption>
       </figure>
       <figure>
-        <img width="176" height="176" loading="lazy"
-             src="store-assets/v0.16.0/instinct3solar45mm/04-work-screen.png"
-             alt="A work screen showing elapsed time, WORK 0:01, 50 bpm, and counters for sets and heart rate.">
+        <div class="device device--small">
+          <div class="device__case">
+            <img class="device__screen" width="176" height="176" loading="lazy"
+                 src="store-assets/v0.16.0/instinct3solar45mm/04-work-screen.png"
+                 alt="A work screen showing elapsed time, WORK 0:01, 50 bpm, and counters for sets and heart rate.">
+          </div>
+        </div>
         <figcaption><b>Work the interval</b>Tempo, rounds and heart rate, nothing else.</figcaption>
       </figure>
       <figure>
-        <img width="176" height="176" loading="lazy"
-             src="store-assets/v0.16.0/instinct3solar45mm/06-paused-summary.png"
-             alt="A paused summary reading one set, both hands 1/1, work and rest durations, and the save, resume and discard controls.">
+        <div class="device device--small">
+          <div class="device__case">
+            <img class="device__screen" width="176" height="176" loading="lazy"
+                 src="store-assets/v0.16.0/instinct3solar45mm/06-paused-summary.png"
+                 alt="A paused summary reading one set, both hands 1/1, work and rest durations, and the save, resume and discard controls.">
+          </div>
+        </div>
         <figcaption><b>Read the set back</b>Durations, and the left/right balance.</figcaption>
       </figure>
     </div>
+
     <p class="support-note">
       <strong>Runs on 120 Connect IQ watches. Swing counting is validated on the Instinct 3 Solar 45&nbsp;mm.</strong>
       Everything above behaves the same on all of them. Swing counting is the exception — its detector is
