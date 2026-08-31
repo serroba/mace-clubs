@@ -5,7 +5,7 @@ import { fileURLToPath } from "node:url";
 import { test } from "node:test";
 import { PNG } from "pngjs";
 import { CLUB, DESIGN_SIZE, MACE_HEAD, MACE_SHAFT, distance, markSvg } from "./brand-mark.ts";
-import { renderMark } from "./render-brand-assets.ts";
+import { PALETTE, renderMark } from "./render-brand-assets.ts";
 
 const REPO_ROOT = join(dirname(fileURLToPath(import.meta.url)), "..");
 const LAUNCHER_ICON = join(REPO_ROOT, "resources/drawables/launcher_icon.png");
@@ -101,10 +101,46 @@ test("the badge variant is opaque everywhere the store will show it", () => {
 });
 
 test("the SVG master carries both colours and a title", () => {
-  const svg = markSvg({ size: 62, shaftColor: "#F0EADC", headColor: "#DB542F" });
+  const svg = markSvg({ size: 62, shaftColor: "#E8DCC8", headColor: "#C08A3E" });
   assert.match(svg, /<svg[^>]+viewBox="0 0 62 62"/);
   assert.match(svg, /aria-label="Mace &amp; Clubs"/);
-  assert.match(svg, /#F0EADC/);
-  assert.match(svg, /#DB542F/);
+  assert.match(svg, /#E8DCC8/);
+  assert.match(svg, /#C08A3E/);
   assert.ok(!svg.includes("NaN"), "tangent maths produced finite coordinates");
+});
+
+/** The hex custom properties declared on the site's `:root`. */
+function siteTokens(): Map<string, string> {
+  const css = readFileSync(join(REPO_ROOT, "docs/index.html"), "utf8");
+  const root = /:root\s*\{([\s\S]*?)\}/.exec(css)?.[1] ?? "";
+  const tokens = new Map<string, string>();
+  for (const match of root.matchAll(/--([a-z-]+):\s*(#[0-9A-Fa-f]{6})\s*;/g)) {
+    tokens.set(match[1] ?? "", (match[2] ?? "").toUpperCase());
+  }
+  return tokens;
+}
+
+// docs/brand.md has claimed since the icon landed that its colours are "taken
+// from the website's custom properties, so the icon and the page it sits on
+// cannot drift apart". They drifted apart the moment the site was redressed:
+// the badge stayed forest green while the page went clay and brass, and a
+// green favicon sat in the tab above it. Nothing failed, because the invariant
+// was only ever asserted in prose. This is the mechanism.
+test("the icon palette is the site's palette", () => {
+  const tokens = siteTokens();
+  assert.ok(tokens.size >= 3, "should find hex custom properties on the site's :root");
+
+  for (const [name, hex] of Object.entries(PALETTE)) {
+    const onSite = tokens.get(name);
+    assert.ok(
+      onSite !== undefined,
+      `PALETTE.${name} has no matching --${name} custom property in docs/index.html`,
+    );
+    assert.equal(
+      hex.toUpperCase(),
+      onSite,
+      `PALETTE.${name} is ${hex} but the site's --${name} is ${onSite}; ` +
+        "run `make brand-assets` after changing either",
+    );
+  }
 });

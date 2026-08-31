@@ -28,13 +28,18 @@ const HEAD_ONLY: readonly Shape[] = [MACE_HEAD];
 const REPO_ROOT = join(dirname(fileURLToPath(import.meta.url)), "..");
 
 /**
- * The site's palette (docs/index.html's custom properties), so the icon and
- * the page it sits on cannot drift apart.
+ * The site's palette, copied from docs/index.html's `:root` custom properties.
+ *
+ * These must stay equal to the site's own tokens. They did not: the site was
+ * redressed and the icon was left on the previous scheme, so a forest-green
+ * favicon sat in the tab above a clay-and-brass page. brand-mark.test.ts now
+ * reads the tokens out of the stylesheet and fails when the two disagree,
+ * because a comment claiming they cannot drift is not a mechanism.
  */
 export const PALETTE = {
-  forest: "#1F382D",
-  paper: "#F0EADC",
-  ember: "#DB542F",
+  pit: "#16100B",
+  chalk: "#E8DCC8",
+  brass: "#C08A3E",
 } as const;
 
 type Rgba = [number, number, number, number];
@@ -120,9 +125,9 @@ function write(relativePath: string, contents: Buffer | string): void {
 }
 
 function main(): void {
-  const forest = hexToRgba(PALETTE.forest);
-  const paper = hexToRgba(PALETTE.paper);
-  const ember = hexToRgba(PALETTE.ember);
+  const pit = hexToRgba(PALETTE.pit);
+  const chalk = hexToRgba(PALETTE.chalk);
+  const brass = hexToRgba(PALETTE.brass);
 
   // The master. Monochrome, transparent: this is the mark itself, before any
   // decision about what it sits on.
@@ -136,13 +141,14 @@ function main(): void {
   );
 
   // The badge: what goes anywhere the background is not ours to choose - the
-  // Connect IQ Store's grid, a browser tab, a phone home screen.
+  // Connect IQ Store's grid, a browser tab, a phone home screen. Clay ground,
+  // chalk mark, brass ball, matching the site exactly.
   const badge = (size: number): PNG =>
     renderMark({
       size,
-      shaft: paper,
-      head: ember,
-      background: forest,
+      shaft: chalk,
+      head: brass,
+      background: pit,
       cornerRadius: size * 0.22,
     });
 
@@ -150,9 +156,9 @@ function main(): void {
     "docs/brand/mace-clubs-icon.svg",
     markSvg({
       size: DESIGN_SIZE,
-      shaftColor: PALETTE.paper,
-      headColor: PALETTE.ember,
-      background: PALETTE.forest,
+      shaftColor: PALETTE.chalk,
+      headColor: PALETTE.brass,
+      background: PALETTE.pit,
       cornerRadius: DESIGN_SIZE * 0.22,
     }),
   );
@@ -165,9 +171,9 @@ function main(): void {
     "docs/favicon.svg",
     markSvg({
       size: DESIGN_SIZE,
-      shaftColor: PALETTE.paper,
-      headColor: PALETTE.ember,
-      background: PALETTE.forest,
+      shaftColor: PALETTE.chalk,
+      headColor: PALETTE.brass,
+      background: PALETTE.pit,
       cornerRadius: DESIGN_SIZE * 0.22,
     }),
   );
