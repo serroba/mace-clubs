@@ -5,9 +5,18 @@
 **Website:** [serroba.github.io/mace-clubs](https://serroba.github.io/mace-clubs/) ·
 **Downloads:** [GitHub Releases](https://github.com/serroba/mace-clubs/releases)
 
-A Garmin Connect IQ workout app for steel mace and Indian club training. The
-supported watch is the **Instinct 3 Solar 45 mm**, whose 25 Hz gyroscope has
-been validated against labelled real-workout recordings.
+A Garmin Connect IQ workout app for steel mace, Indian club, and bulava
+training.
+
+**Runs on 120 Connect IQ watches. Swing counting is validated on the Instinct 3
+Solar 45 mm.** Everything else — the metronome, intervals, movement and side
+tracking, and activity recording — behaves the same on every one of them. Swing
+counting is the exception: its detector is tuned against labelled recordings
+from that one watch and its 25 Hz gyroscope. Elsewhere it still runs, falling
+back to the accelerometer where there is no gyroscope, but the counts have not
+been checked against known-correct numbers. Contributing a recording from your
+own watch is the thing that changes that — see
+[CONTRIBUTING.md](CONTRIBUTING.md#calibration-recordings).
 
 ## Features
 

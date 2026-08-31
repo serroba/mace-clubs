@@ -82,7 +82,16 @@ Health & Fitness
 - Sensor access (for heart rate, gyroscope swing counting, and optional motion capture)
 
 ## Support
-- Instinct 3 Solar 45 mm, the physically validated 25 Hz gyroscope target
+Runs on 120 Connect IQ watches. Swing counting is validated on the Instinct 3
+Solar 45 mm.
+
+Everything else — the metronome, intervals, movement and side tracking, and
+activity recording — behaves the same on all of them. Swing counting is the
+exception: its detector is tuned against labelled recordings from that one
+watch and its 25 Hz gyroscope. On other watches it still runs, falling back to
+the accelerometer where there is no gyroscope, but the counts have not been
+checked against known-correct numbers.
+
 - Language: English
 
 ## Screenshots (need at least one)
