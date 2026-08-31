@@ -19,6 +19,13 @@ release is actually ready before letting it through.
 | `make release-assets VERSION=x.y.z` | both |
 | `make release-check VERSION=x.y.z` | what the hook runs, so you can check before tagging |
 
+**The website shows those captures directly**, from the versioned path
+`store-assets/vx.y.z/instinct3solar45mm/`. After `make release-shots`, point
+`docs/index.html`'s three `.screens` figures and its hero `img` at the new
+version, or the site keeps advertising the previous release's screens.
+`tools/site-assets.test.ts` fails if a path stops resolving, but nothing can
+tell you the screenshots are merely stale, so this one is on you.
+
 **Product-update notes** come from the commits between the previous tag and
 the release, split into *On the watch* and *Tooling and tests* by which paths
 each change touched. Version bumps are dropped, and a non-squash merge's title

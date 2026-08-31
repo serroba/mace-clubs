@@ -8,6 +8,20 @@
 <link rel="icon" href="favicon.svg" type="image/svg+xml">
 <link rel="icon" href="favicon-32.png" sizes="32x32" type="image/png">
 <link rel="apple-touch-icon" href="brand/apple-touch-icon-180.png">
+<link rel="canonical" href="https://serroba.github.io/mace-clubs/">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="Mace &amp; Clubs">
+<meta property="og:title" content="Mace &amp; Clubs — Train in rhythm">
+<meta property="og:description" content="A Garmin watch app for steel mace, Indian club, and bulava training. Holds your tempo, calls the traditional sequences, counts your swings, and records every movement block.">
+<meta property="og:url" content="https://serroba.github.io/mace-clubs/">
+<meta property="og:image" content="https://serroba.github.io/mace-clubs/brand/og-image.jpg">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:image:alt" content="The Mace &amp; Clubs mark: a steel mace crossed with an Indian club.">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="Mace &amp; Clubs — Train in rhythm">
+<meta name="twitter:description" content="A Garmin watch app for steel mace, Indian club, and bulava training. Holds your tempo, calls the traditional sequences, counts your swings, and records every movement block.">
+<meta name="twitter:image" content="https://serroba.github.io/mace-clubs/brand/og-image.jpg">
 <style>
   :root {
     --paper: #f0eadc;
@@ -80,7 +94,9 @@
   .button-primary { background: var(--ink); color: var(--cream); }
   .button-primary:hover { background: var(--ember); border-color: var(--ember); }
 
-  .watch-stage { position: relative; display: grid; place-items: center; min-height: 480px; }
+  /* Tall enough to clear the straps, which overhang the watch by 76px each
+     way, so the caption below them isn't sitting on one. */
+  .watch-stage { position: relative; margin: 0; display: grid; place-items: center; min-height: 570px; }
   .orbit { position: absolute; width: 420px; height: 420px; border: 1px solid var(--moss); border-radius: 50%; opacity: .42; }
   .orbit::before, .orbit::after { content: ""; position: absolute; border-radius: 50%; background: var(--ember); }
   .orbit::before { width: 13px; height: 13px; top: 34px; left: 54px; }
@@ -93,29 +109,37 @@
     place-items: center;
     background: var(--ink);
     border: 14px solid #38463f;
-    border-radius: 43% 43% 46% 46%;
+    border-radius: 30% 30% 32% 32%;
     box-shadow: 0 35px 80px rgba(23, 33, 28, .25), inset 0 0 0 6px #111915;
     transform: rotate(3deg);
   }
   .watch::before, .watch::after { content: ""; position: absolute; z-index: -1; width: 138px; height: 88px; background: #344139; left: 50%; transform: translateX(-50%); }
   .watch::before { top: -76px; border-radius: 24px 24px 6px 6px; }
   .watch::after { bottom: -76px; border-radius: 6px 6px 24px 24px; }
+  /* The real 176x176 capture, scaled into the bezel. image-rendering keeps the
+     watch's own hinted pixels crisp instead of smearing them. */
+  /* The Instinct 3 Solar's display shape is "semi-octagon" (the SDK's own
+     simulator.json says so), not a circle - which is why the app draws its
+     bottom line nearly edge to edge. Masking it round clipped real content. */
   .face {
     width: 252px;
     height: 252px;
-    padding: 60px 24px 26px;
-    border-radius: 44%;
+    clip-path: polygon(
+      20% 0, 80% 0, 100% 20%, 100% 80%,
+      80% 100%, 20% 100%, 0 80%, 0 20%
+    );
     background: #050806;
-    color: #f4f0e5;
-    text-align: center;
-    font-family: var(--mono);
+    object-fit: contain;
+    image-rendering: crisp-edges;
+  }
+  .watch-stage figcaption {
+    position: absolute;
+    bottom: 0;
+    color: rgba(23, 33, 28, .5);
+    font-size: .74rem;
+    letter-spacing: .06em;
     text-transform: uppercase;
   }
-  .subwindow { position: absolute; top: 49px; right: 42px; width: 68px; height: 68px; border: 5px solid #28342e; border-radius: 50%; background: #020302; }
-  .face small { display: block; margin-bottom: 13px; color: #aebaae; letter-spacing: .13em; }
-  .face strong { display: block; font-size: 1.05rem; }
-  .face .tempo { margin: 19px 0 3px; color: #f27750; font-size: 1.5rem; }
-  .face span { color: #9ea89f; font-size: .68rem; letter-spacing: .08em; }
 
   .dark { background: var(--forest); color: var(--cream); }
   .section { padding: 108px 0; }
@@ -130,6 +154,25 @@
   .feature b { display: block; margin-bottom: 44px; color: #f27750; font: 400 2.8rem/1 var(--display); }
   .feature h3 { margin: 0 0 12px; font-size: 1rem; }
   .feature p { margin: 0; color: rgba(255, 250, 240, .62); font-size: .9rem; }
+
+  /* Real captures, not a mockup: the app's own 176x176 frames, upscaled with
+     nearest-neighbour so the watch's hinted pixels stay legible. */
+  .screens { display: grid; grid-template-columns: repeat(3, 1fr); gap: 32px; margin-top: 56px; }
+  .screens figure { margin: 0; }
+  .screens img {
+    width: 100%;
+    max-width: 208px;
+    height: auto;
+    aspect-ratio: 1;
+    clip-path: polygon(
+      20% 0, 80% 0, 100% 20%, 100% 80%,
+      80% 100%, 20% 100%, 0 80%, 0 20%
+    );
+    background: #050806;
+    image-rendering: crisp-edges;
+  }
+  .screens figcaption { margin-top: 16px; max-width: 208px; color: rgba(255, 250, 240, .55); font-size: .82rem; }
+  .screens figcaption b { display: block; margin-bottom: 4px; color: var(--cream); font-weight: 700; }
 
   .support-note {
     margin: 44px 0 0;
@@ -204,6 +247,8 @@
     .watch-stage { min-height: 380px; transform: scale(.85); margin: -30px 0; }
     .section { padding: 76px 0; }
     .features { grid-template-columns: 1fr; }
+    .screens { grid-template-columns: 1fr; justify-items: center; gap: 40px; }
+    .screens figcaption { text-align: center; }
     .feature, .feature + .feature { padding: 25px 0; border-right: 0; border-top: 1px solid rgba(255,255,255,.2); }
     .feature b { margin-bottom: 16px; }
     .table-wrap { overflow-x: auto; }
@@ -242,18 +287,15 @@
         <a class="button" href="#how-it-works">See how it works</a>
       </div>
     </div>
-    <div class="watch-stage" aria-label="Stylised preview of the Mace &amp; Clubs Garmin app">
+    <figure class="watch-stage">
       <div class="orbit" aria-hidden="true"></div>
-      <div class="watch" aria-hidden="true">
-        <div class="subwindow"></div>
-        <div class="face">
-          <small>Mace &amp; Clubs</small>
-          <strong>Challenge 5:00</strong>
-          <div class="tempo">50 BPM</div>
-          <span>Select to start</span>
-        </div>
+      <div class="watch">
+        <img class="face" width="176" height="176" loading="eager"
+             src="store-assets/v0.16.0/instinct3solar45mm/01-start-screen.png"
+             alt="The Mace &amp; Clubs start screen on an Instinct 3 Solar: the mace-and-club mark above &ldquo;50 bpm | fixed 4&rdquo;, &ldquo;SELECT to start&rdquo;, and &ldquo;MENU opens settings&rdquo;.">
       </div>
-    </div>
+      <figcaption>Instinct 3 Solar 45&nbsp;mm &middot; captured from the app</figcaption>
+    </figure>
   </section>
 
   <section class="dark section" id="features">
@@ -269,6 +311,26 @@
         <article class="feature"><b>04</b><h3>Count the challenge</h3><p>Five or ten minutes of continuous mace swinging, scored live from wrist rotation by the gyroscope-primary counter and saved with every set.</p></article>
         <article class="feature"><b>05</b><h3>Look back on the watch</h3><p>Your last twenty sessions stay on the wrist: browse them from Settings, scroll the per-set smoothness, and see the last comparable score before you start.</p></article>
         <article class="feature"><b>06</b><h3>Measure the exposure</h3><p>An optional per-set record of wrist motion — exposure, peak, active seconds, and weight-volume — kept as transparent measurements, not a single invented score.</p></article>
+      </div>
+      <div class="screens">
+        <figure>
+          <img width="176" height="176" loading="lazy"
+               src="store-assets/v0.16.0/instinct3solar45mm/03-movement-picker.png"
+               alt="A movement picker listing 360 and 10-to-2, the mace-and-club mark in the corner.">
+          <figcaption><b>Pick the movement</b>The list follows the implement you chose.</figcaption>
+        </figure>
+        <figure>
+          <img width="176" height="176" loading="lazy"
+               src="store-assets/v0.16.0/instinct3solar45mm/04-work-screen.png"
+               alt="A work screen showing elapsed time, WORK 0:01, 50 bpm, and counters for sets and heart rate.">
+          <figcaption><b>Work the interval</b>Tempo, rounds and heart rate, nothing else.</figcaption>
+        </figure>
+        <figure>
+          <img width="176" height="176" loading="lazy"
+               src="store-assets/v0.16.0/instinct3solar45mm/06-paused-summary.png"
+               alt="A paused summary reading one set, both hands 1/1, work and rest durations, and the save, resume and discard controls.">
+          <figcaption><b>Read the set back</b>Durations, and the left/right balance.</figcaption>
+        </figure>
       </div>
       <p class="support-note">
         <strong>Runs on 120 Connect IQ watches. Swing counting is validated on the Instinct 3 Solar 45&nbsp;mm.</strong>
