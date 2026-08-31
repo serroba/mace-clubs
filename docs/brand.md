@@ -66,10 +66,10 @@ There are two, and the difference is whether we control the background.
 and what `MaceClubsView` draws on the start screen. Both are black, so a white
 silhouette is correct and this file is left exactly as it is.
 
-**Badge** — the mark in paper `#F0EADC` with an ember `#DB542F` ball, on a
-forest `#1F382D` rounded square. Used everywhere the background belongs to
-someone else: the Connect IQ Store's grid, a browser tab, a phone home screen.
-The silhouette is invisible in all three, because a white glyph on transparency
+**Badge** — the mark in chalk `#E8DCC8` with a brass `#C08A3E` ball, on a clay
+`#16100B` rounded square. Used everywhere the background belongs to someone
+else: the Connect IQ Store's grid, a browser tab, a phone home screen. The
+silhouette is invisible in all three, because a white glyph on transparency
 disappears the moment the backdrop is light.
 
 | File | Size | For |
@@ -82,14 +82,33 @@ disappears the moment the backdrop is light.
 
 ### Colours
 
-Taken from the website's custom properties, so the icon and the page it sits on
-cannot drift apart. `render-brand-assets.ts` re-exports them as `PALETTE`.
+The website's own `:root` custom properties are the source. The three the icon
+uses are re-exported by `render-brand-assets.ts` as `PALETTE`, and
+`brand-mark.test.ts` reads them back out of `docs/index.html` and fails if the
+two disagree — so changing the site's palette without re-running `make
+brand-assets` is now a test failure rather than a green favicon above a brown
+page, which is exactly what happened the first time.
 
 | Token | Hex | Role |
 |---|---|---|
-| forest | `#1F382D` | Badge ground, dark sections |
-| paper | `#F0EADC` | The mark on the badge, page background |
-| ember | `#DB542F` | The mace's ball, links, accents |
+| pit | `#16100B` | Page ground, badge ground |
+| chalk | `#E8DCC8` | Body text, the mark on the badge |
+| brass | `#C08A3E` | The mace's ball, links, rules, accents |
+| lamp | `#E8B45F` | Brass highlight, hover, the accented beat |
+| ash | `#9A8B78` | Secondary text |
+| pit-raised | `#1F1710` | Panels sitting above the ground |
+
+Only `pit`, `chalk` and `brass` reach the icon; the rest are the site's alone.
+
+### The one asset that is not generated
+
+`docs/brand/og-image.jpg` is a crop of a hand-made piece (`hero-v0.4.0.png`) —
+the mark in white on black with a lit arc behind it. Its arc is ember-orange
+rather than brass, so it does not match the palette above, and it is a JPEG the
+generator cannot produce. It is kept anyway: it is the best single image the
+project has, its near-black ground still reads correctly, and a social card is
+seen on its own rather than beside the site. Replace it with something better
+rather than with something merely consistent.
 
 ### Known gap
 
