@@ -16,10 +16,12 @@ CI runs exactly this: `.github/workflows/e2e-linux.yml`, on pushes to
 docker build -t mace-clubs-e2e-linux:local -f tools/e2e/linux/Dockerfile .
 
 docker run --rm --entrypoint bash \
-  -v "$HOME/Library/Application Support/Garmin/ConnectIQ/Fonts:/root/.Garmin/ConnectIQ/Fonts:ro" \
   -v "$(pwd):/workspace" -w /workspace \
   mace-clubs-e2e-linux:local /workspace/tools/e2e/linux/run-suite.sh
 ```
+
+No SDK install and no Garmin account are needed: the base image carries the
+device files and, since v2.10.0, the device fonts.
 
 Two gotchas worth knowing:
 
@@ -30,25 +32,19 @@ Two gotchas worth knowing:
   as an empty *directory* inside the container. Keep scripts inside the
   repo mount.
 
-(On a Linux host the fonts are usually already at
-`~/.Garmin/ConnectIQ/Fonts`, so no mount is needed.)
-
 ## Fonts
 
-The image deliberately contains **no Garmin SDK content of its own**.
-Garmin's Connect IQ SDK EULA forbids redistributing the SDK in whole or in
-part, and device fonts - needed for any on-screen text, and therefore for
-OCR - aren't in the base image at all. Locally you mount your own licensed
-copy read-only (above).
+Device fonts are needed for any on-screen text, and therefore for OCR. They
+now ship in the base image (1378 files at `/root/.Garmin/ConnectIQ/Fonts`,
+since v2.10.0), so nothing here mounts or fetches them.
 
-In CI they're fetched at job time through Garmin's own authenticated font
-API via [connect-iq-sdk-manager-cli](https://github.com/lindell/connect-iq-sdk-manager-cli),
-a community CLI that speaks Garmin's real SSO flow headlessly, using the
-repo's `GARMIN_USERNAME`/`GARMIN_PASSWORD` secrets (54 files for this
-device, a few seconds). They're cached via `actions/cache` keyed on device
-plus CLI version, so credentials are exercised once per cache key rather
-than every run, and they only ever touch the runner's ephemeral disk -
-never an image, the repo, or a registry.
+Because they do, **fork PRs run the full UI suite** - they were skipped
+before, when the fonts needed a credential the fork could not have.
+
+Worth knowing that bundling Garmin content is the image publisher's call, not
+this repo's: the SDK's licence forbids redistributing it, so this image
+deliberately carried no fonts of its own until upstream added them. Nothing
+here redistributes anything, but the judgement now sits with the base image.
 
 An earlier alternative - bundling an open-source bitmap font as a
 substitute - is dead-ended by an upstream bug: loading any custom
@@ -65,9 +61,8 @@ push (root-caused with a core dump on branch
 MACE_E2E_DEVICE=venu3 bash tools/e2e/linux/run-suite.sh
 ```
 
-The device's own SDK files must be present under
+The device's own SDK files have to be present under
 `$HOME/.Garmin/ConnectIQ/Devices/<id>/` - `run-suite.sh` compiles for that
 device and the driver reads its screenshot crop, MENU hotspot and skin size
-out of its `simulator.json`. In CI both the fonts and the device files come
-from the same `connect-iq-sdk-manager device download --include-fonts` call
-and are cached per device.
+out of its `simulator.json`. The base image carries 173 of them, so any
+device the SDK has a skin for works without extra setup.
