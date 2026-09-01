@@ -38,21 +38,13 @@ Device fonts are needed for any on-screen text, and therefore for OCR. They
 now ship in the base image (1378 files at `/root/.Garmin/ConnectIQ/Fonts`,
 since v2.10.0), so nothing here mounts or fetches them.
 
-It used to be otherwise, and the history is worth keeping. This image
-carried no fonts because Garmin's SDK EULA forbids redistributing the SDK in
-whole or in part; locally you mounted a licensed copy, and CI fetched them
-per job through Garmin's authenticated API via
-[connect-iq-sdk-manager-cli](https://github.com/lindell/connect-iq-sdk-manager-cli)
-using `GARMIN_USERNAME`/`GARMIN_PASSWORD` secrets. Upstream bundled them
-after this project reported that the simulator renders nothing without them
-(matco/connectiq-tester, fixed in 3aaae84 / v2.10.0).
+Because they do, **fork PRs run the full UI suite** - they were skipped
+before, when the fonts needed a credential the fork could not have.
 
-Two consequences worth naming. CI no longer holds Garmin credentials at all,
-and **fork PRs now run the full UI suite** - they were skipped before purely
-because GitHub withholds secrets from them. And the licensing judgement moved
-upstream: bundling Garmin content is the image publisher's call, and this repo
-consumes the result rather than making it. If that ever needs reversing, the
-mount-and-fetch approach is in this file's history.
+Worth knowing that bundling Garmin content is the image publisher's call, not
+this repo's: the SDK's licence forbids redistributing it, so this image
+deliberately carried no fonts of its own until upstream added them. Nothing
+here redistributes anything, but the judgement now sits with the base image.
 
 An earlier alternative - bundling an open-source bitmap font as a
 substitute - is dead-ended by an upstream bug: loading any custom
@@ -69,9 +61,8 @@ push (root-caused with a core dump on branch
 MACE_E2E_DEVICE=venu3 bash tools/e2e/linux/run-suite.sh
 ```
 
-The device's own SDK files must be present under
+The device's own SDK files have to be present under
 `$HOME/.Garmin/ConnectIQ/Devices/<id>/` - `run-suite.sh` compiles for that
 device and the driver reads its screenshot crop, MENU hotspot and skin size
-out of its `simulator.json`. In CI both the fonts and the device files come
-from the same `connect-iq-sdk-manager device download --include-fonts` call
-and are cached per device.
+out of its `simulator.json`. The base image carries 173 of them, so any
+device the SDK has a skin for works without extra setup.

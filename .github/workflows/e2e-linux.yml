@@ -5,13 +5,11 @@ name: E2E UI tests (Linux)
 # through platform-linux.ts's Xvfb/xdotool/ImageMagick/Tesseract backend.
 #
 # Device fonts ship in the base image as of ghcr.io/matco/connectiq-tester
-# v2.10.0, so this job needs no Garmin credentials at all. It previously
-# fetched them per job through Garmin's authenticated API with
-# GARMIN_USERNAME / GARMIN_PASSWORD; upstream bundled them after this
-# project reported that the simulator draws nothing without them
-# (matco/connectiq-tester, fixed in 3aaae84). The base image is pinned
-# rather than tracking :latest, because a change of this size arriving
-# unannounced is exactly what a floating tag invites.
+# v2.10.0, without which the simulator draws nothing and OCR has nothing to
+# read. This job therefore needs no Garmin account and no secrets, which is
+# also why fork PRs run it. The image is pinned rather than tracking :latest:
+# the fonts arriving was a welcome surprise, but a surprise, and a green run
+# should say which image it was green on.
 #
 # The suite fans out across screen sizes. The driver reads each device's
 # screenshot crop, MENU hotspot and window size from its own simulator.json,
