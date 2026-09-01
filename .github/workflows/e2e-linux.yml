@@ -4,11 +4,14 @@ name: E2E UI tests (Linux)
 # GitHub-hosted runner - the same test files the macOS driver runs locally,
 # through platform-linux.ts's Xvfb/xdotool/ImageMagick/Tesseract backend.
 #
-# Device fonts are fetched at job time through Garmin's own authenticated
-# API via connect-iq-sdk-manager-cli, using this repo's GARMIN_USERNAME /
-# GARMIN_PASSWORD secrets - nothing proprietary lives in an image, the repo,
-# or a registry, and the fonts only ever touch the runner's ephemeral disk.
-# They're cached, so credentials are exercised once per cache key.
+# Device fonts ship in the base image as of ghcr.io/matco/connectiq-tester
+# v2.10.0, so this job needs no Garmin credentials at all. It previously
+# fetched them per job through Garmin's authenticated API with
+# GARMIN_USERNAME / GARMIN_PASSWORD; upstream bundled them after this
+# project reported that the simulator draws nothing without them
+# (matco/connectiq-tester, fixed in 3aaae84). The base image is pinned
+# rather than tracking :latest, because a change of this size arriving
+# unannounced is exactly what a floating tag invites.
 #
 # The suite fans out across screen sizes. The driver reads each device's
 # screenshot crop, MENU hotspot and window size from its own simulator.json,
@@ -17,10 +20,11 @@ name: E2E UI tests (Linux)
 # screen the footer labels used to overlap into "setrndshr" and the headline
 # number overdrew its own caption, both invisible at 176px.
 #
-# Runs on PRs from branches in this repo, on main, on release tags, and on
-# demand. Only *fork* PRs are excluded (the `if` below): GitHub withholds
-# secrets from them, so the font fetch can't work - they skip cleanly
-# rather than failing on a missing credential.
+# Runs on every PR - forks included. Fork PRs used to be skipped because
+# GitHub withholds secrets from them and the font fetch could not work;
+# with the fonts in the image there is no secret left to withhold, so a
+# contributed calibration recording or layout fix now gets the same UI
+# coverage as a branch in this repo.
 #
 # The release-tag run is informational, not a gate: release.yml triggers on
 # the same tag and runs alongside this, so a failure here won't stop a
@@ -65,11 +69,6 @@ on:
 jobs:
   e2e:
     name: E2E UI suite (${{ matrix.device }})
-    # Fork PRs get no secrets, so the font fetch would fail - skip instead.
-    # Always true for pushes and workflow_dispatch (no pull_request payload).
-    if: >-
-      github.event_name != 'pull_request' ||
-      github.event.pull_request.head.repo.full_name == github.repository
     runs-on: ubuntu-latest
     timeout-minutes: 30
     strategy:
@@ -83,7 +82,7 @@ jobs:
           - fenix7
           - venu3
     container:
-      image: ghcr.io/matco/connectiq-tester:latest
+      image: ghcr.io/matco/connectiq-tester:v2.10.0
     defaults:
       run:
         # The container's /bin/sh is dash; these scripts need bash.
@@ -103,41 +102,6 @@ jobs:
 
       - name: Install driver dependencies
         run: npm ci --prefix tools
-
-      # Both the fonts and the device's own skin/metadata come from the same
-      # download, and both are needed: the fonts to draw anything at all, the
-      # simulator.json for the driver's crop geometry.
-      - name: Cache device files
-        id: fonts-cache
-        uses: actions/cache@v4
-        with:
-          path: |
-            /root/.Garmin/ConnectIQ/Fonts
-            /root/.Garmin/ConnectIQ/Devices
-          key: ciq-device-${{ matrix.device }}-cli-v0.8.4
-
-      - name: Fetch device files via Garmin's authenticated API
-        if: steps.fonts-cache.outputs.cache-hit != 'true'
-        env:
-          GARMIN_USERNAME: ${{ secrets.GARMIN_USERNAME }}
-          GARMIN_PASSWORD: ${{ secrets.GARMIN_PASSWORD }}
-        run: |
-          test -n "$GARMIN_USERNAME" || { echo "::error::GARMIN_USERNAME secret is not set"; exit 1; }
-          test -n "$GARMIN_PASSWORD" || { echo "::error::GARMIN_PASSWORD secret is not set"; exit 1; }
-          curl -sL "https://github.com/lindell/connect-iq-sdk-manager-cli/releases/download/v0.8.4/connect-iq-sdk-manager-cli_0.8.4_Linux_x86_64.tar.gz" \
-            | tar xz -C /tmp connect-iq-sdk-manager
-          export HOME=/root
-          # Hash of the agreement at developer.garmin.com/downloads/connect-iq/sdks/agreement.html,
-          # read and accepted by the repo owner (also previously accepted via
-          # the official SDK Manager). Re-read and bump when the CLI reports
-          # a hash mismatch.
-          /tmp/connect-iq-sdk-manager agreement accept -H CC737BBBA104D7740D5BBCF27D0F6382
-          /tmp/connect-iq-sdk-manager login
-          /tmp/connect-iq-sdk-manager device download -d "${{ matrix.device }}" --include-fonts
-          echo "fonts downloaded: $(find /root/.Garmin/ConnectIQ/Fonts -type f | wc -l) files"
-          # The simulator only needs Fonts/; keep the session token out of
-          # the cached path.
-          rm -f /root/.Garmin/ConnectIQ/token.json
 
       - name: Run the e2e UI suite
         env:

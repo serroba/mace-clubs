@@ -1,16 +1,19 @@
 # Image for running the Garmin BDD e2e suite headlessly on
 # Linux (see tools/e2e/platform-linux.ts and README.md in this directory).
 #
-# Deliberately contains NO Garmin SDK content of its own - the base image
-# already bundles monkeyc/monkeydo/simulator/device files (a pre-existing
-# choice from this repo's CI, not introduced here), and this layer only
-# adds open-source packages on top of it. Garmin's Connect IQ SDK EULA
-# ("No Other Permitted Uses") forbids redistributing the SDK, in whole or
-# in part - so device FONTS (needed for any real on-screen text, which is
-# what makes OCR possible) are deliberately NOT copied into this image.
-# Mount them read-only at `docker run` time from a locally-licensed SDK
-# install instead - see README.md in this directory.
-FROM ghcr.io/matco/connectiq-tester:latest
+# Contains no Garmin SDK content of its own: the base image supplies
+# monkeyc/monkeydo/simulator, the device files, and - since v2.10.0 - the
+# device FONTS, without which the simulator draws nothing and OCR has
+# nothing to read. This layer only adds open-source packages on top.
+#
+# The fonts arriving upstream is what removed the need to mount a locally
+# licensed copy, and with it the need for Garmin credentials in CI. That is
+# matco's call to make as the image's publisher; this repo only consumes it.
+#
+# Pinned rather than :latest. The font change landed in a floating tag and
+# would have reached CI unannounced, which is a good argument either way but
+# a better one for knowing which image a green run was green on.
+FROM ghcr.io/matco/connectiq-tester:v2.10.0
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
         xdotool \
