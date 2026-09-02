@@ -9,6 +9,10 @@ env:
   # the bool-comparison and local naming-convention rules, and is the first
   # revision where the toolchain is the single rafiki binary.
   MONKEY_C_RS_REV: 93d004f1f26af98c96dc36be10ab841f035f0dbb
+  # The floor the Monkey C function-coverage badge quotes, enforced below.
+  # rafiki has no --fail-under of its own, so the gate lives here; the badge
+  # would otherwise promise something nothing checks. Currently at 75%.
+  MONKEY_C_COVERAGE_FLOOR: "70"
 
 # Supersede an in-flight run when the same ref is pushed again. Without this
 # a force-push leaves the old run grinding away on a commit that no longer
@@ -270,7 +274,31 @@ jobs:
       # a broken instrumentation pipeline, which is what this job is here for.
       - name: Report coverage
         run: |
-          "$HOME/.cargo/bin/rafiki" coverage report coverage-run.log
+          set -o pipefail
+          "$HOME/.cargo/bin/rafiki" coverage report coverage-run.log | tee coverage-mc.log
+          # "TOTAL 325/432 functions executed (75%)"
+          pct=$(grep -oE 'TOTAL [0-9]+/[0-9]+ functions executed \([0-9]+%\)' coverage-mc.log \
+                | grep -oE '[0-9]+%' | tr -d '%')
+          # Fail loudly if the format moved, rather than skipping the gate and
+          # reporting nothing - a silent pass is the failure mode worth fearing.
+          test -n "$pct" || { echo "::error::could not read a coverage percentage from rafiki"; exit 1; }
+          echo "MONKEY_C_COVERAGE=$pct" >> "$GITHUB_ENV"
+          if [ "$pct" -lt "$MONKEY_C_COVERAGE_FLOOR" ]; then
+            echo "::error::Monkey C function coverage ${pct}% is below the ${MONKEY_C_COVERAGE_FLOOR}% floor"
+            exit 1
+          fi
+          echo "Monkey C function coverage ${pct}% (floor ${MONKEY_C_COVERAGE_FLOOR}%)"
+
+      - name: Quality report
+        if: always()
+        run: |
+          {
+            echo "## Quality signals"
+            echo
+            node --experimental-strip-types --disable-warning=ExperimentalWarning \
+              tools/quality-report.ts \
+              ${MONKEY_C_COVERAGE:+--monkey-c-coverage "${MONKEY_C_COVERAGE}% (floor ${MONKEY_C_COVERAGE_FLOOR}%)"}
+          } >> "$GITHUB_STEP_SUMMARY"
 
   synthetic-fit:
     name: Synthetic FIT and visual contract

@@ -9,6 +9,7 @@ import {
     coverageFloor,
     manifestDeviceCount,
     matrixDevices,
+    monkeyCFloor,
     renderMarkdown,
 } from "./quality-report.ts";
 
@@ -28,6 +29,8 @@ test("device and matrix counts come out of the real files", () => {
     assert.ok(matrixDevices(ci, "name: Unit tests").length >= 5, "unit matrix should be found");
     assert.ok(matrixDevices(e2e, "matrix:").length >= 3, "e2e matrix should be found");
     assert.equal(coverageFloor(ci), 95);
+    assert.ok((monkeyCFloor(ci) ?? 0) > 0, "the Monkey C floor should be set in ci.yml");
+    assert.equal(monkeyCFloor("nothing here"), null);
 });
 
 // The badges are the reason this file exists. A README number that no longer
@@ -52,6 +55,13 @@ test("every badge in the README states something still true", () => {
         Number(floor),
         coverageFloor(ci),
         "the coverage badge quotes a floor CI does not enforce",
+    );
+
+    const monkeyC = /Monkey_C_function_coverage-%E2%89%A5(\d+)%25/.exec(readme)?.[1];
+    assert.equal(
+        Number(monkeyC),
+        monkeyCFloor(ci),
+        "the Monkey C coverage badge quotes a floor ci.yml does not enforce",
     );
 
     const rules = /badge\/lint_rules-(\d+)-/.exec(readme)?.[1];

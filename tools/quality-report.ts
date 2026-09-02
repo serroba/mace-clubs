@@ -70,6 +70,16 @@ export function coverageFloor(workflow: string): number | null {
     return match?.[1] === undefined ? null : Number(match[1]);
 }
 
+/**
+ * The Monkey C function-coverage floor. rafiki has no --fail-under, so the
+ * gate is a step in ci.yml reading this env value - which means the badge has
+ * something real to quote.
+ */
+export function monkeyCFloor(workflow: string): number | null {
+    const match = /MONKEY_C_COVERAGE_FLOOR:\s*"?(\d+)"?/.exec(workflow);
+    return match?.[1] === undefined ? null : Number(match[1]);
+}
+
 export function collectSignals(options: {
     manifest: string;
     ci: string;

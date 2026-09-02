@@ -1,13 +1,3 @@
 project.manifest = manifest.xml
-base.sourcePath = source
-# The Linux simulator cannot draw device fonts offscreen; CI compiles the
-# no-op render(). Local test builds use monkey.local.jungle instead.
-# swingTuning is SwingTuningSearch.mc's grid search: too slow for routine
-# runs, opt-in only via `make tuning-search` (monkey.tuning.jungle).
+base.sourcePath = bin/coverage
 base.excludeAnnotations = offscreenRender;swingTuning
-# fenix5 (API 3.1, our oldest supported level) used to be excluded from
-# liveSessionSmoke because Activity.SPORT_TRAINING (@since 3.2.0) threw at
-# runtime there. WorkoutSession.trainingSport() now falls back to the
-# ActivityRecording equivalents, so fenix5 runs the same live-session smoke
-# test as every other device - it is the only one in the CI matrix that
-# covers the 3.1 fallback path at all.

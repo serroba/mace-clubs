@@ -4,12 +4,13 @@
 [![E2E UI tests](https://github.com/serroba/mace-clubs/actions/workflows/e2e-linux.yml/badge.svg)](https://github.com/serroba/mace-clubs/actions/workflows/e2e-linux.yml)
 [![Devices](https://img.shields.io/badge/devices-120-C08A3E)](manifest.xml)
 [![TypeScript coverage](https://img.shields.io/badge/TypeScript_line_coverage-%E2%89%A595%25-C08A3E)](.github/workflows/ci.yml)
+[![Monkey C coverage](https://img.shields.io/badge/Monkey_C_function_coverage-%E2%89%A570%25-C08A3E)](.github/workflows/ci.yml)
 [![Lint rules](https://img.shields.io/badge/lint_rules-11-C08A3E)](https://github.com/bombsimon/monkey-c-rs)
 [![Release](https://img.shields.io/github/v/release/serroba/mace-clubs?color=C08A3E)](https://github.com/serroba/mace-clubs/releases)
 [![License](https://img.shields.io/github/license/serroba/mace-clubs?color=C08A3E)](LICENSE)
 
 Every number above is either reported by GitHub or asserted by a test: the
-device count against `manifest.xml`, the coverage floor against the value CI
+device count against `manifest.xml`, each coverage floor against the value CI
 actually fails below, the rule count against the linter's own list. A badge
 that can drift out of date is not worth having, so
 [`quality-report.test.ts`](tools/quality-report.test.ts) fails when one does.
