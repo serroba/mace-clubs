@@ -61,8 +61,8 @@ test("linux sdk manager config is used", () => {
 
 test("cargo bin is used for rust tools", () => {
     withHome((home) => {
-        const expected = executable(join(home, ".cargo/bin/monkey-c-linter"));
-        assert.equal(resolve("monkey-c-linter", home, ""), expected);
+        const expected = executable(join(home, ".cargo/bin/rafiki"));
+        assert.equal(resolve("rafiki", home, ""), expected);
     });
 });
 

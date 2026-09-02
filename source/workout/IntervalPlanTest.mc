@@ -208,7 +208,12 @@ function testChallengePresetsAreSingleRestlessIntervals(logger as Test.Logger) a
     var found = 0;
     for (var i = 0; i < Presets.LIST.size(); i++) {
         var p = Presets.LIST[i] as Dictionary;
-        if (p[:challenge] != true) {
+        // Most presets omit :challenge entirely, so this lookup is null far
+        // more often than it is a Boolean. Narrow before testing it, the way
+        // WorkoutSession does - `!p[:challenge]` would be the obvious
+        // shortening and is wrong, because the operand is not a Boolean.
+        var challenge = p[:challenge];
+        if (!(challenge instanceof Boolean) || !challenge) {
             continue;
         }
         found++;

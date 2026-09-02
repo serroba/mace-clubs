@@ -8,7 +8,9 @@ import { delimiter, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
 const CONNECT_IQ_TOOLS = new Set(["connectiq", "monkeyc", "monkeydo", "monkeygraph"]);
-const RUST_TOOLS = new Set(["monkey-c-formatter", "monkey-c-linter", "rafiki"]);
+// One binary since bombsimon/monkey-c-rs#8; monkey-c-formatter and
+// monkey-c-linter were folded into rafiki and no longer build as binaries.
+const RUST_TOOLS = new Set(["rafiki"]);
 
 function isExecutableFile(candidate: string): boolean {
     try {
