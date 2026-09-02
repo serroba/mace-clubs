@@ -366,6 +366,44 @@
   .combo span { color: var(--brass); font-size: .72rem; }
   .combo .switch { color: var(--brass); }
 
+  /*
+    Someone swinging a mace, in the section that explains the movements.
+    A 360: the head of the mace describes a full circle around the body, one
+    revolution per --beat, which is the tempo the metronome calls.
+
+    The whole trick is the counter-movement. A rigid body with a rotating
+    stick attached reads as a machine; what makes it read as a person is that
+    the torso sways against the mace and the knees take the load twice per
+    revolution, at the two points where a real swing is heaviest - overhead
+    and through the bottom. Nothing here is a sprite or a frame sequence: it
+    is four rotations and one translate on grouped SVG paths.
+  */
+  .swinger { width: 100%; max-width: 210px; height: auto; margin-top: 34px; }
+  .swinger .limb { fill: none; stroke: var(--ash); stroke-width: 7; stroke-linecap: round; }
+  .swinger .trunk { fill: var(--ash); }
+  .swinger .arm { fill: none; stroke: var(--chalk); stroke-width: 5; stroke-linecap: round; }
+  .swinger .shaft { fill: none; stroke: var(--chalk); stroke-width: 4.5; stroke-linecap: round; }
+  .swinger .head { fill: var(--brass); }
+
+  /* The mace, pivoting about the grip just in front of the chest. */
+  .swinger .mace { animation: mace-360 var(--beat) cubic-bezier(.42, 0, .58, 1) infinite; }
+  @keyframes mace-360 {
+    to { transform: rotate(360deg); }
+  }
+  /* Torso leans away from where the weight is - opposite phase to the mace. */
+  .swinger .lean { animation: lean var(--beat) ease-in-out infinite; }
+  @keyframes lean {
+    0%, 100% { transform: rotate(-5deg); }
+    50%      { transform: rotate(5deg); }
+  }
+  /* Knees absorb twice per revolution: once overhead, once through the
+     bottom. Half the period, which is what makes the rhythm feel loaded. */
+  .swinger .load { animation: load calc(var(--beat) / 2) ease-in-out infinite; }
+  @keyframes load {
+    0%, 100% { transform: translateY(0); }
+    50%      { transform: translateY(3px); }
+  }
+
   /* --- Features ---------------------------------------------------------- */
   .section-head { max-width: 52em; margin-bottom: 56px; }
   .section-head p { margin: 18px 0 0; color: var(--ash); }
@@ -499,6 +537,15 @@
     html { scroll-behavior: auto; }
     /* Hold the ring lit rather than beating. */
     .beat-ring { animation: none; opacity: .6; }
+    /* The figure exists in order to move; standing still it reads as a
+       diagram, which is the right thing to show someone who asked not to be
+       moved. Each selector is spelled out rather than using `.swinger *`,
+       because that is one class less specific than `.swinger .mace` and a
+       media query does not add specificity - it lost, silently, and the
+       animation kept running. */
+    .swinger .mace,
+    .swinger .lean,
+    .swinger .load { animation: none; }
     .button, .resource .arrow, .resource strong { transition: none; }
   }
 </style>
@@ -554,6 +601,39 @@
       <div>
         <p class="eyebrow">Why it is built this way</p>
         <h2>A timer doesn't know what a mill is</h2>
+        <svg class="swinger" viewBox="0 0 240 250" role="img"
+             aria-label="A figure swinging a steel mace in a 360: the mace head travels a full circle around the body once per beat while the torso leans against the weight and the knees absorb it.">
+          <!-- Ground, so the knee bob reads against something fixed. -->
+          <line x1="62" y1="242" x2="146" y2="242" stroke-width="2" stroke="rgba(154,139,120,.35)"/>
+          <g class="load">
+            <!-- Planted wide, knees soft. -->
+            <path class="limb" d="M104 152 L83 196 L78 238"/>
+            <path class="limb" d="M104 152 L125 196 L130 238"/>
+            <g class="lean" style="transform-origin: 104px 150px; transform-box: view-box;">
+              <path class="trunk" d="M92 78 L116 78 L112 152 L96 152 Z"/>
+              <circle class="trunk" cx="104" cy="60" r="15"/>
+              <!-- Arms reach forward to the grip, which is where a mace is
+                   actually held: out in front of the chest, the implement
+                   circling around the hands. Chalk and narrower than the
+                   trunk, because at this scale an arm of the same weight and
+                   colour disappears into the torso and leaves the mace
+                   floating unattached. -->
+              <path class="arm" d="M101 88 L117 104 L124 114"/>
+              <path class="arm" d="M107 90 L120 106 L124 114"/>
+              <!-- The mace, drawn outward from the grip so it rotates about
+                   0,0 of this group. The viewBox is 240 wide rather than 200
+                   so the full arc clears it: the head reaches 103 from the
+                   grip, and at 200 it was being clipped at the right of the
+                   swing. -->
+              <g transform="translate(124 114)">
+                <g class="mace">
+                  <path class="shaft" d="M0 0 L0 -84"/>
+                  <circle class="head" cx="0" cy="-92" r="11"/>
+                </g>
+              </g>
+            </g>
+          </g>
+        </svg>
       </div>
       <div class="tradition-copy">
         <p>Any app can count down two minutes. What none of them know is that the bulava combo runs mill, reverse mill, bullwhip on one hand and then the other; that the gada challenge is five or ten minutes of unbroken swinging because that is how it has always been contested; or that a set on the left is owed a set on the right.</p>
