@@ -289,15 +289,20 @@ jobs:
           fi
           echo "Monkey C function coverage ${pct}% (floor ${MONKEY_C_COVERAGE_FLOOR}%)"
 
-      - name: Quality report
+      # Plain shell, not quality-report.ts: this job runs in the Connect IQ
+      # container, which ships no Node. Installing it to print one line would
+      # cost every run for nothing - the derived table comes from the
+      # TypeScript coverage job, which has Node already, and GitHub
+      # concatenates both jobs' summaries into the run's.
+      - name: Coverage summary
         if: always()
         run: |
           {
-            echo "## Quality signals"
+            echo "## Monkey C coverage"
             echo
-            node --experimental-strip-types --disable-warning=ExperimentalWarning \
-              tools/quality-report.ts \
-              ${MONKEY_C_COVERAGE:+--monkey-c-coverage "${MONKEY_C_COVERAGE}% (floor ${MONKEY_C_COVERAGE_FLOOR}%)"}
+            echo "| Signal | Value | Derived from |"
+            echo "|---|---|---|"
+            echo "| Monkey C function coverage | ${MONKEY_C_COVERAGE:-not measured}% (floor ${MONKEY_C_COVERAGE_FLOOR}%) | \`rafiki coverage\` |"
           } >> "$GITHUB_STEP_SUMMARY"
 
   synthetic-fit:
