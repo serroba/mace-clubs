@@ -14,7 +14,7 @@ RAFIKI ?= $(shell $(TOOL_RESOLVER) rafiki)
 JAVA_PATH := $(if $(findstring /,$(JAVA)),$(dir $(JAVA)):,)
 export PATH := $(JAVA_PATH)$(PATH)
 
-.PHONY: check pre-commit install-hooks doctor tools-check tool-resolver-test manifest-check xml fit-schema format format-check lint build test-build simulator-test tuning-search coverage clean brand-assets release-docs release-shots release-assets release-check
+.PHONY: quality check pre-commit install-hooks doctor tools-check tool-resolver-test manifest-check xml fit-schema format format-check lint build test-build simulator-test tuning-search coverage clean brand-assets release-docs release-shots release-assets release-check
 
 check: doctor tools-check xml fit-schema format-check lint build test-build
 
@@ -95,6 +95,13 @@ tuning-search: $(DEVELOPER_KEY) | $(BIN_DIR)
 # never swept into the build.
 coverage: $(DEVELOPER_KEY) | $(BIN_DIR)
 	"$(RAFIKI)" coverage test -d $(DEVICE) -y $(DEVELOPER_KEY) --start-simulator source
+
+# The project's quality signals as a markdown table - device counts, matrix
+# sizes, coverage, lint rules - every figure derived from the manifest and the
+# workflow files rather than restated. CI appends the same table to its job
+# summary. Coverage is only included when a run measured it.
+quality:
+	@$(NODE_TS) tools/quality-report.ts --lint-rules "$$('$(RAFIKI)' lint --list-rules | wc -l | tr -d ' ')"
 
 # Brand assets rendered from tools/brand-mark.ts: the SVG master, the store
 # icon, and the site's favicons. Does not touch the app's launcher icon -

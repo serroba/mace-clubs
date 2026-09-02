@@ -45,6 +45,10 @@ jobs:
         run: npm run lint --prefix tools
       - name: Test report generator with coverage
         run: |
+          # pipefail, or `| tee` swallows a coverage-gate failure and the
+          # step passes on tee's exit code instead. GitHub's default shell is
+          # `bash -e`, without it.
+          set -o pipefail
           node --experimental-strip-types --test --experimental-test-coverage \
             --test-coverage-include='tools/analyze-workout.ts' \
             --test-coverage-include='tools/report-fit.ts' \
@@ -53,7 +57,22 @@ jobs:
             --test-coverage-include='tools/fit-io.ts' \
             --test-coverage-lines=95 \
             tools/analyze-workout.test.ts tools/report-fit.test.ts \
-            tools/validate-workout.test.ts tools/workout-history.test.ts
+            tools/validate-workout.test.ts tools/workout-history.test.ts \
+            2>&1 | tee coverage-ts.log
+
+      # Quality signals into the job summary, so every run carries the numbers
+      # instead of leaving them to a README that rots.
+      - name: Quality report
+        if: always()
+        run: |
+          pct=$(grep -oE '^# all files *\| *[0-9.]+' coverage-ts.log | grep -oE '[0-9.]+$' || true)
+          {
+            echo "## Quality signals"
+            echo
+            node --experimental-strip-types --disable-warning=ExperimentalWarning \
+              tools/quality-report.ts \
+              ${pct:+--typescript-coverage "$pct%"}
+          } >> "$GITHUB_STEP_SUMMARY"
 
   lint:
     name: Lint XML resources
