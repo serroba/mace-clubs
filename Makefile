@@ -6,8 +6,10 @@ TOOL_RESOLVER := $(NODE_TS) tools/resolve-tool.ts
 JAVA ?= $(shell $(TOOL_RESOLVER) java)
 MONKEYC ?= $(shell $(TOOL_RESOLVER) monkeyc)
 MONKEYDO ?= $(shell $(TOOL_RESOLVER) monkeydo)
-FORMATTER ?= $(shell $(TOOL_RESOLVER) monkey-c-formatter)
-LINTER ?= $(shell $(TOOL_RESOLVER) monkey-c-linter)
+# rafiki is the whole monkey-c-rs toolchain in one binary - fmt, lint and
+# coverage - since bombsimon/monkey-c-rs#8. The separate monkey-c-formatter
+# and monkey-c-linter binaries no longer exist upstream; those crates are
+# libraries now, and `cargo install` of them fails.
 RAFIKI ?= $(shell $(TOOL_RESOLVER) rafiki)
 JAVA_PATH := $(if $(findstring /,$(JAVA)),$(dir $(JAVA)):,)
 export PATH := $(JAVA_PATH)$(PATH)
@@ -26,8 +28,7 @@ doctor:
 	@command -v node >/dev/null || { echo "node is not on PATH (the local tooling needs Node.js 22+)"; exit 1; }
 	@"$(JAVA)" -version >/dev/null 2>&1 || { echo "a working Java runtime was not found (or set JAVA=/path/to/java)"; exit 1; }
 	@command -v "$(MONKEYC)" >/dev/null || { echo "monkeyc is not on PATH (or set MONKEYC=/path/to/monkeyc)"; exit 1; }
-	@command -v "$(FORMATTER)" >/dev/null || { echo "monkey-c-formatter was not found (install it with cargo or set FORMATTER=/path/to/monkey-c-formatter)"; exit 1; }
-	@command -v "$(LINTER)" >/dev/null || { echo "monkey-c-linter was not found (install it with cargo or set LINTER=/path/to/monkey-c-linter)"; exit 1; }
+	@command -v "$(RAFIKI)" >/dev/null || { echo "rafiki was not found (cargo install --git https://github.com/bombsimon/monkey-c-rs rafiki, or set RAFIKI=/path/to/rafiki)"; exit 1; }
 	@command -v xmllint >/dev/null || { echo "xmllint is not on PATH"; exit 1; }
 
 # Typecheck, lint, and test every TypeScript tool. tools-check is the full
@@ -50,13 +51,13 @@ fit-schema:
 	bash tools/validate_fit_xml.sh
 
 format:
-	"$(FORMATTER)" source
+	"$(RAFIKI)" fmt source
 
 format-check:
-	"$(FORMATTER)" --check source
+	"$(RAFIKI)" fmt --check source
 
 lint:
-	"$(LINTER)" source
+	"$(RAFIKI)" lint source
 
 $(DEVELOPER_KEY):
 	openssl genrsa -out $(DEVELOPER_KEY).pem 4096
@@ -93,7 +94,6 @@ tuning-search: $(DEVELOPER_KEY) | $(BIN_DIR)
 # passed explicitly so stale instrumented copies under build/ or tmp/ are
 # never swept into the build.
 coverage: $(DEVELOPER_KEY) | $(BIN_DIR)
-	@command -v "$(RAFIKI)" >/dev/null || { echo "rafiki is not on PATH"; exit 1; }
 	"$(RAFIKI)" coverage test -d $(DEVICE) -y $(DEVELOPER_KEY) --start-simulator source
 
 # Brand assets rendered from tools/brand-mark.ts: the SVG master, the store

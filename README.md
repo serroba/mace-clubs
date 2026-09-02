@@ -167,7 +167,7 @@ layer is verified in the simulator, not by unit tests.
 The Makefile generates an ignored local developer key when `developer_key.der` is
 absent. It discovers a working Java runtime, finds `monkeyc` and `monkeydo` from
 `PATH` or Garmin SDK Manager's `current-sdk.cfg`, and finds the Rust formatter,
-linter, and `rafiki` in either `PATH` or `~/.cargo/bin`. This keeps `make check`
+and `rafiki` in either `PATH` or `~/.cargo/bin`. This keeps `make check`
 working in non-interactive shells that have not loaded your shell profile.
 Override `DEVICE`, `DEVELOPER_KEY`, `JAVA`, `MONKEYC`, `MONKEYDO`, `FORMATTER`,
 `LINTER`, or `RAFIKI` when needed.
@@ -207,14 +207,21 @@ workout remains the final check for live sensor behavior.
 
 ### Formatting and linting
 
-Source is formatted with [monkey-c-formatter and linted with monkey-c-linter](https://github.com/bombsimon/monkey-c-rs)
-(install with `cargo install --git https://github.com/bombsimon/monkey-c-rs monkey-c-formatter monkey-c-linter`).
-CI enforces both:
+Source is formatted and linted by [rafiki](https://github.com/bombsimon/monkey-c-rs),
+which is the whole monkey-c-rs toolchain in one binary:
 
 ```sh
-monkey-c-formatter source        # format in place
-monkey-c-linter --fix source     # lint with auto-fixes
+cargo install --git https://github.com/bombsimon/monkey-c-rs rafiki
+
+rafiki fmt source          # format in place
+rafiki lint source         # report violations
+rafiki lint --fix source   # apply the machine-applicable ones
 ```
+
+CI enforces `fmt --check` and `lint`, pinned to a revision in `ci.yml`.
+`--fix` is worth reading before trusting: `bool-comparison` will rewrite
+`x != true` to `!x`, which is wrong when `x` is a nullable dictionary lookup
+rather than a Boolean.
 
 ### Releases
 

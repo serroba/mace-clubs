@@ -64,8 +64,12 @@ jobs:
     name: Monkey C format & lint
     runs-on: ubuntu-latest
     env:
-      # bombsimon/monkey-c-rs revision; bump deliberately (no releases yet)
-      MONKEY_C_RS_REV: 3cbdbfccf24b1695559cb40136673e5b9ed81330
+      # bombsimon/monkey-c-rs revision; bump deliberately (no releases yet).
+      # 93d004f adds the bool-comparison and local naming-convention rules,
+      # and is the first revision where the toolchain is the single rafiki
+      # binary - monkey-c-formatter and monkey-c-linter are libraries now and
+      # cannot be cargo-installed at all.
+      MONKEY_C_RS_REV: 93d004f1f26af98c96dc36be10ab841f035f0dbb
     steps:
       - uses: actions/checkout@v6
       - name: Cache monkey-c tools
@@ -74,16 +78,15 @@ jobs:
         with:
           path: ~/.mc-tools
           key: monkey-c-rs-${{ env.MONKEY_C_RS_REV }}
-      - name: Install monkey-c formatter and linter
+      - name: Install the monkey-c toolchain
         if: steps.cache-tools.outputs.cache-hit != 'true'
         run: |
           cargo install --git https://github.com/bombsimon/monkey-c-rs \
-            --rev "$MONKEY_C_RS_REV" --locked --root ~/.mc-tools \
-            monkey-c-formatter monkey-c-linter
+            --rev "$MONKEY_C_RS_REV" --locked --root ~/.mc-tools rafiki
       - name: Check formatting
-        run: ~/.mc-tools/bin/monkey-c-formatter --check source
+        run: ~/.mc-tools/bin/rafiki fmt --check source
       - name: Lint
-        run: ~/.mc-tools/bin/monkey-c-linter source
+        run: ~/.mc-tools/bin/rafiki lint source
 
   garmin-resources:
     name: Validate Garmin resource contract
