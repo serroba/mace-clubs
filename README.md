@@ -158,19 +158,16 @@ fixture for the presentation contract; those artifacts are attached to each CI
 run as `synthetic-workout-visuals`.
 
 `make coverage` reports which functions the unit tests actually execute. It
-requires `monkey-c-coverage` on `PATH` (from the same monkey-c-rs project as
-the formatter and linter; until it is upstream, install with
-`cargo install --path <monkey-c-rs>/monkey-c-coverage`) and a running
-simulator. View and delegate code intentionally reports near zero — that
+needs the same `rafiki` as `make lint` and a running simulator. View and delegate code intentionally reports near zero — that
 layer is verified in the simulator, not by unit tests.
 
 The Makefile generates an ignored local developer key when `developer_key.der` is
 absent. It discovers a working Java runtime, finds `monkeyc` and `monkeydo` from
-`PATH` or Garmin SDK Manager's `current-sdk.cfg`, and finds the Rust formatter,
-and `rafiki` in either `PATH` or `~/.cargo/bin`. This keeps `make check`
+`PATH` or Garmin SDK Manager's `current-sdk.cfg`, and finds `rafiki` in either
+`PATH` or `~/.cargo/bin`. This keeps `make check`
 working in non-interactive shells that have not loaded your shell profile.
-Override `DEVICE`, `DEVELOPER_KEY`, `JAVA`, `MONKEYC`, `MONKEYDO`, `FORMATTER`,
-`LINTER`, or `RAFIKI` when needed.
+Override `DEVICE`, `DEVELOPER_KEY`, `JAVA`, `MONKEYC`, `MONKEYDO`, or
+`RAFIKI` when needed.
 
 ### Local workout report
 

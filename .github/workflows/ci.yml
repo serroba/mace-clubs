@@ -3,6 +3,13 @@ name: CI
 permissions:
   contents: read
 
+env:
+  # bombsimon/monkey-c-rs revision, shared by the lint and coverage jobs so
+  # they cannot drift apart; bump deliberately (no releases yet). 93d004f adds
+  # the bool-comparison and local naming-convention rules, and is the first
+  # revision where the toolchain is the single rafiki binary.
+  MONKEY_C_RS_REV: 93d004f1f26af98c96dc36be10ab841f035f0dbb
+
 # Supersede an in-flight run when the same ref is pushed again. Without this
 # a force-push leaves the old run grinding away on a commit that no longer
 # exists - observed here holding runner slots while its own replacement
@@ -63,13 +70,6 @@ jobs:
   mc-lint:
     name: Monkey C format & lint
     runs-on: ubuntu-latest
-    env:
-      # bombsimon/monkey-c-rs revision; bump deliberately (no releases yet).
-      # 93d004f adds the bool-comparison and local naming-convention rules,
-      # and is the first revision where the toolchain is the single rafiki
-      # binary - monkey-c-formatter and monkey-c-linter are libraries now and
-      # cannot be cargo-installed at all.
-      MONKEY_C_RS_REV: 93d004f1f26af98c96dc36be10ab841f035f0dbb
     steps:
       - uses: actions/checkout@v6
       - name: Cache monkey-c tools
@@ -92,7 +92,10 @@ jobs:
     name: Validate Garmin resource contract
     runs-on: ubuntu-latest
     container:
-      image: ghcr.io/matco/connectiq-tester:latest
+      # Pinned, not :latest - a floating tag is how v2.10.0's font and
+      # proprietary-file rework reached these jobs unannounced. Bump the
+      # three occurrences together.
+      image: ghcr.io/matco/connectiq-tester:v2.10.0
     steps:
       - uses: actions/checkout@v6
       - name: Validate Garmin resources and FIT presentation contract
@@ -126,7 +129,10 @@ jobs:
           - { shard: 7, label: 8 }
     container:
       # Same image the test job's action uses: monkeyc and device files included.
-      image: ghcr.io/matco/connectiq-tester:latest
+      # Pinned, not :latest - a floating tag is how v2.10.0's font and
+      # proprietary-file rework reached these jobs unannounced. Bump the
+      # three occurrences together.
+      image: ghcr.io/matco/connectiq-tester:v2.10.0
     env:
       SHARD: ${{ matrix.shard }}
       SHARD_COUNT: 8
@@ -192,13 +198,16 @@ jobs:
           device: ${{ matrix.device }}
 
   coverage:
-    name: Function coverage (Code Quality upload)
+    name: Function coverage
     runs-on: ubuntu-latest
     permissions:
       contents: read
       code-quality: write
     container:
-      image: ghcr.io/matco/connectiq-tester:latest
+      # Pinned, not :latest - a floating tag is how v2.10.0's font and
+      # proprietary-file rework reached these jobs unannounced. Bump the
+      # three occurrences together.
+      image: ghcr.io/matco/connectiq-tester:v2.10.0
     defaults:
       run:
         # The container's /bin/sh is dash; pipefail and tester.sh need bash.
@@ -207,16 +216,14 @@ jobs:
       - uses: actions/checkout@v6
 
       # Coverage merged upstream (bombsimon/monkey-c-rs#1) and lives in the
-      # unified rafiki binary since bombsimon/monkey-c-rs#8. The install
-      # still points at the monkey-c-rs fork because the Cobertura writer is
-      # a pending follow-up: upstream main plus that one commit. Once it
-      # lands this becomes the upstream repo at a pinned rev.
+      # unified rafiki binary since #8, so this installs the same upstream
+      # revision the lint job pins rather than a fork.
       - name: Install rafiki
         run: |
           apt-get update -qq && apt-get install -y -qq --no-install-recommends curl gcc libc6-dev
           curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y --profile minimal
-          "$HOME/.cargo/bin/cargo" install --quiet --git https://github.com/serroba/monkey-c-rs \
-            --branch feat/rafiki-coverage-cobertura rafiki
+          "$HOME/.cargo/bin/cargo" install --quiet --git https://github.com/bombsimon/monkey-c-rs \
+            --rev "$MONKEY_C_RS_REV" --locked rafiki
 
       # `source` is passed explicitly so stale instrumented copies under
       # build/ or tmp/ are never swept into the build. Test code is excluded
@@ -236,19 +243,15 @@ jobs:
           printf 'project.manifest = manifest.xml\nbase.sourcePath = bin/coverage\nbase.excludeAnnotations = offscreenRender;swingTuning\n' > monkey.jungle
           HOME=/root tester.sh instinct3solar45mm 2>&1 | tee coverage-run.log
 
+      # Printed, not uploaded. This used to also write Cobertura XML for
+      # actions/upload-code-coverage, which needed a forked rafiki to produce
+      # and fed a GitHub Code Quality integration that was never enabled -
+      # with fail-on-error off, so it stayed quiet about doing nothing. The
+      # per-function report in the log is the signal; the step still fails on
+      # a broken instrumentation pipeline, which is what this job is here for.
       - name: Report coverage
         run: |
-          "$HOME/.cargo/bin/rafiki" coverage report coverage-run.log --cobertura coverage.xml
-
-      # fail-on-error stays off until Code Quality is enabled in the repo
-      # settings; the report step above already fails on a broken pipeline.
-      - name: Upload to GitHub code coverage
-        uses: actions/upload-code-coverage@v1
-        with:
-          file: coverage.xml
-          language: "Monkey C"
-          label: code-coverage/monkey-c
-          fail-on-error: false
+          "$HOME/.cargo/bin/rafiki" coverage report coverage-run.log
 
   synthetic-fit:
     name: Synthetic FIT and visual contract
