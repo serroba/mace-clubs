@@ -9,6 +9,10 @@ env:
   # the bool-comparison and local naming-convention rules, and is the first
   # revision where the toolchain is the single rafiki binary.
   MONKEY_C_RS_REV: 93d004f1f26af98c96dc36be10ab841f035f0dbb
+  # The floor the Monkey C function-coverage badge quotes, enforced below.
+  # rafiki has no --fail-under of its own, so the gate lives here; the badge
+  # would otherwise promise something nothing checks. Currently at 75%.
+  MONKEY_C_COVERAGE_FLOOR: "70"
 
 # Supersede an in-flight run when the same ref is pushed again. Without this
 # a force-push leaves the old run grinding away on a commit that no longer
@@ -45,6 +49,10 @@ jobs:
         run: npm run lint --prefix tools
       - name: Test report generator with coverage
         run: |
+          # pipefail, or `| tee` swallows a coverage-gate failure and the
+          # step passes on tee's exit code instead. GitHub's default shell is
+          # `bash -e`, without it.
+          set -o pipefail
           node --experimental-strip-types --test --experimental-test-coverage \
             --test-coverage-include='tools/analyze-workout.ts' \
             --test-coverage-include='tools/report-fit.ts' \
@@ -53,7 +61,22 @@ jobs:
             --test-coverage-include='tools/fit-io.ts' \
             --test-coverage-lines=95 \
             tools/analyze-workout.test.ts tools/report-fit.test.ts \
-            tools/validate-workout.test.ts tools/workout-history.test.ts
+            tools/validate-workout.test.ts tools/workout-history.test.ts \
+            2>&1 | tee coverage-ts.log
+
+      # Quality signals into the job summary, so every run carries the numbers
+      # instead of leaving them to a README that rots.
+      - name: Quality report
+        if: always()
+        run: |
+          pct=$(grep -oE '^# all files *\| *[0-9.]+' coverage-ts.log | grep -oE '[0-9.]+$' || true)
+          {
+            echo "## Quality signals"
+            echo
+            node --experimental-strip-types --disable-warning=ExperimentalWarning \
+              tools/quality-report.ts \
+              ${pct:+--typescript-coverage "$pct%"}
+          } >> "$GITHUB_STEP_SUMMARY"
 
   lint:
     name: Lint XML resources
@@ -251,7 +274,36 @@ jobs:
       # a broken instrumentation pipeline, which is what this job is here for.
       - name: Report coverage
         run: |
-          "$HOME/.cargo/bin/rafiki" coverage report coverage-run.log
+          set -o pipefail
+          "$HOME/.cargo/bin/rafiki" coverage report coverage-run.log | tee coverage-mc.log
+          # "TOTAL 325/432 functions executed (75%)"
+          pct=$(grep -oE 'TOTAL [0-9]+/[0-9]+ functions executed \([0-9]+%\)' coverage-mc.log \
+                | grep -oE '[0-9]+%' | tr -d '%')
+          # Fail loudly if the format moved, rather than skipping the gate and
+          # reporting nothing - a silent pass is the failure mode worth fearing.
+          test -n "$pct" || { echo "::error::could not read a coverage percentage from rafiki"; exit 1; }
+          echo "MONKEY_C_COVERAGE=$pct" >> "$GITHUB_ENV"
+          if [ "$pct" -lt "$MONKEY_C_COVERAGE_FLOOR" ]; then
+            echo "::error::Monkey C function coverage ${pct}% is below the ${MONKEY_C_COVERAGE_FLOOR}% floor"
+            exit 1
+          fi
+          echo "Monkey C function coverage ${pct}% (floor ${MONKEY_C_COVERAGE_FLOOR}%)"
+
+      # Plain shell, not quality-report.ts: this job runs in the Connect IQ
+      # container, which ships no Node. Installing it to print one line would
+      # cost every run for nothing - the derived table comes from the
+      # TypeScript coverage job, which has Node already, and GitHub
+      # concatenates both jobs' summaries into the run's.
+      - name: Coverage summary
+        if: always()
+        run: |
+          {
+            echo "## Monkey C coverage"
+            echo
+            echo "| Signal | Value | Derived from |"
+            echo "|---|---|---|"
+            echo "| Monkey C function coverage | ${MONKEY_C_COVERAGE:-not measured}% (floor ${MONKEY_C_COVERAGE_FLOOR}%) | \`rafiki coverage\` |"
+          } >> "$GITHUB_STEP_SUMMARY"
 
   synthetic-fit:
     name: Synthetic FIT and visual contract

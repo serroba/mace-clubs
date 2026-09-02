@@ -20,3 +20,12 @@ source/motion/RecordedFixture*Tuning.mc
 # e2e screenshot-diff artifacts (see docs/e2e-testing.md) - baselines under
 # tools/e2e/baselines/ ARE committed, just not these failure-debugging diffs.
 tools/e2e/.diffs/
+
+# Coverage runs write these into the working tree. `rafiki coverage` also
+# rewrites monkey.jungle to point sourcePath at bin/coverage - harmless in
+# CI's throwaway checkout, but it clobbers the real file when run locally
+# against a bind-mounted repo. If a build suddenly cannot find
+# '$.MaceClubsApp', check monkey.jungle first.
+cov.log
+coverage-*.log
+bin/coverage/
