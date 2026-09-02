@@ -216,6 +216,42 @@
   }
 
   /*
+    A 360 - the mace's canonical movement, and the first thing its movement
+    picker offers. The head traces a full circle around the body, one
+    revolution per beat, which is the relationship the metronome actually
+    calls: you swing on the beat. So this rides the beat ring's own
+    circumference at the same --beat, and the two read as one mechanism
+    rather than as two animations competing for attention.
+
+    Eased rather than linear, because a swung mace is not constant-speed - it
+    is slowest overhead and fastest through the bottom of the arc. The curve
+    is symmetric, so it enters and leaves each revolution at the same velocity
+    and the loop has no visible seam.
+  */
+  .swing {
+    position: absolute;
+    width: min(392px, 84%);
+    aspect-ratio: 1;
+    pointer-events: none;
+    animation: swing var(--beat) cubic-bezier(.42, 0, .58, 1) infinite;
+  }
+  .swing::after {
+    content: "";
+    position: absolute;
+    top: -6px;
+    left: 50%;
+    width: 13px;
+    height: 13px;
+    margin-left: -6.5px;
+    border-radius: 50%;
+    background: var(--lamp);
+    box-shadow: 0 0 16px 2px rgba(232, 180, 95, .45);
+  }
+  @keyframes swing {
+    to { transform: rotate(360deg); }
+  }
+
+  /*
     The watch, drawn rather than photographed. Modelled on the Instinct 3 Solar
     the app is validated against: a chunky near-square case with a deep bezel,
     a hex screw at each corner, three buttons left and two right, and the
@@ -499,6 +535,9 @@
     html { scroll-behavior: auto; }
     /* Hold the ring lit rather than beating. */
     .beat-ring { animation: none; opacity: .6; }
+    /* The swing is nothing but motion - frozen it is a stray dot, so it
+       is removed rather than paused. */
+    .swing { display: none; }
     .button, .resource .arrow, .resource strong { transition: none; }
   }
 </style>
@@ -535,6 +574,7 @@
     <figure class="pit-stage">
       <div class="pit-edge" aria-hidden="true"></div>
       <div class="beat-ring" aria-hidden="true"></div>
+      <div class="swing" aria-hidden="true"></div>
       <div class="device device--hero">
         <div class="device__case">
           <img class="device__screen" width="176" height="176" loading="eager"
