@@ -139,12 +139,13 @@ Two consequences worth knowing:
 ## Running in CI
 
 The suite runs on **Linux**, headlessly, on GitHub-hosted runners -
-`.github/workflows/e2e-linux.yml` - as a matrix over four devices:
+`.github/workflows/e2e-linux.yml` - as a matrix over five devices:
 
 | Width | Device | Display | Input |
 | --- | --- | --- | --- |
 | 176 | `instinct3solar45mm` | semi-octagon MIP, 1bpp, subwindow | keys |
 | 176 | `instinct2` | semi-octagon MIP, **96KB app memory** | keys |
+| 240 | `fr945` | round MIP, 8bpp | keys |
 | 260 | `fenix7` | round MIP, 8bpp | touch with keys |
 | 454 | `venu3` | round AMOLED, 16bpp | touch, no UP/DOWN |
 
@@ -160,7 +161,7 @@ all.
 ### The widths still missing
 
 The store's device report puts the installed base across seven screen widths.
-The four above cover three of them, which leaves roughly 39% of installs
+The five above cover four of them, which leaves roughly 30% of installs
 rendering at a width nothing in CI draws. These are the devices that would
 close it - each the highest-usage watch in its band:
 
@@ -168,7 +169,6 @@ close it - each the highest-usage watch in its band:
 | --- | --- | --- |
 | 208 | `fr55` | truncates the picker's title (`Choose e-`) |
 | 218 | `vivoactive4s` | truncates the picker's title |
-| 240 | `fr945` | races the movement list; reads the title, not the rows |
 | 280 | `fenix8solar51mm` | OCR misreads the title on 280px MIP |
 | 390 | `vivoactive5` | not yet run |
 | 454 | `venu445mm` | not yet run - no MENU key at all |

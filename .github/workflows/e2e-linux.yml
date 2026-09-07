@@ -77,14 +77,14 @@ jobs:
         # guesswork: it puts the installed base across seven screen widths,
         # and this covers three of them.
         #
-        # It should cover all seven, and the six devices that would do it are
+        # It should cover all seven, and the devices that would do it are
         # named in docs/e2e-testing.md. They are staged rather than added in
         # one go because a device only earns a row here once it is green with
         # its baselines committed - fr55 and vivoactive4s truncate a system
         # menu title on a narrow screen, fenix8solar51mm reads badly under
-        # OCR, fr945 races the movement list. Each is a real finding and each
-        # needs its own fix; parking them in a red matrix would mean a suite
-        # nobody can read, which is how a UI suite stops being believed.
+        # OCR. Each is a real finding and each needs its own fix; parking
+        # them in a red matrix would mean a suite nobody can read, which is
+        # how a UI suite stops being believed.
         #
         # instinct2 is here for memory rather than geometry: same 176px
         # semi-octagon as the Instinct 3, but a 96KB app-memory ceiling
@@ -97,6 +97,7 @@ jobs:
         device:
           - instinct3solar45mm # 176 semi-octagon MIP, 1bpp, keys only
           - instinct2 # 176 semi-octagon MIP, 96KB - the memory floor
+          - fr945 # 240 round MIP, keys only
           - fenix7 # 260 round MIP, touch with keys
           - venu3 # 454 round AMOLED, touch, no UP/DOWN
     container:
