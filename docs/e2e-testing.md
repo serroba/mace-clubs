@@ -165,7 +165,7 @@ widths below:
 
 | Device | Screen | Status |
 | --- | --- | --- |
-| `instinctcrossover` | 176x176 | the equipment picker's title is not read at all, though its rows are - the same shape as the `fr55` and `vivoactive4s` findings below |
+| `instinctcrossover` | 176x176 | reaches the rest screen, where the OCR cannot read the big countdown or the `SELECT: work` label beneath it - the same large-glyph problem as `fr945` below, and it will be fixed with it |
 
 That is not a crash. The watch starts, runs a workout and records it; what
 is missing is UI coverage, which is why it is staged rather than blocking.
@@ -217,7 +217,7 @@ the highest-usage watch in its band:
 | --- | --- | --- |
 | 208 | `fr55` | truncates the picker's title (`Choose e-`) |
 | 218 | `vivoactive4s` | truncates the picker's title |
-| 240 | `fr945` | OCR drops glyphs that are already large - see PR #173 |
+| 240 | `fr945` | OCR drops glyphs that are already large - see PR #173. `instinctcrossover` above waits on the same fix |
 | 280 | `fenix8solar51mm` | OCR misreads the title on 280px MIP |
 | 390 | `vivoactive5` | not yet run |
 | 454 | `venu445mm` | not yet run - no MENU key at all |
