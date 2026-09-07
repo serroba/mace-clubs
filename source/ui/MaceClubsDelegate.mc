@@ -177,7 +177,7 @@ class MaceClubsDelegate extends WatchUi.BehaviorDelegate {
 
     private function showHomeConfirmation() as Void {
         WatchUi.pushView(
-            new WatchUi.Confirmation("Discard & go home?"),
+            new WatchUi.Confirmation(RestOptionsMenu.discardPrompt()),
             new DiscardConfirmationDelegate(_view),
             WatchUi.SLIDE_IMMEDIATE
         );

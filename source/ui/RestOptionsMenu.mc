@@ -56,6 +56,21 @@ module RestOptionsMenu {
     function discardLabel() as String {
         return "Discard";
     }
+
+    // The confirmation the discard row and a mid-workout MENU both raise.
+    // Shortened on the same watches and for the same reason as the rows
+    // above: "Discard & go home?" is wider than a 163px Instinct 2S, and
+    // the Instinct Crossover loses its tail too - both were read back as
+    // "Discard & go" with the question mark and the rest gone.
+    (:menuLabelPrefix)
+    function discardPrompt() as String {
+        return "Discard & go home?";
+    }
+
+    (:noMenuLabelPrefix)
+    function discardPrompt() as String {
+        return "Discard?";
+    }
 }
 
 class RestOptionsDelegate extends WatchUi.Menu2InputDelegate {
@@ -82,7 +97,7 @@ class RestOptionsDelegate extends WatchUi.Menu2InputDelegate {
         } else {
             WatchUi.popView(WatchUi.SLIDE_IMMEDIATE);
             WatchUi.pushView(
-                new WatchUi.Confirmation("Discard & go home?"),
+                new WatchUi.Confirmation(RestOptionsMenu.discardPrompt()),
                 new DiscardConfirmationDelegate(_view),
                 WatchUi.SLIDE_IMMEDIATE
             );
