@@ -84,11 +84,12 @@ export function collectSignals(options: {
     manifest: string;
     ci: string;
     e2e: string;
+    e2eReduced: string;
     lintRules: number | null;
     monkeyCCoverage: string | null;
     typescriptCoverage: string | null;
 }): Signal[] {
-    const { manifest, ci, e2e, lintRules, monkeyCCoverage, typescriptCoverage } = options;
+    const { manifest, ci, e2e, e2eReduced, lintRules, monkeyCCoverage, typescriptCoverage } = options;
     const floor = coverageFloor(ci);
     const signals: Signal[] = [
         {
@@ -107,9 +108,14 @@ export function collectSignals(options: {
             source: "ci.yml unit matrix",
         },
         {
+            // Both workflows, because the reduced build's watches are driven
+            // too - just against their own variant of the two screens that
+            // differ. Counting only the full suite would report a smaller
+            // number every time a device moved to the reduced build, which
+            // is exactly backwards.
             name: "Devices driven through the UI",
-            value: String(matrixDevices(e2e, "matrix:").length),
-            source: "e2e-linux.yml matrix",
+            value: String(matrixDevices(e2e, "matrix:").length + matrixDevices(e2eReduced, "matrix:").length),
+            source: "e2e-linux.yml + e2e-linux-reduced.yml matrices",
         },
     ];
     if (typescriptCoverage !== null) {
@@ -151,6 +157,7 @@ function main(): void {
         manifest: read("manifest.xml"),
         ci: read(".github/workflows/ci.yml"),
         e2e: read(".github/workflows/e2e-linux.yml"),
+        e2eReduced: read(".github/workflows/e2e-linux-reduced.yml"),
         lintRules: valueOf("--lint-rules") === null ? null : Number(valueOf("--lint-rules")),
         monkeyCCoverage: valueOf("--monkey-c-coverage"),
         typescriptCoverage: valueOf("--typescript-coverage"),

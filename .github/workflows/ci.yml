@@ -184,6 +184,36 @@ jobs:
           echo "Shard $((SHARD+1))/$SHARD_COUNT: $((total-fails))/$total devices build clean"
           test "$fails" -eq 0
 
+  reduced-devices:
+    name: Low-memory devices are on the reduced build
+    runs-on: ubuntu-latest
+    container:
+      # Needed for the device files: each device's own compiler.json is what
+      # states its watch-app memory limit, and the whole point of this job is
+      # to derive the list from those rather than trust a list someone typed.
+      # Pinned, not :latest - bump with the other occurrences.
+      image: ghcr.io/matco/connectiq-tester:v2.10.0
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - uses: actions/checkout@v6
+      - name: Install Node
+        run: |
+          apt-get update -qq
+          apt-get install -y -qq --no-install-recommends curl ca-certificates
+          curl -fsSL https://deb.nodesource.com/setup_22.x | bash -
+          apt-get install -y -qq --no-install-recommends nodejs
+      # Five of the 120 devices give a watch-app 96KB and cannot hold the
+      # whole app. #172 fixed the crash for three of them, listed by hand,
+      # and left descentg1 and instinctcrossover failing in the store with an
+      # Out Of Memory Error before their first frame. This fails the build
+      # instead, the next time the manifest and the jungles disagree.
+      - name: Check the jungles against the devices' own memory limits
+        run: |
+          node --experimental-strip-types --disable-warning=ExperimentalWarning \
+            tools/reduced-devices.ts /root/.Garmin/ConnectIQ/Devices
+
   build-all:
     name: Build every manifest device
     needs: build-shards

@@ -84,6 +84,7 @@ test("the report renders a table and omits signals it was not given", () => {
         manifest: '<iq:product id="a"/><iq:product id="b"/>',
         ci: "name: Unit tests\n      matrix:\n        device:\n          - x\n          - y\n--test-coverage-lines=95",
         e2e: "matrix:\n        device:\n          - p\n",
+        e2eReduced: "matrix:\n        device:\n          - q\n          - r\n",
         lintRules: null,
         monkeyCCoverage: null,
         typescriptCoverage: null,
@@ -96,6 +97,9 @@ test("the report renders a table and omits signals it was not given", () => {
     const table = renderMarkdown(signals);
     assert.match(table, /^\| Signal \| Value \| Derived from \|/);
     assert.match(table, /Devices supported \| 2 /);
+    // Both e2e workflows count: one full device plus two reduced ones. A
+    // device moving to the reduced build must not shrink this number.
+    assert.match(table, /Devices driven through the UI \| 3 /);
 });
 
 test("a renamed job or matrix key reports nothing rather than a wrong number", () => {

@@ -6,10 +6,9 @@
 
 import { after, before, describe, it } from "node:test";
 
-import { assertScreenShows } from "./ocr-match.ts";
+import { assertScreenShows } from "../ocr-match.ts";
 
-import { isFeatureExcluded } from "./device-profile.ts";
-import { deviceProfile, Simulator } from "./simulator.ts";
+import { deviceProfile, Simulator } from "../simulator.ts";
 
 // MENU is a held button, and seven shipped devices have no MENU key at all
 // (the venu 4 family, venux1, vivoactive6, the vivoactive3 variants). On
@@ -35,11 +34,6 @@ void suite("Settings menu", () => {
 
         const joined = (await sim.readText()).join(" ");
         assertScreenShows(joined, "Settings");
-        // The Instinct 2 family ships without the history browser (see
-        // isFeatureExcluded and the jungles): there is no row to read there,
-        // and asserting one would be testing the jungle, not the menu.
-        if (!isFeatureExcluded(deviceProfile().id, "history")) {
-            assertScreenShows(joined, "History");
-        }
+        assertScreenShows(joined, "History");
     });
 });
