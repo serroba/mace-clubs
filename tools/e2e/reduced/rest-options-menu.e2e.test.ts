@@ -52,16 +52,18 @@ void suite("Rest options menu (reduced build)", () => {
         const joined = (await sim.readText()).join(" ");
         assertScreenShows(joined, "Options");
         assertScreenShows(joined, "Move");
-        // The side row is the value alone here. Reading it at all is the
-        // check: it is the row that was being clipped, and a regression in
-        // the terse labels would show up as this word going missing rather
-        // than as anything visibly broken.
-        assertScreenShows(joined, "handed");
 
-        // The discard row is the last item and below the fold on this
-        // screen. Scroll until it is actually visible rather than pressing a
-        // fixed number of times: a button steps one row, but a swipe flings a
-        // touch list by a variable amount and overscrolls a three-item menu.
+        // Only two rows fit above the fold on a 163x156 Instinct 2S, so the
+        // side row has to be scrolled to like the discard row below it.
+        // Asserting it without scrolling read it as "eet he" and looked like
+        // clipped text; it is simply half of a row at the bottom edge.
+        await sim.pressUntilVisible("down", "handed");
+
+        // The discard row is the last item and below the fold on every
+        // screen here. Scroll until it is actually visible rather than
+        // pressing a fixed number of times: a button steps one row, but a
+        // swipe flings a touch list by a variable amount and overscrolls a
+        // three-item menu.
         await sim.pressUntilVisible("down", "Discard");
     });
 });

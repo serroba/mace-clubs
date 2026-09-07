@@ -152,24 +152,32 @@ workflows over two device groups.
 | 454 | `venu3` | round AMOLED, 16bpp | touch, no UP/DOWN |
 
 `.github/workflows/e2e-linux-reduced.yml` runs the **reduced** suite over
-`instinct2`, `instinct2x` and `descentg1`. The whole app does not fit in
+`instinct2`, `instinct2s`, `instinct2x` and `descentg1`. The whole app does not fit in
 96KB, so the reduced build compiles out the history browser, the on-watch
 workout editor, motion export and calibration logging, and shortens the
 rest-options rows and the discard prompt that their older Menu2 font clips
 off a 176px screen.
 
-Five devices ship that build, not three. Which ones is decided by
+Five devices ship that build, not four. Which ones is decided by
 `tools/reduced-devices.ts` from each device's own memory limit, and all five
-start and run; the two missing from the matrix are staged the same way as
-the widths below:
+start and run; the one missing from the matrix is staged the same way as the
+widths below:
 
 | Device | Screen | Status |
 | --- | --- | --- |
-| `instinct2s` | 163x156, the narrowest we ship | the side row's `Two-handed` reads as `eet he` - not yet established whether the watch clips it or the OCR cannot manage it at that size |
 | `instinctcrossover` | 176x176 | the equipment picker's title is not read at all, though its rows are - the same shape as the `fr55` and `vivoactive4s` findings below |
 
-Neither is a crash. Both watches start, run a workout and record it; what is
-missing is UI coverage, which is why they are staged rather than blocking.
+That is not a crash. The watch starts, runs a workout and records it; what
+is missing is UI coverage, which is why it is staged rather than blocking.
+
+`instinct2s` is worth a note as the shape of mistake this suite invites. Its
+side row read as `eet he`, which looks exactly like the clipped text we had
+just fixed twice, and the fix looked obvious: shorten the label again. It
+was not clipped. Only two rows fit above the fold on a 156px-tall screen and
+the assertion was reading half of a row at the bottom edge - the test needed
+to scroll to it, as it already did for the row below. A screenshot of the
+scrolled screen settled in one run what the wording change would have
+shipped as a permanent product change to five watches.
 
 ### Two suites, not one suite with conditionals
 
