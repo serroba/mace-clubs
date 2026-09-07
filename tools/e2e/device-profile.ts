@@ -24,10 +24,6 @@ import { execFileSync } from "node:child_process";
 import { existsSync, readFileSync } from "node:fs";
 import { homedir } from "node:os";
 import { join } from "node:path";
-import { fileURLToPath } from "node:url";
-
-// tools/e2e/ -> tools/ -> repo root.
-const REPO_ROOT_FROM_PROFILE = fileURLToPath(new URL("../..", import.meta.url));
 
 export interface Point {
     x: number;
@@ -198,36 +194,4 @@ function readPngSize(path: string): { width: number; height: number } | null {
     } catch {
         return null;
     }
-}
-
-/**
- * Is `annotation` compiled out of `device`'s build?
- *
- * Read out of monkey.jungle rather than restated here, the same way the
- * geometry above is read out of the SDK's own simulator.json. The Instinct 2
- * family ships a reduced build - no history browser, no custom workout
- * editor, no motion export - because the app does not otherwise fit in its
- * 96KB, and a test that asserts on a screen those features appear in has to
- * know which side of that split it is running on. Duplicating the device
- * list here would let the two drift, and the failure mode is a red suite
- * that is describing the jungle rather than the app.
- */
-export function isFeatureExcluded(device: string, annotation: string): boolean {
-    const jungle = join(REPO_ROOT_FROM_PROFILE, "monkey.jungle");
-    if (!existsSync(jungle)) {
-        return false;
-    }
-    const line = readFileSync(jungle, "utf8")
-        .split("\n")
-        .find((l) => l.trimStart().startsWith(`${device}.excludeAnnotations`));
-    if (line === undefined) {
-        return false;
-    }
-    return line
-        .split("=")
-        .slice(1)
-        .join("=")
-        .split(";")
-        .map((part) => part.trim())
-        .includes(annotation);
 }

@@ -6,10 +6,9 @@
 
 import { after, before, describe, it } from "node:test";
 
-import { assertScreenShows } from "./ocr-match.ts";
+import { assertScreenShows } from "../ocr-match.ts";
 
-import { isFeatureExcluded } from "./device-profile.ts";
-import { deviceProfile, Simulator } from "./simulator.ts";
+import { deviceProfile, Simulator } from "../simulator.ts";
 
 // MENU is a held button, and seven shipped devices have no MENU key at all
 // (the venu 4 family, venux1, vivoactive6, the vivoactive3 variants). On
@@ -45,16 +44,10 @@ void suite("Rest options menu", () => {
         // Free-resting, not paused: MENU opens Rest options, not discard.
         await sim.hold("menu");
 
-        // The Instinct 2 family ships terse rows because its Menu2 font
-        // clips the full ones off the left of a 176px screen (see
-        // RestOptionsMenu). Same three rows either way - "Options" over
-        // "Rest options", the bare side over "Side: <side>" - so this
-        // asserts on whichever form that build actually carries.
-        const terse = isFeatureExcluded(deviceProfile().id, "menuLabelPrefix");
         const joined = (await sim.readText()).join(" ");
-        assertScreenShows(joined, "options");
+        assertScreenShows(joined, "Rest options");
         assertScreenShows(joined, "Move");
-        assertScreenShows(joined, terse ? "handed" : "Side");
+        assertScreenShows(joined, "Side");
 
         // The discard row is the last item and below the fold on this
         // screen. Scroll until it is actually visible rather than pressing a

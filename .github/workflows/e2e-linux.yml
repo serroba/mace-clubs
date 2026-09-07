@@ -86,17 +86,13 @@ jobs:
         # needs its own fix; parking them in a red matrix would mean a suite
         # nobody can read, which is how a UI suite stops being believed.
         #
-        # instinct2 is here for memory rather than geometry: same 176px
-        # semi-octagon as the Instinct 3, but a 96KB app-memory ceiling
-        # against its 128KB, the tightest of the 120 devices we ship and the
-        # most-installed watch in the report. Compiling for it proves nothing
-        # about whether it can hold the app at runtime - the store's only
-        # 1-star review is an Instinct 2 owner reporting a crash on start,
-        # which every green build sweep and unit-test run missed because none
-        # of them launch the app.
+        # The five 96KB devices are not here. They ship a reduced build and
+        # their screens genuinely differ, so they have their own workflow and
+        # their own variant of the two tests that differ - see
+        # e2e-linux-reduced.yml. This job runs the full suite, which is what
+        # the other 115 devices ship.
         device:
           - instinct3solar45mm # 176 semi-octagon MIP, 1bpp, keys only
-          - instinct2 # 176 semi-octagon MIP, 96KB - the memory floor
           - fenix7 # 260 round MIP, touch with keys
           - venu3 # 454 round AMOLED, touch, no UP/DOWN
     container:

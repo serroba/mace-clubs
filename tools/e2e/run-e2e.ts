@@ -1,5 +1,15 @@
 #!/usr/bin/env node
-// Runs every *.e2e.test.ts file in this directory, one at a time.
+// Runs the e2e suite for one device, one file at a time.
+//
+// The suite is the shared files in this directory plus one variant
+// directory: full/ or reduced/, chosen by MACE_E2E_SUITE. Most screens look
+// the same on every watch and live here; the two that do not - the settings
+// menu, which loses its history row, and the rest options menu, whose labels
+// are shortened - have a file in each variant instead of a conditional in
+// one file. A conditional would put the jungle's device list inside an
+// assertion, where it would have to stay right in two places at once, and
+// the reduced devices are chosen by their memory rather than by name (see
+// tools/reduced-devices.ts).
 //
 // `node --test a.ts b.ts` runs separate test files concurrently by default,
 // and --test-concurrency=1 did not reliably serialize them in practice -
@@ -11,11 +21,28 @@
 
 import { execFileSync, spawn } from "node:child_process";
 import { readdir } from "node:fs/promises";
+import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 
 import { killSimulatorProcess, simulatorWindowExists } from "./simulator.ts";
 
 const E2E_DIR = fileURLToPath(new URL(".", import.meta.url));
+
+const SUITES = ["full", "reduced"] as const;
+type Suite = (typeof SUITES)[number];
+
+/** Which variant directory to run alongside the shared files. Defaults to
+ * full: that is what all but five of the 120 devices ship. */
+function selectedSuite(): Suite {
+    const requested = process.env["MACE_E2E_SUITE"];
+    if (requested === undefined || requested.length === 0) {
+        return "full";
+    }
+    if ((SUITES as readonly string[]).includes(requested)) {
+        return requested as Suite;
+    }
+    throw new Error(`MACE_E2E_SUITE must be one of ${SUITES.join(", ")}, not "${requested}"`);
+}
 
 // connectiq is launched detached (its own process group) so it survives a
 // child test process exiting between presses - but that also means a
@@ -91,13 +118,26 @@ function abortsForEnvironment(): boolean {
     return true;
 }
 
+async function testFiles(dir: string, prefix: string): Promise<string[]> {
+    const names = await readdir(dir);
+    return names
+        .filter((name) => name.endsWith(".e2e.test.ts"))
+        .sort()
+        .map((name) => `${prefix}${name}`);
+}
+
 async function main(): Promise<void> {
-    const files = (await readdir(E2E_DIR)).filter((name) => name.endsWith(".e2e.test.ts")).sort();
+    const suite = selectedSuite();
+    const files = [
+        ...(await testFiles(E2E_DIR, "")),
+        ...(await testFiles(join(E2E_DIR, suite), `${suite}/`)),
+    ];
     if (files.length === 0) {
         console.error("no *.e2e.test.ts files found");
         process.exitCode = 1;
         return;
     }
+    console.log(`running the ${suite} suite: ${String(files.length)} file(s)`);
 
     let failures = 0;
     for (const file of files) {

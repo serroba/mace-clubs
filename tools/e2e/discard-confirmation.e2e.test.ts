@@ -51,8 +51,12 @@ void suite("Discard confirmation", () => {
         await sim.hold("menu");
 
         const confirmLines = (await sim.readText()).join(" ");
+        // "Discard", not the whole prompt: reduced builds ask "Discard?"
+        // where the rest ask "Discard & go home?" (see
+        // RestOptionsMenu.discardPrompt). The word they share is enough to
+        // know the confirmation is up, which is what this test is about -
+        // the wording itself belongs to whichever variant renders it.
         assertScreenShows(confirmLines, "Discard");
-        assertScreenShows(confirmLines, "home");
 
         // BACK backs out of the confirmation without discarding - the
         // workout must still be running afterward.

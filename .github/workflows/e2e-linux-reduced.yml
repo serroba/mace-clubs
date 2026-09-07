@@ -1,0 +1,121 @@
+name: E2E UI tests (Linux, reduced build)
+
+# The same driver and the same shared test files as e2e-linux.yml, run
+# against the watches that ship a reduced build.
+#
+# Five of the 120 devices in the manifest give a watch-app 96KB, against
+# 128KB or more everywhere else, and the whole app does not fit: it fails
+# with an Out Of Memory Error inside getInitialView(), before drawing a
+# frame. They compile out the history browser, the on-watch workout editor,
+# motion export and calibration logging, and shorten the rest-options rows
+# that their older Menu2 font clips off a 176px screen (see the jungles and
+# tools/reduced-devices.ts).
+#
+# So the screens differ, and a separate workflow is how that difference is
+# expressed - not a conditional inside a shared test. MACE_E2E_SUITE picks
+# tools/e2e/reduced/ instead of tools/e2e/full/; everything that renders the
+# same on every watch stays in tools/e2e/ and runs in both.
+#
+# The device list here has to match the jungles', and neither is the source
+# of truth: both are checked against each device's own compiler.json by
+# tools/reduced-devices.ts in ci.yml. That check exists because the first fix
+# for this listed the Instinct 2 family by hand and left descentg1 and
+# instinctcrossover crashing in the store.
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+on:
+  pull_request:
+    paths: &ui-paths
+      - "source/**" # the app itself
+      - "resources/**" # strings, drawables, layouts
+      - "manifest.xml" # target devices and permissions
+      - "*.jungle" # what gets compiled in, and which devices are reduced
+      - "tools/e2e/**" # the driver and the tests
+      - "tools/package.json" # the driver's own dependencies
+      - "tools/package-lock.json"
+      - ".github/workflows/e2e-linux-reduced.yml"
+  push:
+    branches: [main]
+    tags: ["v*"]
+    paths: *ui-paths
+  workflow_dispatch:
+
+jobs:
+  e2e-reduced:
+    name: E2E UI suite, reduced (${{ matrix.device }})
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        # Three of the five 96KB devices. All five get the reduced build -
+        # that is decided by tools/reduced-devices.ts from their memory, not
+        # here - and all five start and run; this list is only about which
+        # of them the UI suite drives green today.
+        #
+        # instinct2s and instinctcrossover are staged, for the reasons in
+        # docs/e2e-testing.md. Neither is a crash: they are text that the
+        # suite cannot read on two unusual screens, and they are held out on
+        # the same rule as every other staged device - a permanently red job
+        # is a job people learn to ignore.
+        device:
+          - instinct2 # Instinct 2 - 11.94% of installs, where this was found
+          - instinct2x # Instinct 2X Solar
+          - descentg1 # Descent G1 - missed by the first fix
+    container:
+      # Pinned, not :latest - the same image the full suite uses. Bump them
+      # together.
+      image: ghcr.io/matco/connectiq-tester:v2.10.0
+    defaults:
+      run:
+        # The container's /bin/sh is dash; these scripts need bash.
+        shell: bash
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Install display, input, screenshot, and OCR tooling
+        run: |
+          apt-get update -qq
+          apt-get install -y -qq --no-install-recommends \
+            xvfb xdotool imagemagick tesseract-ocr openbox curl ca-certificates
+          # Node for the driver itself - the base image has none (it was
+          # only ever meant to compile and unit-test Monkey C).
+          curl -fsSL https://deb.nodesource.com/setup_22.x | bash -
+          apt-get install -y -qq --no-install-recommends nodejs
+
+      - name: Install driver dependencies
+        run: npm ci --prefix tools
+
+      - name: Run the reduced e2e UI suite
+        env:
+          MACE_E2E_DEVICE: ${{ matrix.device }}
+          MACE_E2E_SUITE: reduced
+        run: bash tools/e2e/linux/run-suite.sh
+
+      # Screenshots of whatever the driver last saw, for diagnosing a
+      # failure that can't be reproduced locally.
+      - name: Upload screenshot diffs
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: e2e-reduced-screenshot-diffs-${{ matrix.device }}
+          path: tools/e2e/.diffs/
+          if-no-files-found: ignore
+
+      # Always, not just on failure: a device without committed baselines
+      # seeds them here and compares nothing (it says so, as a ::warning::).
+      # Download them from this artifact, look at the PNGs, and commit them -
+      # only then is the layout actually being checked.
+      - name: Upload screenshot baselines
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: e2e-reduced-baselines-${{ matrix.device }}
+          path: tools/e2e/baselines/linux/${{ matrix.device }}/
+          if-no-files-found: ignore

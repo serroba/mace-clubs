@@ -122,7 +122,8 @@ Two consequences worth knowing:
   `tools/e2e/baselines/<platform>/<device>/`. Screen sizes differ outright,
   so they are not interchangeable. `instinct3solar45mm`, `fenix7` and `venu3`
   have both their macOS and Linux baselines committed; `instinct2` has Linux
-  baselines only, which is what CI compares against.
+  baselines only. The other four reduced devices have none yet and will seed
+  them on their first run of the reduced workflow.
 
   Adding a *new* device is two steps, because its baselines do not exist yet:
   the first run **seeds** them and compares nothing (it says so, as a
@@ -138,47 +139,86 @@ Two consequences worth knowing:
 
 ## Running in CI
 
-The suite runs on **Linux**, headlessly, on GitHub-hosted runners -
-`.github/workflows/e2e-linux.yml` - as a matrix over four devices:
+The suite runs on **Linux**, headlessly, on GitHub-hosted runners, as two
+workflows over two device groups.
+
+`.github/workflows/e2e-linux.yml` runs the **full** suite - what 115 of the
+120 devices ship:
 
 | Width | Device | Display | Input |
 | --- | --- | --- | --- |
 | 176 | `instinct3solar45mm` | semi-octagon MIP, 1bpp, subwindow | keys |
-| 176 | `instinct2` | semi-octagon MIP, **96KB app memory** | keys |
 | 260 | `fenix7` | round MIP, 8bpp | touch with keys |
 | 454 | `venu3` | round AMOLED, 16bpp | touch, no UP/DOWN |
 
-`instinct2` earns its row on memory rather than width. It adds no new
-geometry - it is the same 176px semi-octagon as the Instinct 3 - but it has a
-96KB app-memory ceiling against the Instinct 3's 128KB, the tightest of the
-120 devices in the manifest and the most-installed watch in the store's
-device report. A device that only ever gets compiled for is a device nobody
-has checked can actually hold the app: the build sweep, the unit-test matrix
-and this suite were all green while the app was failing to start there at
-all.
+`.github/workflows/e2e-linux-reduced.yml` runs the **reduced** suite over
+`instinct2`, `instinct2x` and `descentg1`. The whole app does not fit in
+96KB, so the reduced build compiles out the history browser, the on-watch
+workout editor, motion export and calibration logging, and shortens the
+rest-options rows and the discard prompt that their older Menu2 font clips
+off a 176px screen.
+
+Five devices ship that build, not three. Which ones is decided by
+`tools/reduced-devices.ts` from each device's own memory limit, and all five
+start and run; the two missing from the matrix are staged the same way as
+the widths below:
+
+| Device | Screen | Status |
+| --- | --- | --- |
+| `instinct2s` | 163x156, the narrowest we ship | the side row's `Two-handed` reads as `eet he` - not yet established whether the watch clips it or the OCR cannot manage it at that size |
+| `instinctcrossover` | 176x176 | the equipment picker's title is not read at all, though its rows are - the same shape as the `fr55` and `vivoactive4s` findings below |
+
+Neither is a crash. Both watches start, run a workout and record it; what is
+missing is UI coverage, which is why they are staged rather than blocking.
+
+### Two suites, not one suite with conditionals
+
+Most screens render the same everywhere and live in `tools/e2e/`; both
+workflows run them. The two that differ have a file each in
+`tools/e2e/full/` and `tools/e2e/reduced/`, selected by `MACE_E2E_SUITE`:
+
+| Shared | Full only | Reduced only |
+| --- | --- | --- |
+| discard-confirmation | settings-menu | settings-menu |
+| equipment-picker | rest-options-menu | rest-options-menu |
+| movement-picker | | |
+| rest-screen | | |
+| workout-summary | | |
+
+This started as a conditional inside the shared files, asking a helper
+whether the device under test had a given feature compiled out. It read
+fine and was wrong in a way worth remembering: it put the jungle's device
+list inside an assertion, so the same fact had to stay right in two places,
+and "this device has no history row" and "the history row is broken" became
+the same green result. A file per variant says what its build shows and
+nothing else.
+
+Which devices are reduced is not written down in either workflow as the
+source of truth. `tools/reduced-devices.ts` derives it from each device's
+own `compiler.json` and fails CI when the jungles disagree - because the
+first fix for this listed three devices by hand and left two more crashing
+in the store.
 
 ### The widths still missing
 
-The store's device report puts the installed base across seven screen widths.
-The four above cover three of them, which leaves roughly 39% of installs
-rendering at a width nothing in CI draws. These are the devices that would
-close it - each the highest-usage watch in its band:
+The store's device report puts the installed base across seven screen
+widths. The devices above cover three of them. These would close it - each
+the highest-usage watch in its band:
 
 | Width | Device | Status |
 | --- | --- | --- |
 | 208 | `fr55` | truncates the picker's title (`Choose e-`) |
 | 218 | `vivoactive4s` | truncates the picker's title |
-| 240 | `fr945` | races the movement list; reads the title, not the rows |
+| 240 | `fr945` | OCR drops glyphs that are already large - see PR #173 |
 | 280 | `fenix8solar51mm` | OCR misreads the title on 280px MIP |
 | 390 | `vivoactive5` | not yet run |
 | 454 | `venu445mm` | not yet run - no MENU key at all |
 
-They are staged deliberately. A device earns a row in the matrix once it is
-green and its baselines are committed, because a permanently red job is a job
-people learn to ignore, and the first thing that gets ignored with it is the
-real regression it was meant to catch. Add them one at a time: fix what the
-device shows, seed its baselines (see "Choosing a device" above), commit
-them, then add the row.
+They are staged deliberately. A device earns a row once it is green and its
+baselines are committed, because a permanently red job is a job people learn
+to ignore, and the first thing ignored with it is the real regression it was
+meant to catch. Add them one at a time: fix what the device shows, seed its
+baselines (see "Choosing a device" above), commit them, then add the row.
 
 When it runs:
 
