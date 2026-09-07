@@ -1,7 +1,7 @@
 import Toybox.Lang;
 import Toybox.Test;
 
-(:test)
+(:test, :menuLabelPrefix)
 function testRestOptionsLabelsAreCompact(logger as Test.Logger) as Boolean {
     Test.assertEqualMessage(
         RestOptionsMenu.movementLabel(Movement.TYPE_360),

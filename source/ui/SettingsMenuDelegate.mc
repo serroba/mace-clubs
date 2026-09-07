@@ -13,13 +13,36 @@ class SettingsMenuDelegate extends WatchUi.Menu2InputDelegate {
         _view = view;
     }
 
+    (:history)
+    private function openHistory() as Void {
+        WatchUi.pushView(HistoryMenu.build(), new HistoryMenuDelegate(), WatchUi.SLIDE_UP);
+    }
+
+    // Unreachable rather than dead: SettingsMenu.addHistoryItem adds no row
+    // to select when this twin is the one compiled in.
+    (:noHistory)
+    private function openHistory() as Void {}
+
+    (:customWorkout)
+    private function openCustomWorkoutEditor(item as WatchUi.MenuItem) as Void {
+        var customEditor = new CustomWorkoutEditorView();
+        WatchUi.pushView(
+            customEditor,
+            new CustomWorkoutEditorDelegate(customEditor, _view, item),
+            WatchUi.SLIDE_UP
+        );
+    }
+
+    (:noCustomWorkout)
+    private function openCustomWorkoutEditor(item as WatchUi.MenuItem) as Void {}
+
     function onSelect(item as WatchUi.MenuItem) as Void {
         var id = item.getId() as String;
         if (item instanceof WatchUi.ToggleMenuItem) {
             // Toggle items flip their own state; persist the new value.
             Application.Properties.setValue(id, (item as WatchUi.ToggleMenuItem).isEnabled());
         } else if (id.equals("history")) {
-            WatchUi.pushView(HistoryMenu.build(), new HistoryMenuDelegate(), WatchUi.SLIDE_UP);
+            openHistory();
         } else if (id.equals("trainingMode")) {
             var currentMode = SettingsMenu.numProp("trainingMode", TrainingMode.INTERVAL);
             Application.Properties.setValue("trainingMode", currentMode == TrainingMode.REPS ? 0 : 1);
@@ -51,12 +74,7 @@ class SettingsMenuDelegate extends WatchUi.Menu2InputDelegate {
             Application.Properties.setValue("cueMode", (SettingsMenu.numProp("cueMode", 0) + 1) % 3);
             item.setLabel(SettingsMenu.cueLabel());
         } else if (id.equals("customWorkout")) {
-            var customEditor = new CustomWorkoutEditorView();
-            WatchUi.pushView(
-                customEditor,
-                new CustomWorkoutEditorDelegate(customEditor, _view, item),
-                WatchUi.SLIDE_UP
-            );
+            openCustomWorkoutEditor(item);
         } else if (id.equals("maceWeight") || id.equals("clubWeight") || id.equals("bulavaWeight")) {
             var kind = Equipment.TYPE_MACE;
             if (id.equals("clubWeight")) {

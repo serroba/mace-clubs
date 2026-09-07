@@ -8,6 +8,7 @@ import Toybox.WatchUi;
 // scroll view. Instinct's circular safe area is too short for Menu2 secondary
 // labels (see SettingsMenu), so each row keeps its date and score in one
 // compact primary label and the implement is shown on the detail screen.
+(:history)
 module HistoryMenu {
     function build() as WatchUi.Menu2 {
         var menu = new WatchUi.Menu2({:title => "History"});

@@ -120,8 +120,9 @@ Two consequences worth knowing:
 
 - **Baselines are per platform *and* per device**, under
   `tools/e2e/baselines/<platform>/<device>/`. Screen sizes differ outright,
-  so they are not interchangeable. All three matrix devices have both their
-  macOS and Linux baselines committed.
+  so they are not interchangeable. `instinct3solar45mm`, `fenix7` and `venu3`
+  have both their macOS and Linux baselines committed; `instinct2` has Linux
+  baselines only, which is what CI compares against.
 
   Adding a *new* device is two steps, because its baselines do not exist yet:
   the first run **seeds** them and compares nothing (it says so, as a
@@ -138,14 +139,46 @@ Two consequences worth knowing:
 ## Running in CI
 
 The suite runs on **Linux**, headlessly, on GitHub-hosted runners -
-`.github/workflows/e2e-linux.yml` - as a matrix over
-`instinct3solar45mm`, `fenix7` and `venu3`: one per layout class the app
-renders differently (semi-octagon with a subwindow, plain round MIP, large
-round AMOLED). The same test files run on every platform and device; only
-the driver's backend differs (see "Two platforms, one driver" below).
-Device fonts and skins are fetched at job time through Garmin's own
-authenticated API (see `tools/e2e/linux/README.md`), so nothing
-proprietary lives in an image or this repo.
+`.github/workflows/e2e-linux.yml` - as a matrix over four devices:
+
+| Width | Device | Display | Input |
+| --- | --- | --- | --- |
+| 176 | `instinct3solar45mm` | semi-octagon MIP, 1bpp, subwindow | keys |
+| 176 | `instinct2` | semi-octagon MIP, **96KB app memory** | keys |
+| 260 | `fenix7` | round MIP, 8bpp | touch with keys |
+| 454 | `venu3` | round AMOLED, 16bpp | touch, no UP/DOWN |
+
+`instinct2` earns its row on memory rather than width. It adds no new
+geometry - it is the same 176px semi-octagon as the Instinct 3 - but it has a
+96KB app-memory ceiling against the Instinct 3's 128KB, the tightest of the
+120 devices in the manifest and the most-installed watch in the store's
+device report. A device that only ever gets compiled for is a device nobody
+has checked can actually hold the app: the build sweep, the unit-test matrix
+and this suite were all green while the app was failing to start there at
+all.
+
+### The widths still missing
+
+The store's device report puts the installed base across seven screen widths.
+The four above cover three of them, which leaves roughly 39% of installs
+rendering at a width nothing in CI draws. These are the devices that would
+close it - each the highest-usage watch in its band:
+
+| Width | Device | Status |
+| --- | --- | --- |
+| 208 | `fr55` | truncates the picker's title (`Choose e-`) |
+| 218 | `vivoactive4s` | truncates the picker's title |
+| 240 | `fr945` | races the movement list; reads the title, not the rows |
+| 280 | `fenix8solar51mm` | OCR misreads the title on 280px MIP |
+| 390 | `vivoactive5` | not yet run |
+| 454 | `venu445mm` | not yet run - no MENU key at all |
+
+They are staged deliberately. A device earns a row in the matrix once it is
+green and its baselines are committed, because a permanently red job is a job
+people learn to ignore, and the first thing that gets ignored with it is the
+real regression it was meant to catch. Add them one at a time: fix what the
+device shows, seed its baselines (see "Choosing a device" above), commit
+them, then add the row.
 
 When it runs:
 

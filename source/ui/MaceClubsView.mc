@@ -615,38 +615,59 @@ class MaceClubsView extends WatchUi.View {
                 iconY = 2;
             }
             dc.drawBitmap(iconX, iconY, _icon);
-            if (isRepMode()) {
-                dc.drawText(cx, h * 35 / 100, Graphics.FONT_SMALL, "REP MODE", Graphics.TEXT_JUSTIFY_CENTER);
-            } else if (!isFreeTraining) {
+            // Every line below is centred text on what may be a round screen,
+            // so each picks the largest face that still fits the chord at its
+            // own height rather than the one face that suited the Instinct.
+            // The faces are unchanged wherever they already fit, which is
+            // every screen the layout was tuned on; the narrow round ones
+            // (the 208px fr55 lost the tail of "MENU opens settings") step
+            // down instead of drawing past the edge of the display.
+            var smallFaces = [Graphics.FONT_SMALL, Graphics.FONT_TINY, Graphics.FONT_XTINY] as Array<Graphics.FontDefinition>;
+            var tinyFaces = [Graphics.FONT_TINY, Graphics.FONT_XTINY] as Array<Graphics.FontDefinition>;
+            var headingY = h * 35 / 100;
+            if (isRepMode() || !isFreeTraining) {
+                var heading = isRepMode() ? "REP MODE" : preset[:label] as String;
                 dc.drawText(
                     cx,
-                    h * 35 / 100,
-                    Graphics.FONT_SMALL,
-                    preset[:label] as String,
+                    headingY,
+                    Layout.fitCentredLine(dc, heading, smallFaces, w, h, headingY),
+                    heading,
                     Graphics.TEXT_JUSTIFY_CENTER
                 );
             }
+            var summaryY = h * (isFreeTraining ? 40 : 49) / 100;
+            var summary = isRepMode()
+                ? Lang.format("target $1$ swings", [TrainingMode.targetLabel(_repTarget)])
+                : Lang.format("$1$ bpm | $2$", [metronome.getBpm(), patternLabel(preset)]);
             dc.drawText(
                 cx,
-                h * (isFreeTraining ? 40 : 49) / 100,
-                isFreeTraining ? Graphics.FONT_SMALL : Graphics.FONT_TINY,
-                isRepMode()
-                    ? Lang.format("target $1$ swings", [TrainingMode.targetLabel(_repTarget)])
-                    : Lang.format("$1$ bpm | $2$", [metronome.getBpm(), patternLabel(preset)]),
+                summaryY,
+                Layout.fitCentredLine(dc, summary, isFreeTraining ? smallFaces : tinyFaces, w, h, summaryY),
+                summary,
                 Graphics.TEXT_JUSTIFY_CENTER
             );
+            var startY = h * (isFreeTraining ? 55 : 62) / 100;
             dc.drawText(
                 cx,
-                h * (isFreeTraining ? 55 : 62) / 100,
-                isFreeTraining ? Graphics.FONT_SMALL : Graphics.FONT_TINY,
+                startY,
+                Layout.fitCentredLine(
+                    dc,
+                    "SELECT to start",
+                    isFreeTraining ? smallFaces : tinyFaces,
+                    w,
+                    h,
+                    startY
+                ),
                 "SELECT to start",
                 Graphics.TEXT_JUSTIFY_CENTER
             );
+            var hintY = h * (isFreeTraining ? 70 : 75) / 100;
+            var hint = Lang.format("$1$ opens settings", [DeviceInput.menuLabel()]);
             dc.drawText(
                 cx,
-                h * (isFreeTraining ? 70 : 75) / 100,
-                Graphics.FONT_TINY,
-                Lang.format("$1$ opens settings", [DeviceInput.menuLabel()]),
+                hintY,
+                Layout.fitCentredLine(dc, hint, tinyFaces, w, h, hintY),
+                hint,
                 Graphics.TEXT_JUSTIFY_CENTER
             );
             // Last comparable session's smoothness (with trend), so the score
@@ -655,7 +676,14 @@ class MaceClubsView extends WatchUi.View {
             // above on both the interval and free-training idle layouts.
             var lastSmooth = smoothnessText(false);
             if (!lastSmooth.equals("")) {
-                dc.drawText(cx, h * 88 / 100, Graphics.FONT_TINY, lastSmooth, Graphics.TEXT_JUSTIFY_CENTER);
+                var smoothY = h * 88 / 100;
+                dc.drawText(
+                    cx,
+                    smoothY,
+                    Layout.fitCentredLine(dc, lastSmooth, tinyFaces, w, h, smoothY),
+                    lastSmooth,
+                    Graphics.TEXT_JUSTIFY_CENTER
+                );
             }
             return;
         }

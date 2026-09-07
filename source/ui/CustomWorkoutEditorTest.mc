@@ -1,7 +1,7 @@
 import Toybox.Lang;
 import Toybox.Test;
 
-(:test)
+(:test, :customWorkout)
 function testCustomEditorWalksSetsWorkRestAndSaves(logger as Test.Logger) as Boolean {
     var editor = new CustomWorkoutEditorView();
     Test.assertMessage(editor.retreat(), "BACK on the first field closes the editor");
@@ -16,7 +16,7 @@ function testCustomEditorWalksSetsWorkRestAndSaves(logger as Test.Logger) as Boo
     return true;
 }
 
-(:test)
+(:test, :customWorkout)
 function testCustomEditorAdjustsAndClampsEachField(logger as Test.Logger) as Boolean {
     var editor = new CustomWorkoutEditorView();
     // Sets clamp at 1; a long run of DOWN presses must not go below it.

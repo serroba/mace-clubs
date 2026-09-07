@@ -5,11 +5,37 @@ import Toybox.WatchUi;
 // On-watch settings menu. Sideloaded builds don't get Garmin Connect's
 // settings gear, so the most useful settings are editable here directly.
 module SettingsMenu {
+    // The saved-session browser, in the two places the settings menu touches
+    // it - the row and the push. Both have a (:noHistory) twin that adds
+    // nothing and does nothing, so the browser, its detail view, their two
+    // delegates and the Storage reads behind them compile out where the app
+    // will not otherwise fit. See the jungles for why the Instinct 2 family
+    // is where that happens; browsing past sessions is the part of the app
+    // those owners lose, and the alternative was an app that does not start.
+    (:history)
+    function addHistoryItem(menu as WatchUi.Menu2) as Void {
+        menu.addItem(new WatchUi.MenuItem("History", null, "history", null));
+    }
+
+    (:noHistory)
+    function addHistoryItem(menu as WatchUi.Menu2) as Void {}
+
+    // The on-watch interval editor, paired the same way as the history
+    // browser above. Presets still work with it gone; what an Instinct 2
+    // owner loses is editing the custom one on the watch.
+    (:customWorkout)
+    function addCustomWorkoutItem(menu as WatchUi.Menu2) as Void {
+        menu.addItem(new WatchUi.MenuItem(customWorkoutLabel(), null, "customWorkout", null));
+    }
+
+    (:noCustomWorkout)
+    function addCustomWorkoutItem(menu as WatchUi.Menu2) as Void {}
+
     function build() as WatchUi.Menu2 {
         var menu = new WatchUi.Menu2({:title => "Settings"});
         // Instinct's circular safe area is too short for Menu2's secondary
         // labels. Keep the current value in one compact primary label.
-        menu.addItem(new WatchUi.MenuItem("History", null, "history", null));
+        addHistoryItem(menu);
         menu.addItem(new WatchUi.MenuItem(trainingModeLabel(), null, "trainingMode", null));
         menu.addItem(new WatchUi.MenuItem(repTargetLabel(), null, "repTarget", null));
         menu.addItem(new WatchUi.MenuItem(cornerLabel(), null, "circleShows", null));
@@ -17,7 +43,7 @@ module SettingsMenu {
         menu.addItem(new WatchUi.MenuItem(movementLabel(), null, "movementType", null));
         menu.addItem(new WatchUi.MenuItem(workingSideLabel(), null, "workingSide", null));
         menu.addItem(new WatchUi.MenuItem(cueLabel(), null, "cueMode", null));
-        menu.addItem(new WatchUi.MenuItem(customWorkoutLabel(), null, "customWorkout", null));
+        addCustomWorkoutItem(menu);
         menu.addItem(new WatchUi.MenuItem(equipmentWeightLabel(Equipment.TYPE_MACE), null, "maceWeight", null));
         menu.addItem(
             new WatchUi.MenuItem(equipmentWeightLabel(Equipment.TYPE_CLUBS), null, "clubWeight", null)

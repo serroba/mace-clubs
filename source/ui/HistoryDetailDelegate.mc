@@ -3,6 +3,7 @@ import Toybox.WatchUi;
 
 // UP/DOWN scroll the sets (matching the end-of-workout summary), BACK returns to
 // the session list.
+(:history)
 class HistoryDetailDelegate extends WatchUi.BehaviorDelegate {
     private var _view as HistoryDetailView;
 

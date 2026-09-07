@@ -218,6 +218,110 @@ class WorkoutSession {
         _workOpen = true;
     }
 
+    // Motion export - the per-second accelerometer features, the record-level
+    // Rhythm Score and gyro_peak that become charts in Garmin Connect. Paired
+    // the same way as the calibration logging below, and excluded on the same
+    // devices for the same reason.
+    //
+    // Swing counting is deliberately not part of this. The count is what the
+    // app is for, so _swingCounter.addGyroSamples and writeSwingPoint stay on
+    // both sides of the split; what an Instinct 2 owner loses is the charts
+    // describing how the swings looked, not the swings.
+    (:motionExport)
+    private function prepareMotionExportFields(session as ActivityRecording.Session) as Void {
+        _fit.createMotionExportFields(session, _smoothnessEnabled);
+    }
+
+    (:noMotionExport)
+    private function prepareMotionExportFields(session as ActivityRecording.Session) as Void {}
+
+    (:motionExport)
+    private function recordMotionExport(f as Dictionary) as Void {
+        _fit.writeMotionFeatures(f[:rms] as Number, f[:peak] as Number, f[:zc] as Number);
+        _fit.writeRecordSmoothness(_smoothness.getScore());
+    }
+
+    (:noMotionExport)
+    private function recordMotionExport(f as Dictionary) as Void {}
+
+    (:motionExport)
+    private function recordGyroPeak(gyroX as Array<Float>, gyroY as Array<Float>, gyroZ as Array<Float>) as Void {
+        var g = Motion.gyroFeatures(gyroX, gyroY, gyroZ);
+        _fit.writeGyroPeak(g[:peak] as Float);
+    }
+
+    (:noMotionExport)
+    private function recordGyroPeak(gyroX as Array<Float>, gyroY as Array<Float>, gyroZ as Array<Float>) as Void {}
+
+    // Swing calibration logging, in the four places the session touches it.
+    //
+    // Each has a (:noSwingDebug) twin below that reads false and does
+    // nothing, so the whole diagnostic path - these methods, the FitFields
+    // writers they call, and Motion's rawMagnitudes/decimatedAxisValues -
+    // compiles out entirely where the jungle asks for it. That is not a
+    // tidiness exercise: the Instinct 2 family gives a watch-app 96KB
+    // against every other device's 128KB or more, and the app grew past
+    // that ceiling in v0.13.4, failing with an Out Of Memory Error inside
+    // getInitialView() before it drew a single frame. It is the
+    // most-installed watch we ship. This machinery is developer tuning
+    // equipment - it exists to turn a recording into a CSV for offline peak
+    // detection - so it is what gives way, rather than anything an owner of
+    // that watch would notice missing.
+    (:swingDebug)
+    private function swingDebugRequested() as Boolean {
+        // One switch for calibration recordings: the accel_peak trace and
+        // the swing_event trace only line up against each other when both
+        // are captured on the same recording, which is easy to forget
+        // wiring up from the two separate settings below.
+        try {
+            var debug = Application.Properties.getValue("swingDebugEnabled");
+            if (debug instanceof Boolean) {
+                return debug;
+            }
+        } catch (e) {}
+        return false;
+    }
+
+    (:noSwingDebug)
+    private function swingDebugRequested() as Boolean {
+        return false;
+    }
+
+    (:swingDebug)
+    private function prepareSwingDebugFields(session as ActivityRecording.Session) as Void {
+        _fit.createSwingDebugFields(session);
+    }
+
+    (:noSwingDebug)
+    private function prepareSwingDebugFields(session as ActivityRecording.Session) as Void {}
+
+    (:swingDebug)
+    private function recordSwingDebugAccel(accel as Sensor.AccelerometerData, min as Number) as Void {
+        _fit.writeAccelMin(min);
+        _fit.writeCountingState(_workOpen, _swingCounting);
+        _fit.writeRawMagnitudes(
+            Motion.rawMagnitudes(accel.x as Array<Number>, accel.y as Array<Number>, accel.z as Array<Number>)
+        );
+    }
+
+    (:noSwingDebug)
+    private function recordSwingDebugAccel(accel as Sensor.AccelerometerData, min as Number) as Void {}
+
+    (:swingDebug)
+    private function recordSwingDebugGyro(gyroX as Array<Float>, gyroY as Array<Float>, gyroZ as Array<Float>) as Void {
+        // Stride must match FitFields.GYRO_AXIS_SAMPLE_COUNT, which sizes
+        // the gyro_x/y/z fields this feeds.
+        var gyroAxisStride = 2;
+        _fit.writeRawGyroAxes(
+            Motion.decimatedAxisValues(gyroX, gyroAxisStride),
+            Motion.decimatedAxisValues(gyroY, gyroAxisStride),
+            Motion.decimatedAxisValues(gyroZ, gyroAxisStride)
+        );
+    }
+
+    (:noSwingDebug)
+    private function recordSwingDebugGyro(gyroX as Array<Float>, gyroY as Array<Float>, gyroZ as Array<Float>) as Void {}
+
     // Phase-1 motion research (opt-in via the motionCapture setting):
     // stream the accelerometer at 25Hz and log per-second features to
     // the FIT record stream for offline swing analysis. Gyroscope capture
@@ -241,15 +345,8 @@ class WorkoutSession {
             if (load instanceof Boolean) {
                 _loadExposureEnabled = load;
             }
-            // One switch for calibration recordings: the accel_peak trace and
-            // the swing_event trace only line up against each other when both
-            // are captured on the same recording, which is easy to forget
-            // wiring up from the two separate settings below.
-            var debug = Application.Properties.getValue("swingDebugEnabled");
-            if (debug instanceof Boolean) {
-                debugEnabled = debug;
-            }
         } catch (e) {}
+        debugEnabled = swingDebugRequested();
         if (debugEnabled) {
             exportEnabled = true;
         }
@@ -282,10 +379,10 @@ class WorkoutSession {
         // Local smoothness does not create FIT fields. The separate research
         // setting remains the explicit opt-in path for exporting summaries.
         if (exportEnabled) {
-            _fit.createMotionExportFields(session, _smoothnessEnabled);
+            prepareMotionExportFields(session);
         }
         if (_swingDebugEnabled) {
-            _fit.createSwingDebugFields(session);
+            prepareSwingDebugFields(session);
         }
         var sensorOptions = {:period => 1, :accelerometer => {:enabled => true, :sampleRate => 25}};
         // Mace's primary detector needs gyro data; export/debug also want it
@@ -347,19 +444,10 @@ class WorkoutSession {
             _swingCounting ? _swingCounter : null,
             _swingCounting
         );
-        _fit.writeMotionFeatures(f[:rms] as Number, f[:peak] as Number, f[:zc] as Number);
-        _fit.writeRecordSmoothness(_smoothness.getScore());
+        recordMotionExport(f);
         _fit.writeWorkPhase(_workOpen);
         if (_swingDebugEnabled) {
-            _fit.writeAccelMin(f[:min] as Number);
-            _fit.writeCountingState(_workOpen, _swingCounting);
-            _fit.writeRawMagnitudes(
-                Motion.rawMagnitudes(
-                    accel.x as Array<Number>,
-                    accel.y as Array<Number>,
-                    accel.z as Array<Number>
-                )
-            );
+            recordSwingDebugAccel(accel, f[:min] as Number);
         }
         // gyro_peak is charted for every export-enabled user, not just
         // calibration recordings (see createMotionExportFields), so this
@@ -369,20 +457,12 @@ class WorkoutSession {
             var gyroX = gyro.x as Array<Float>;
             var gyroY = gyro.y as Array<Float>;
             var gyroZ = gyro.z as Array<Float>;
-            var g = Motion.gyroFeatures(gyroX, gyroY, gyroZ);
-            _fit.writeGyroPeak(g[:peak] as Float);
+            recordGyroPeak(gyroX, gyroY, gyroZ);
             if (_swingCounting) {
                 _swingCounter.addGyroSamples(gyroX, gyroY, gyroZ, _workOpen);
             }
             if (_swingDebugEnabled) {
-                // Stride must match FitFields.GYRO_AXIS_SAMPLE_COUNT, which
-                // sizes the gyro_x/y/z fields this feeds.
-                var gyroAxisStride = 2;
-                _fit.writeRawGyroAxes(
-                    Motion.decimatedAxisValues(gyroX, gyroAxisStride),
-                    Motion.decimatedAxisValues(gyroY, gyroAxisStride),
-                    Motion.decimatedAxisValues(gyroZ, gyroAxisStride)
-                );
+                recordSwingDebugGyro(gyroX, gyroY, gyroZ);
             }
         }
         if (_swingCounting) {

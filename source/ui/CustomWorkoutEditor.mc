@@ -5,6 +5,7 @@ import Toybox.WatchUi;
 
 // Three-step on-watch editor for the Custom preset:
 // sets -> work duration -> rest duration.
+(:customWorkout)
 class CustomWorkoutEditorView extends WatchUi.View {
     const FIELD_SETS = 0;
     const FIELD_WORK = 1;

@@ -4,7 +4,21 @@ base.sourcePath = source
 # no-op render(). Local test builds use monkey.local.jungle instead.
 # swingTuning is SwingTuningSearch.mc's grid search: too slow for routine
 # runs, opt-in only via `make tuning-search` (monkey.tuning.jungle).
-base.excludeAnnotations = offscreenRender;swingTuning
+BASE_EXCLUDES = offscreenRender;swingTuning
+# Swing calibration logging is developer tuning equipment - it turns a
+# recording into a raw 25Hz CSV for offline peak detection - and the code
+# that does it is the first thing to give way where the app will not
+# otherwise fit. The Instinct 2 family gives a watch-app 96KB against every
+# other device's 128KB or more; the app grew past that in v0.13.4 and has
+# since failed with an Out Of Memory Error inside getInitialView(), before
+# drawing a frame, on the most-installed watch we ship. Every build excludes
+# the noSwingDebug stubs and keeps the real path; those three devices swap
+# which side is compiled. Keep the three jungles in step - a device that
+# builds here and not there is a device nobody runs.
+base.excludeAnnotations = $(BASE_EXCLUDES);noSwingDebug;noHistory;noCustomWorkout;noMotionExport;noMenuLabelPrefix
+instinct2.excludeAnnotations = $(BASE_EXCLUDES);swingDebug;history;customWorkout;motionExport;menuLabelPrefix
+instinct2s.excludeAnnotations = $(BASE_EXCLUDES);swingDebug;history;customWorkout;motionExport;menuLabelPrefix
+instinct2x.excludeAnnotations = $(BASE_EXCLUDES);swingDebug;history;customWorkout;motionExport;menuLabelPrefix
 # fenix5 (API 3.1, our oldest supported level) used to be excluded from
 # liveSessionSmoke because Activity.SPORT_TRAINING (@since 3.2.0) threw at
 # runtime there. WorkoutSession.trainingSport() now falls back to the

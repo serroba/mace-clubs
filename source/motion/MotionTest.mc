@@ -45,7 +45,7 @@ function testMotionFeaturesRejectBadBuffers(logger as Test.Logger) as Boolean {
     return true;
 }
 
-(:test)
+(:test, :motionExport)
 function testGyroFeaturesOfAHold(logger as Test.Logger) as Boolean {
     // A still, near-zero rotation rate: an isometric hold, not a swing.
     var zeros = [0.0, 0.0, 0.0, 0.0] as Array<Float>;
@@ -56,7 +56,7 @@ function testGyroFeaturesOfAHold(logger as Test.Logger) as Boolean {
     return true;
 }
 
-(:test)
+(:test, :motionExport)
 function testGyroFeaturesOfASwing(logger as Test.Logger) as Boolean {
     // A real swing rotates hard throughout, unlike a hold's near-zero rate.
     var zeros = [0.0, 0.0, 0.0, 0.0] as Array<Float>;
@@ -69,7 +69,7 @@ function testGyroFeaturesOfASwing(logger as Test.Logger) as Boolean {
     return true;
 }
 
-(:test)
+(:test, :motionExport)
 function testGyroFeaturesRejectBadBuffers(logger as Test.Logger) as Boolean {
     var empty = [] as Array<Float>;
     var one = [5.0] as Array<Float>;
@@ -80,7 +80,7 @@ function testGyroFeaturesRejectBadBuffers(logger as Test.Logger) as Boolean {
     return true;
 }
 
-(:test)
+(:test, :swingDebug)
 function testRawMagnitudesPreservesEverySample(logger as Test.Logger) as Boolean {
     var zeros = [0, 0, 0] as Array<Number>;
     var swing = [1000, 3000, 1800] as Array<Number>;
@@ -92,7 +92,7 @@ function testRawMagnitudesPreservesEverySample(logger as Test.Logger) as Boolean
     return true;
 }
 
-(:test)
+(:test, :swingDebug)
 function testRawMagnitudesRejectBadBuffers(logger as Test.Logger) as Boolean {
     var empty = [] as Array<Number>;
     var one = [500] as Array<Number>;
@@ -109,7 +109,7 @@ function testRawMagnitudesRejectBadBuffers(logger as Test.Logger) as Boolean {
     return true;
 }
 
-(:test)
+(:test, :swingDebug)
 function testDecimatedAxisValuesKeepsEveryStrideSample(logger as Test.Logger) as Boolean {
     var axis = [10.0, -20.0, 30.0, -480.0, 50.0] as Array<Float>;
     var out = Motion.decimatedAxisValues(axis, 2);
@@ -124,7 +124,7 @@ function testDecimatedAxisValuesKeepsEveryStrideSample(logger as Test.Logger) as
     return true;
 }
 
-(:test)
+(:test, :swingDebug)
 function testDecimatedAxisValuesRejectsEmptyOrBadStride(logger as Test.Logger) as Boolean {
     var axis = [1.0, 2.0, 3.0] as Array<Float>;
     var empty = [] as Array<Float>;

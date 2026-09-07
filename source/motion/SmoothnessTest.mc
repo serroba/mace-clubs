@@ -1,15 +1,10 @@
 import Toybox.Lang;
 import Toybox.Test;
-
-function smoothFeatures(rms as Number, peak as Number, crossings as Number) as Dictionary {
-    return {:dynamicRms => rms, :dynamicPeak => peak, :zc => crossings};
-}
-
 (:test)
 function testSmoothnessStableWindowsScoreOneHundred(logger as Test.Logger) as Boolean {
     var tracker = new Smoothness.Tracker();
     for (var i = 0; i < 5; i++) {
-        tracker.add(smoothFeatures(500, 900, 4));
+        tracker.add(MotionTestFixtures.smoothFeatures(500, 900, 4));
     }
     Test.assertEqualMessage(tracker.getScoredWindows(), 1, "four windows warm up before scoring");
     Test.assertEqualMessage(tracker.getScore(), 100, "identical motion windows are fully repeatable");
@@ -20,7 +15,10 @@ function testSmoothnessStableWindowsScoreOneHundred(logger as Test.Logger) as Bo
 function testSmoothnessRejectsStillWindows(logger as Test.Logger) as Boolean {
     var tracker = new Smoothness.Tracker();
     for (var i = 0; i < 8; i++) {
-        Test.assertMessage(!tracker.add(smoothFeatures(10, 20, 0)), "still window is ignored");
+        Test.assertMessage(
+            !tracker.add(MotionTestFixtures.smoothFeatures(10, 20, 0)),
+            "still window is ignored"
+        );
     }
     Test.assertEqualMessage(tracker.getScoredWindows(), 0, "stillness never becomes a scored swing");
     Test.assertEqualMessage(tracker.getScore(), -1, "no score is shown without enough movement");
@@ -31,9 +29,9 @@ function testSmoothnessRejectsStillWindows(logger as Test.Logger) as Boolean {
 function testSmoothnessPenalizesDifferentEffortAndTiming(logger as Test.Logger) as Boolean {
     var tracker = new Smoothness.Tracker();
     for (var i = 0; i < 4; i++) {
-        tracker.add(smoothFeatures(500, 900, 4));
+        tracker.add(MotionTestFixtures.smoothFeatures(500, 900, 4));
     }
-    tracker.add(smoothFeatures(1000, 1800, 8));
+    tracker.add(MotionTestFixtures.smoothFeatures(1000, 1800, 8));
     Test.assertMessage(tracker.getScore() < 30, "doubling every motion metric scores as inconsistent");
     return true;
 }
@@ -43,10 +41,10 @@ function testTrackerScoreTotalAccumulatesScoredWindows(logger as Test.Logger) as
     var tracker = new Smoothness.Tracker();
     Test.assertEqualMessage(tracker.getScoreTotal(), 0, "no total before any motion");
     for (var i = 0; i < 5; i++) {
-        tracker.add(smoothFeatures(500, 900, 4));
+        tracker.add(MotionTestFixtures.smoothFeatures(500, 900, 4));
     }
     Test.assertEqualMessage(tracker.getScoreTotal(), 100, "one perfect scored window totals 100");
-    tracker.add(smoothFeatures(500, 900, 4));
+    tracker.add(MotionTestFixtures.smoothFeatures(500, 900, 4));
     Test.assertEqualMessage(tracker.getScoreTotal(), 200, "each further perfect window adds 100");
     return true;
 }

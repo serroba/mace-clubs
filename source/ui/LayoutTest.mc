@@ -250,5 +250,33 @@ function testRenderedTextDoesNotCollide(logger as Test.Logger) as Boolean {
             Lang.format("headline \"$1$\" overruns its caption", [values[v]])
         );
     }
+
+    // The rest screen's centred lines have to fit the chord at their own
+    // height, measured at the end of the glyph box furthest from the centre
+    // line - which on a round screen below the middle is its foot, not its
+    // head. The 208px Forerunner 55 drew the tail of "MENU opens settings"
+    // past the edge of the display before fitCentredLine stepped the face
+    // down; nothing about that was visible at the Instinct's 176.
+    var smallFaces = [Graphics.FONT_SMALL, Graphics.FONT_TINY, Graphics.FONT_XTINY] as Array<Graphics.FontDefinition>;
+    var tinyFaces = [Graphics.FONT_TINY, Graphics.FONT_XTINY] as Array<Graphics.FontDefinition>;
+    var lines = [
+        [h * 35 / 100, smallFaces, "REP MODE"],
+        [h * 49 / 100, tinyFaces, "180 bpm | 10/10 x4"],
+        [h * 55 / 100, smallFaces, "SELECT to start"],
+        [h * 75 / 100, tinyFaces, "MENU opens settings"],
+        [h * 88 / 100, tinyFaces, "smooth 88 same"]
+    ] as Array<Array>;
+    for (var i = 0; i < lines.size(); i++) {
+        var lineY = lines[i][0] as Number;
+        var text = lines[i][2] as String;
+        var line = Layout.fitCentredLine(dc, text, lines[i][1] as Array<Graphics.FontDefinition>, w, h, lineY);
+        var foot = lineY + Graphics.getFontHeight(line);
+        var room = 2
+            * Layout.usableHalfWidth(w, h, (lineY - h / 2).abs() > (foot - h / 2).abs() ? lineY : foot);
+        Test.assertMessage(
+            dc.getTextDimensions(text, line)[0] <= room,
+            Lang.format("rest line \"$1$\" is wider than the $2$px chord at its height", [text, room])
+        );
+    }
     return true;
 }

@@ -2,7 +2,7 @@ import Toybox.Application.Storage;
 import Toybox.Lang;
 import Toybox.Test;
 
-(:test)
+(:test, :history)
 module HistoryDetailFixtures {
     function detailedRecord() as Array<Storage.ValueType> {
         var blocks = [] as Array<WorkBlockSummary>;
@@ -47,7 +47,7 @@ module HistoryDetailFixtures {
     }
 }
 
-(:test)
+(:test, :history)
 function testHistoryDetailScrollWrapsThroughOverviewAndSets(logger as Test.Logger) as Boolean {
     var view = new HistoryDetailView(HistoryDetailFixtures.detailedRecord());
     RenderTestSupport.render(view);
@@ -63,7 +63,7 @@ function testHistoryDetailScrollWrapsThroughOverviewAndSets(logger as Test.Logge
     return true;
 }
 
-(:test)
+(:test, :history)
 function testHistoryDetailRendersLegacyRecordsWithoutDetails(logger as Test.Logger) as Boolean {
     var rec = SmoothnessLog.record(
         1700000000,

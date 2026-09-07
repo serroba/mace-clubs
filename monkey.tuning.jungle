@@ -3,4 +3,18 @@ base.sourcePath = source
 # Same as monkey.local.jungle, minus the swingTuning exclusion - this is the
 # only jungle that actually compiles SwingTuningSearch.mc's grid search.
 # Run via `make tuning-search`, not part of any routine test run.
-base.excludeAnnotations = noOffscreenRender
+BASE_EXCLUDES = noOffscreenRender
+# Swing calibration logging is developer tuning equipment - it turns a
+# recording into a raw 25Hz CSV for offline peak detection - and the code
+# that does it is the first thing to give way where the app will not
+# otherwise fit. The Instinct 2 family gives a watch-app 96KB against every
+# other device's 128KB or more; the app grew past that in v0.13.4 and has
+# since failed with an Out Of Memory Error inside getInitialView(), before
+# drawing a frame, on the most-installed watch we ship. Every build excludes
+# the noSwingDebug stubs and keeps the real path; those three devices swap
+# which side is compiled. Keep the three jungles in step - a device that
+# builds here and not there is a device nobody runs.
+base.excludeAnnotations = $(BASE_EXCLUDES);noSwingDebug;noHistory;noCustomWorkout;noMotionExport;noMenuLabelPrefix
+instinct2.excludeAnnotations = $(BASE_EXCLUDES);swingDebug;history;customWorkout;motionExport;menuLabelPrefix
+instinct2s.excludeAnnotations = $(BASE_EXCLUDES);swingDebug;history;customWorkout;motionExport;menuLabelPrefix
+instinct2x.excludeAnnotations = $(BASE_EXCLUDES);swingDebug;history;customWorkout;motionExport;menuLabelPrefix
