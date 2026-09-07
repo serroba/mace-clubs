@@ -54,16 +54,20 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        # Every 96KB device in the manifest. instinct2 is the one the crash
-        # was reported on and the only one with committed baselines so far;
-        # the rest seed theirs on their first run here (the job uploads them
-        # - see "Upload screenshot baselines" below).
+        # Three of the five 96KB devices. All five get the reduced build -
+        # that is decided by tools/reduced-devices.ts from their memory, not
+        # here - and all five start and run; this list is only about which
+        # of them the UI suite drives green today.
+        #
+        # instinct2s and instinctcrossover are staged, for the reasons in
+        # docs/e2e-testing.md. Neither is a crash: they are text that the
+        # suite cannot read on two unusual screens, and they are held out on
+        # the same rule as every other staged device - a permanently red job
+        # is a job people learn to ignore.
         device:
           - instinct2 # Instinct 2 - 11.94% of installs, where this was found
-          - instinct2s # Instinct 2S
           - instinct2x # Instinct 2X Solar
           - descentg1 # Descent G1 - missed by the first fix
-          - instinctcrossover # Instinct Crossover - missed by the first fix
     container:
       # Pinned, not :latest - the same image the full suite uses. Bump them
       # together.

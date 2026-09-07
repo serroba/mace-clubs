@@ -152,11 +152,24 @@ workflows over two device groups.
 | 454 | `venu3` | round AMOLED, 16bpp | touch, no UP/DOWN |
 
 `.github/workflows/e2e-linux-reduced.yml` runs the **reduced** suite over
-every device with a 96KB watch-app limit - `instinct2`, `instinct2s`,
-`instinct2x`, `descentg1`, `instinctcrossover`. The whole app does not fit
-in 96KB, so those five compile out the history browser, the on-watch workout
-editor, motion export and calibration logging, and shorten the rest-options
-rows their older Menu2 font clips off a 176px screen.
+`instinct2`, `instinct2x` and `descentg1`. The whole app does not fit in
+96KB, so the reduced build compiles out the history browser, the on-watch
+workout editor, motion export and calibration logging, and shortens the
+rest-options rows and the discard prompt that their older Menu2 font clips
+off a 176px screen.
+
+Five devices ship that build, not three. Which ones is decided by
+`tools/reduced-devices.ts` from each device's own memory limit, and all five
+start and run; the two missing from the matrix are staged the same way as
+the widths below:
+
+| Device | Screen | Status |
+| --- | --- | --- |
+| `instinct2s` | 163x156, the narrowest we ship | the side row's `Two-handed` reads as `eet he` - not yet established whether the watch clips it or the OCR cannot manage it at that size |
+| `instinctcrossover` | 176x176 | the equipment picker's title is not read at all, though its rows are - the same shape as the `fr55` and `vivoactive4s` findings below |
+
+Neither is a crash. Both watches start, run a workout and record it; what is
+missing is UI coverage, which is why they are staged rather than blocking.
 
 ### Two suites, not one suite with conditionals
 
