@@ -270,7 +270,12 @@ export class Simulator {
     async hold(_button: "menu", holdMs = 1200): Promise<void> {
         this.platform.focus();
         await this.platform.holdMenu(holdMs);
-        await this.waitForStable(this.settleMs, 100);
+        // Twice the usual settle: what a hold opens is always a Menu2, whose
+        // slide-in is the longest transition the app has. On a 96KB Instinct 2
+        // it runs slowly enough that two consecutive frames mid-slide look
+        // stable, and the screen was being read - and OCR'd - with the menu
+        // still moving ("Rest options" appearing twice in one capture).
+        await this.waitForStable(this.settleMs * 2, 100);
     }
 
     /**

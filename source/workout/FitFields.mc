@@ -293,6 +293,7 @@ class FitFields {
     // supported the same way across every device API level this app ships
     // to. Losing one debug field to an incompatibility should never cost
     // the workout itself.
+    (:swingDebug)
     function createSwingDebugFields(session as ActivityRecording.Session) as Void {
         try {
             _accelMinField = session.createField(
@@ -381,6 +382,7 @@ class FitFields {
         } catch (e) {}
     }
 
+    (:motionExport)
     function createMotionExportFields(session as ActivityRecording.Session, includeSmoothness as Boolean) as Void {
         _rmsField = session.createField(
             "accel_rms",
@@ -449,6 +451,7 @@ class FitFields {
         }
     }
 
+    (:motionExport)
     function writeMotionFeatures(rms as Number, peak as Number, crossings as Number) as Void {
         var rmsField = _rmsField;
         var peakField = _peakField;
@@ -471,6 +474,7 @@ class FitFields {
         }
     }
 
+    (:swingDebug)
     function writeAccelMin(min as Number) as Void {
         var field = _accelMinField;
         if (field != null) {
@@ -478,6 +482,7 @@ class FitFields {
         }
     }
 
+    (:swingDebug)
     function writeCountingState(workOpen as Boolean, swingCounting as Boolean) as Void {
         var field = _countingStateField;
         if (field != null) {
@@ -486,6 +491,7 @@ class FitFields {
         }
     }
 
+    (:motionExport)
     function writeGyroPeak(peak as Float) as Void {
         var peakField = _gyroPeakField;
         if (peakField != null) {
@@ -496,12 +502,14 @@ class FitFields {
     // x/y/z are one axis each (deg/s, signed, downsampled - see
     // Motion.decimatedAxisValues) for this second. Debug-only: see
     // createSwingDebugFields for why these stay off the live charts.
+    (:swingDebug)
     function writeRawGyroAxes(x as Array<Number>, y as Array<Number>, z as Array<Number>) as Void {
         writeGyroAxis(x, _gyroXField);
         writeGyroAxis(y, _gyroYField);
         writeGyroAxis(z, _gyroZField);
     }
 
+    (:swingDebug)
     private function writeGyroAxis(values as Array<Number>, field as FitContributor.Field?) as Void {
         if (field == null) {
             return;
@@ -516,6 +524,7 @@ class FitFields {
     // mags is the raw per-sample magnitude for this second (mg), up to 25
     // entries at the sensor's configured rate. Missing samples pad with 0
     // rather than leaving the declared array field short.
+    (:swingDebug)
     function writeRawMagnitudes(mags as Array<Number>) as Void {
         writeSplitMagnitudes(mags, _accelMagAField, _accelMagBField);
     }
@@ -523,6 +532,7 @@ class FitFields {
     // Shared by accel_mag_a/b: one raw 25Hz second split across two
     // fixed-size UINT16 arrays, zero-padded rather than left short if fewer
     // samples arrived.
+    (:swingDebug)
     private function writeSplitMagnitudes(
         mags as Array<Number>,
         fieldA as FitContributor.Field?,
@@ -548,6 +558,7 @@ class FitFields {
         }
     }
 
+    (:motionExport)
     function writeRecordSmoothness(score as Number) as Void {
         var field = _recordSmoothnessField;
         if (field != null && score >= 0) {

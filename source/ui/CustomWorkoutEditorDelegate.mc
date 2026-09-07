@@ -1,6 +1,7 @@
 import Toybox.Lang;
 import Toybox.WatchUi;
 
+(:customWorkout)
 class CustomWorkoutEditorDelegate extends WatchUi.BehaviorDelegate {
     private var _editor as CustomWorkoutEditorView;
     private var _view as MaceClubsView;

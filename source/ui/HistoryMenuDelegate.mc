@@ -5,6 +5,7 @@ import Toybox.WatchUi;
 // Opens the per-set detail view for the chosen session. Item ids are the
 // record's index in the stored log; the "No sessions yet" placeholder carries a
 // String id and is ignored.
+(:history)
 class HistoryMenuDelegate extends WatchUi.Menu2InputDelegate {
     function initialize() {
         Menu2InputDelegate.initialize();

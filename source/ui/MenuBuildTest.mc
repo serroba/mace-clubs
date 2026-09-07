@@ -26,7 +26,7 @@ function testMovementMenuFollowsTheImplement(logger as Test.Logger) as Boolean {
     return true;
 }
 
-(:test)
+(:test, :history)
 function testHistoryMenuBuildsWithAnEmptyLog(logger as Test.Logger) as Boolean {
     Test.assertMessage(HistoryMenu.build() instanceof WatchUi.Menu2, "empty history still builds");
     Test.assertMessage(HistoryMenu.stamp(1700000000) != null, "epochs format into a menu stamp");

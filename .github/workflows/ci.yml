@@ -263,7 +263,19 @@ jobs:
       - name: Run the suite instrumented
         run: |
           set -o pipefail
-          printf 'project.manifest = manifest.xml\nbase.sourcePath = bin/coverage\nbase.excludeAnnotations = offscreenRender;swingTuning\n' > monkey.jungle
+          # The base exclusions are read out of the real jungle, not restated
+          # here. Restating them is what broke this job the first time a
+          # feature became an annotated pair: source carries both twins
+          # (:history and :noHistory, and four more like it), the jungle
+          # excludes one side per device, and a hardcoded list that predates
+          # them compiles both - which the compiler rejects as "Redefinition
+          # of 'addHistoryItem'". This is the fourth place those exclusions
+          # have to agree, and the only one that can derive them.
+          base=$(sed -n 's/^BASE_EXCLUDES = //p' monkey.jungle)
+          # shellcheck disable=SC2016  # $(BASE_EXCLUDES) is jungle syntax to
+          # match literally, not a shell expansion to perform.
+          rest=$(sed -n 's/^base\.excludeAnnotations = \$(BASE_EXCLUDES);//p' monkey.jungle)
+          printf 'project.manifest = manifest.xml\nbase.sourcePath = bin/coverage\nbase.excludeAnnotations = %s;%s\n' "$base" "$rest" > monkey.jungle
           HOME=/root tester.sh instinct3solar45mm 2>&1 | tee coverage-run.log
 
       # Printed, not uploaded. This used to also write Cobertura XML for

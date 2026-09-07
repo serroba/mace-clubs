@@ -225,7 +225,7 @@ function testBlocksWithoutSwingCounterCarryNoCount(logger as Test.Logger) as Boo
 // fallback to the ActivityRecording sport symbols. fenix5 used to be
 // excluded here precisely because that fallback did not exist and
 // Activity.SPORT_TRAINING (@since 3.2.0) threw on it.
-(:test, :liveSessionSmoke)
+(:test, :liveSessionSmoke, :swingDebug)
 function testStartWithDebugLoggingDoesNotThrow(logger as Test.Logger) as Boolean {
     Application.Properties.setValue("swingDebugEnabled", true);
     var session = new WorkoutSession();

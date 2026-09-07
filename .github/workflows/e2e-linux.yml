@@ -72,13 +72,33 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        # One per layout class the app actually renders differently:
-        # semi-octagon with a subwindow, plain round MIP, and the large round
-        # AMOLED where the fixed-pixel layout used to break outright.
+        # One per layout class, plus the memory floor. Which devices belong
+        # here is answered by the store's device report rather than by
+        # guesswork: it puts the installed base across seven screen widths,
+        # and this covers three of them.
+        #
+        # It should cover all seven, and the six devices that would do it are
+        # named in docs/e2e-testing.md. They are staged rather than added in
+        # one go because a device only earns a row here once it is green with
+        # its baselines committed - fr55 and vivoactive4s truncate a system
+        # menu title on a narrow screen, fenix8solar51mm reads badly under
+        # OCR, fr945 races the movement list. Each is a real finding and each
+        # needs its own fix; parking them in a red matrix would mean a suite
+        # nobody can read, which is how a UI suite stops being believed.
+        #
+        # instinct2 is here for memory rather than geometry: same 176px
+        # semi-octagon as the Instinct 3, but a 96KB app-memory ceiling
+        # against its 128KB, the tightest of the 120 devices we ship and the
+        # most-installed watch in the report. Compiling for it proves nothing
+        # about whether it can hold the app at runtime - the store's only
+        # 1-star review is an Instinct 2 owner reporting a crash on start,
+        # which every green build sweep and unit-test run missed because none
+        # of them launch the app.
         device:
-          - instinct3solar45mm
-          - fenix7
-          - venu3
+          - instinct3solar45mm # 176 semi-octagon MIP, 1bpp, keys only
+          - instinct2 # 176 semi-octagon MIP, 96KB - the memory floor
+          - fenix7 # 260 round MIP, touch with keys
+          - venu3 # 454 round AMOLED, touch, no UP/DOWN
     container:
       image: ghcr.io/matco/connectiq-tester:v2.10.0
     defaults:
