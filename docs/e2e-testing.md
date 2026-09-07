@@ -165,7 +165,15 @@ widths below:
 
 | Device | Screen | Status |
 | --- | --- | --- |
-| `instinctcrossover` | 176x176 | reaches the rest screen, where the OCR cannot read the big countdown or the `SELECT: work` label beneath it - the same large-glyph problem as `fr945` below, and it will be fixed with it |
+| `instinctcrossover` | 176x176 | 6 of 7. The workout summary's middle rows sit under the watch's **physical hands**, which the simulator draws over the display - `0 sets 0 work` and the equipment row are legible to neither OCR nor, at that hour, a person. Where the hands rest depends on the time of day, so the test would pass or fail by the clock |
+
+That last one is a device property rather than a defect, and it is not
+something the app can compile its way out of. It is worth knowing as a
+product question though: on a Crossover, the numbers a workout ends on can
+be behind the hands.
+
+Everything else about that watch is covered - it starts, records, and passes
+the other six files.
 
 That is not a crash. The watch starts, runs a workout and records it; what
 is missing is UI coverage, which is why it is staged rather than blocking.
