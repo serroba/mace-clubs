@@ -67,13 +67,34 @@ const DECORATION_OFFSET = { x: 1, y: 31 } as const;
 // never interleaved.
 const OCR_SCALES = [400, 200] as const;
 
-/** One OCR'd line and where it sat on the watch screen. */
+/** One OCR'd line, where it sat on the watch screen, and how sure Tesseract
+ * was about it. */
 export interface OcrLine {
     readonly text: string;
     /** Top edge in the *screen's* pixels, i.e. divided back out by the
      * pass's upscale factor so lines from different scales are comparable. */
     readonly top: number;
+    /** Mean per-word confidence, 0-100. */
+    readonly confidence: number;
 }
+
+/** Words Tesseract is less sure of than this are hallucinations off the
+ * inverted pass - "Lt}", "eh 0", "PO 4", all from one CI run - not rows of
+ * the screen. Four passes produce four times as many of them as two did,
+ * and they land between the rows tests navigate by.
+ *
+ * Set low deliberately. Real text on this screen scores in the 80s and 90s
+ * and the junk scores under 30, so anything in between would do; the cost
+ * of the two errors is not symmetric, though. Dropping junk is a
+ * convenience, and dropping a real row that a small or unusual font
+ * happened to score 60 on is a test failing for a reason nobody will find. */
+const MIN_WORD_CONFIDENCE = 45;
+
+/** Two lines whose tops are within this many screen pixels are the same row
+ * of the screen, read differently by different passes ("REST 7:50} 1" and
+ * "REST 7:50, 1"). Keeping both would put a duplicate between a landmark and
+ * the value a test reads next to it. */
+const SAME_ROW_TOLERANCE_PX = 5;
 
 /**
  * Tesseract's TSV output, grouped back into lines.
@@ -85,7 +106,7 @@ export interface OcrLine {
  */
 export function parseTsvLines(tsv: string, scale: number): OcrLine[] {
     const rows = tsv.split("\n").slice(1);
-    const lines = new Map<string, { words: string[]; top: number }>();
+    const lines = new Map<string, { words: string[]; top: number; confidences: number[] }>();
     for (const row of rows) {
         const cols = row.split("\t");
         if (cols.length < 12 || cols[0] !== "5") {
@@ -93,43 +114,55 @@ export function parseTsvLines(tsv: string, scale: number): OcrLine[] {
         }
         const text = (cols[11] ?? "").trim();
         const top = Number(cols[7]);
-        if (text.length === 0 || Number.isNaN(top)) {
+        const confidence = Number(cols[10]);
+        if (text.length === 0 || Number.isNaN(top) || Number.isNaN(confidence)) {
+            continue;
+        }
+        if (confidence < MIN_WORD_CONFIDENCE) {
             continue;
         }
         const key = `${cols[2] ?? ""}/${cols[3] ?? ""}/${cols[4] ?? ""}`;
         const existing = lines.get(key);
         if (existing === undefined) {
-            lines.set(key, { words: [text], top });
+            lines.set(key, { words: [text], top, confidences: [confidence] });
         } else {
             existing.words.push(text);
+            existing.confidences.push(confidence);
             existing.top = Math.min(existing.top, top);
         }
     }
     return [...lines.values()].map((line) => ({
         text: line.words.join(" "),
         top: line.top / (scale / 100),
+        confidence: line.confidences.reduce((sum, c) => sum + c, 0) / line.confidences.length,
     }));
 }
 
 /**
- * The union of every pass's lines, in top-to-bottom screen order.
+ * One line per row of the screen, top to bottom.
  *
- * Deduplicated on text, keeping the topmost sighting: the same row read by
- * two passes should appear once, at the position they agree on. Ties break
- * on first sighting, which keeps the leading pass's ordering for rows drawn
- * at the same height.
+ * Four passes see the same row four times and rarely agree character for
+ * character, so this groups by position rather than by text and keeps the
+ * reading Tesseract was most confident about. That matters more than
+ * tidiness: tests navigate by adjacency - the countdown is "the time-shaped
+ * value directly before the SELECT: work label" - so a second, worse reading
+ * of a row inserted next to it breaks the very thing the position sort was
+ * added to fix.
  */
 export function mergeByPosition(lines: OcrLine[]): string[] {
-    const best = new Map<string, { top: number; order: number }>();
-    lines.forEach((line, index) => {
-        const seen = best.get(line.text);
-        if (seen === undefined || line.top < seen.top) {
-            best.set(line.text, { top: line.top, order: seen?.order ?? index });
+    const sorted = [...lines].sort((a, b) => a.top - b.top);
+    const rows: OcrLine[] = [];
+    for (const line of sorted) {
+        const current = rows[rows.length - 1];
+        if (current !== undefined && line.top - current.top <= SAME_ROW_TOLERANCE_PX) {
+            if (line.confidence > current.confidence) {
+                rows[rows.length - 1] = { ...line, top: current.top };
+            }
+            continue;
         }
-    });
-    return [...best.entries()]
-        .sort(([, a], [, b]) => (a.top === b.top ? a.order - b.order : a.top - b.top))
-        .map(([text]) => text);
+        rows.push(line);
+    }
+    return rows.map((row) => row.text);
 }
 
 // Big enough for the largest device skin the SDK ships plus decoration
