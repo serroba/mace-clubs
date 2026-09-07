@@ -67,6 +67,71 @@ const DECORATION_OFFSET = { x: 1, y: 31 } as const;
 // never interleaved.
 const OCR_SCALES = [400, 200] as const;
 
+/** One OCR'd line and where it sat on the watch screen. */
+export interface OcrLine {
+    readonly text: string;
+    /** Top edge in the *screen's* pixels, i.e. divided back out by the
+     * pass's upscale factor so lines from different scales are comparable. */
+    readonly top: number;
+}
+
+/**
+ * Tesseract's TSV output, grouped back into lines.
+ *
+ * The columns are level, page, block, paragraph, line, word, left, top,
+ * width, height, confidence, text. Words (level 5) carry the text; a line is
+ * every word sharing a block/paragraph/line triple, joined in word order.
+ * Confidence -1 marks Tesseract's structural rows, which carry no text.
+ */
+export function parseTsvLines(tsv: string, scale: number): OcrLine[] {
+    const rows = tsv.split("\n").slice(1);
+    const lines = new Map<string, { words: string[]; top: number }>();
+    for (const row of rows) {
+        const cols = row.split("\t");
+        if (cols.length < 12 || cols[0] !== "5") {
+            continue;
+        }
+        const text = (cols[11] ?? "").trim();
+        const top = Number(cols[7]);
+        if (text.length === 0 || Number.isNaN(top)) {
+            continue;
+        }
+        const key = `${cols[2] ?? ""}/${cols[3] ?? ""}/${cols[4] ?? ""}`;
+        const existing = lines.get(key);
+        if (existing === undefined) {
+            lines.set(key, { words: [text], top });
+        } else {
+            existing.words.push(text);
+            existing.top = Math.min(existing.top, top);
+        }
+    }
+    return [...lines.values()].map((line) => ({
+        text: line.words.join(" "),
+        top: line.top / (scale / 100),
+    }));
+}
+
+/**
+ * The union of every pass's lines, in top-to-bottom screen order.
+ *
+ * Deduplicated on text, keeping the topmost sighting: the same row read by
+ * two passes should appear once, at the position they agree on. Ties break
+ * on first sighting, which keeps the leading pass's ordering for rows drawn
+ * at the same height.
+ */
+export function mergeByPosition(lines: OcrLine[]): string[] {
+    const best = new Map<string, { top: number; order: number }>();
+    lines.forEach((line, index) => {
+        const seen = best.get(line.text);
+        if (seen === undefined || line.top < seen.top) {
+            best.set(line.text, { top: line.top, order: seen?.order ?? index });
+        }
+    });
+    return [...best.entries()]
+        .sort(([, a], [, b]) => (a.top === b.top ? a.order - b.order : a.top - b.top))
+        .map(([text]) => text);
+}
+
 // Big enough for the largest device skin the SDK ships plus decoration
 // (descentmk351mm is 847x1089, so its window is 847x1145). A skin that does
 // not fit the virtual display gets a window clipped at the edge, and clicks
@@ -280,6 +345,19 @@ export class LinuxPlatform implements Platform {
      * and their lines merged, so whichever pass renders a given row legibly
      * contributes it.
      *
+     * The merge is by position on the screen, not by the order the passes
+     * happened to run, because callers read meaning out of the order:
+     * rest-screen.e2e.test.ts identifies the big countdown as the
+     * time-shaped value sitting directly *before* the "SELECT: work" label.
+     * Concatenating passes cannot express that. A row only the 200% pass can
+     * read - which on a 240px Forerunner 945 is exactly the countdown, the
+     * largest glyphs on the screen - would land at the end of the array
+     * rather than in its slot, and the test would resolve both of its
+     * landmarks to the wall clock and report a regression against a screen
+     * that is drawing correctly. So every pass reports each line's y
+     * coordinate (Tesseract's TSV output, normalised back through the
+     * pass's own scale factor) and the union is sorted by it.
+     *
      * Applied here rather than in captureScreen() so screenshots keep the
      * screen's real pixels for baseline comparison. */
     async ocr(png: Buffer): Promise<string[]> {
@@ -293,7 +371,7 @@ export class LinuxPlatform implements Platform {
                     this.ocrPass(dir, pngPath, `direct-${String(scale)}`, false, scale),
                 ]),
             );
-            return [...new Set(passes.flat())];
+            return mergeByPosition(passes.flat());
         } finally {
             await rm(dir, { recursive: true, force: true });
         }
@@ -305,7 +383,7 @@ export class LinuxPlatform implements Platform {
         tag: string,
         negate: boolean,
         scale: number,
-    ): Promise<string[]> {
+    ): Promise<OcrLine[]> {
         const processedPath = join(dir, `${tag}.png`);
         await execFileAsync("convert", [
             pngPath,
@@ -319,11 +397,8 @@ export class LinuxPlatform implements Platform {
         // psm 6 ("a single uniform block of text") beat the sparse-text
         // modes here - the watch screen is a small set of centered lines,
         // not scattered labels.
-        const { stdout } = await execFileAsync("tesseract", [processedPath, "-", "--psm", "6"]);
-        return stdout
-            .split("\n")
-            .map((line) => line.trim())
-            .filter((line) => line.length > 0);
+        const { stdout } = await execFileAsync("tesseract", [processedPath, "-", "--psm", "6", "tsv"]);
+        return parseTsvLines(stdout, scale);
     }
 
     private findWindow(): string | null {
