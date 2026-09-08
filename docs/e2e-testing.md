@@ -251,6 +251,34 @@ elsewhere goes straight to the discard confirmation. They pause first and
 discard from there. `discard-confirmation` skips accordingly; the paused
 route it stands in for is covered by `workout-summary`.
 
+### Compiling is not running
+
+`ci.yml`'s build sweep proves all 120 devices compile. It says nothing about
+whether a watch can hold what it compiled, and that gap is how the app spent
+four months unable to start on 11.94% of installs.
+
+`make memory-headroom` measures what is left once the first screen exists,
+per device, by running the app with `MaceClubsApp`'s `memoryProbe` annotation
+compiled in - the one build that has it, `monkey.probe.jungle`. The numbers
+are not close:
+
+| Tier | Devices | Free after the first screen |
+| --- | --- | --- |
+| 96KB | 5 | 7-8KB |
+| 128KB | 15 | 27-53KB |
+| 512KB and up | 100 | ~693KB |
+
+So the pull-request check covers everything at or below 128KB - the tier where
+the answer can change - and a nightly run covers all 120, which is what
+catches that reasoning being wrong. A device that crashes or drops under 4KB
+fails; under 12KB warns.
+
+`tools/memory-baselines.json` records each device's number, so a change that
+costs headroom says so on the pull request that costs it. v0.13.4 took about
+2.6KB from the Instinct 2 and shipped; that is the size of drop this now
+reports. Re-record with `make memory-headroom-record` when a change is worth
+its cost, and read the diff before committing it.
+
 ### The simulator is not a reliable process
 
 It fails in at least three ways that have nothing to do with the app, all of

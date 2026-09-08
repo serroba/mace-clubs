@@ -1,0 +1,101 @@
+name: Memory headroom (all devices)
+
+# What the per-PR check does not cover.
+#
+# ci.yml measures the tier where headroom can plausibly change - everything at
+# or below 128KB, about 20 of the 120 devices - because a watch with 768KB has
+# roughly 693KB left once the first screen exists and cannot fail. That is a
+# reasonable assumption and it is still an assumption. This run checks it,
+# nightly, across every device the manifest claims to support.
+#
+# It is also the thing that catches a device nobody thought about: the first
+# fix for the Instinct 2 crash named three of the five 96KB watches by hand and
+# left descentg1 and instinctcrossover failing in the store. A list derived
+# from the devices themselves is better, and a nightly run over all of them is
+# better still.
+
+permissions:
+  contents: read
+  issues: write
+
+on:
+  schedule:
+    # Early morning UTC, so a failure is waiting rather than interrupting.
+    - cron: "17 4 * * *"
+  workflow_dispatch:
+
+jobs:
+  headroom:
+    name: Headroom (shard ${{ matrix.label }}/8)
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { shard: 0, label: 1 }
+          - { shard: 1, label: 2 }
+          - { shard: 2, label: 3 }
+          - { shard: 3, label: 4 }
+          - { shard: 4, label: 5 }
+          - { shard: 5, label: 6 }
+          - { shard: 6, label: 7 }
+          - { shard: 7, label: 8 }
+    container:
+      image: ghcr.io/matco/connectiq-tester:v2.10.0
+    defaults:
+      run:
+        shell: bash
+    env:
+      SHARD: ${{ matrix.shard }}
+      SHARD_COUNT: 8
+    steps:
+      - uses: actions/checkout@v6
+      - name: Install a display and Node
+        run: |
+          apt-get update -qq
+          apt-get install -y -qq --no-install-recommends xvfb curl ca-certificates
+          curl -fsSL https://deb.nodesource.com/setup_22.x | bash -
+          apt-get install -y -qq --no-install-recommends nodejs
+      # Sharded the same way the build sweep is, and for the same reason: one
+      # device takes about 26 seconds to build, launch and report, so all 120
+      # is roughly 50 minutes in a line and 7 minutes in eight.
+      - name: Measure this shard
+        run: |
+          openssl genrsa -out /tmp/key.pem 4096 2>/dev/null
+          openssl pkcs8 -topk8 -inform PEM -outform DER -in /tmp/key.pem -out developer_key.der -nocrypt
+          mapfile -t all < <(grep -o 'product id="[^"]*"' manifest.xml | cut -d'"' -f2)
+          mine=()
+          for i in "${!all[@]}"; do
+            if (( i % SHARD_COUNT == SHARD )); then mine+=("${all[$i]}"); fi
+          done
+          echo "shard $((SHARD+1))/$SHARD_COUNT: ${#mine[@]} devices"
+          node --experimental-strip-types --disable-warning=ExperimentalWarning \
+            tools/memory-headroom.ts "${mine[@]}" --devices-dir=/root/.Garmin/ConnectIQ/Devices
+
+  report:
+    name: Say so if a watch cannot hold the app
+    needs: headroom
+    if: failure() && github.event_name == 'schedule'
+    runs-on: ubuntu-latest
+    steps:
+      # A red scheduled run with nobody attached is a red run nobody reads -
+      # the same trap as a permanently-red matrix job. An issue has an owner.
+      - name: Open an issue
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          gh issue create \
+            --repo "$GITHUB_REPOSITORY" \
+            --title "A watch cannot hold the app" \
+            --body "The nightly headroom run failed: $RUN_URL
+
+          One of the 120 devices in the manifest either crashed before drawing
+          its first screen or is down to its last few KB. That is the state the
+          app shipped in on the Instinct 2 for four months.
+
+          The failing shard's log names the device. See docs/e2e-testing.md and
+          tools/reduced-devices.ts for how a device is moved to the reduced
+          build." \
+            --label "bug"

@@ -100,6 +100,23 @@ coverage: $(DEVELOPER_KEY) | $(BIN_DIR)
 # sizes, coverage, lint rules - every figure derived from the manifest and the
 # workflow files rather than restated. CI appends the same table to its job
 # summary. Coverage is only included when a run measured it.
+# How much memory the app has left once its first screen exists, per device.
+# The check whose absence let the app ship unable to start on the Instinct 2
+# for four months: the build sweep proves 120 devices compile, and compiling
+# says nothing about whether a watch can hold what it compiled.
+#
+# Defaults to the tier where the answer can change - everything at or below
+# 128KB. `make memory-headroom DEVICES="venu3 fenix7"` checks named devices,
+# and the nightly workflow runs --all.
+memory-headroom: $(DEVELOPER_KEY)
+	@$(NODE_TS) tools/memory-headroom.ts $(if $(DEVICES),$(DEVICES),--at-risk)
+
+# Re-record tools/memory-baselines.json after a change that legitimately costs
+# headroom. Review the diff: a device losing 2KB is the size of drop that made
+# the app stop starting, and it is worth knowing what bought it.
+memory-headroom-record: $(DEVELOPER_KEY)
+	@$(NODE_TS) tools/memory-headroom.ts $(if $(DEVICES),$(DEVICES),--at-risk) --record
+
 quality:
 	@$(NODE_TS) tools/quality-report.ts --lint-rules "$$('$(RAFIKI)' lint --list-rules | wc -l | tr -d ' ')"
 
