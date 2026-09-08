@@ -6,18 +6,19 @@ import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 
 import {
-    type Change,
     describeCommit,
     headline,
+    isGenerated,
+    isNotUserFacing,
     isReleaseMechanics,
     parseSubject,
     previousTag,
-    isGenerated,
     releaseDate,
     releaseNoteOf,
     renderReleaseNotes,
     renderWhatsNew,
     replaceRegion,
+    type Change,
 } from "./release-docs.ts";
 
 const watch = (subject: string, pull: number | null = null, releaseNote: string | null = null): Change => ({
@@ -203,7 +204,9 @@ void describe("Release-note trailers", () => {
             watch("Stop the paused headline hiding behind the Instinct's subwindow", 149, "Fixed the paused screen on Instinct watches."),
             tooling("Run the e2e UI suite on Linux in CI", 141),
         ]);
-        assert.match(notes, /# Mace & Clubs v0\.17\.0: fixed the paused screen on Instinct watches\./);
+        // One sentence, and no trailing stop: this is a title, and a release
+        // note may be a paragraph.
+        assert.match(notes, /# Mace & Clubs v0\.17\.0: fixed the paused screen on Instinct watches\n/);
         // The bullet reads in user words but keeps its PR link.
         assert.match(notes, /- Fixed the paused screen on Instinct watches\. \(\[#149\]/);
         // Tooling keeps the repo's own vocabulary.
@@ -242,5 +245,45 @@ void describe("releaseDate", () => {
         const dated = releaseDate("0.16.0", true, "2026-08-31");
         assert.match(dated, /^\d{4}-\d{2}-\d{2}$/);
         assert.notEqual(dated, "2026-08-31");
+    });
+});
+
+
+void describe("non-user-facing changes", () => {
+    it("a change whose note says it is not user-facing stays out of the store listing", () => {
+      // The repo writes "Release-note: Nothing user-facing - CI reporting only"
+      // on changes that touch source/ for reasons nobody outside the repo cares
+      // about - #168 moved a test file and was classed watch-facing for it.
+      // v0.17.0 was one command away from shipping that sentence to the Connect
+      // IQ store as a feature.
+      const changes = [
+        { subject: "Move to rafiki", pull: 168, watchFacing: true, releaseNote: "Nothing user-facing - developer tooling only." },
+        { subject: "Colour the work phase", pull: 166, watchFacing: true, releaseNote: "Work intervals now show in colour." },
+      ];
+      const whatsNew = renderWhatsNew("0.17.0", changes);
+      assert.doesNotMatch(whatsNew, /Nothing user-facing/);
+      assert.match(whatsNew, /Work intervals now show in colour/);
+    });
+
+    it("but it still appears in the changelog, under tooling", () => {
+      // Dropping it from both would be worse than quoting it: the product update
+      // is the record of what shipped, so everything belongs somewhere in it.
+      const changes = [
+        { subject: "Move to rafiki", pull: 168, watchFacing: true, releaseNote: "Nothing user-facing - developer tooling only." },
+      ];
+      const notes = renderReleaseNotes("0.17.0", "2026-09-08", "v0.16.0", changes);
+      const toolingSection = notes.slice(notes.indexOf("## Tooling and tests"));
+      assert.match(toolingSection, /Move to rafiki/);
+      // The watch section is still written, saying there was nothing - which
+      // is the truth once this change is classified correctly.
+      assert.match(notes, /Nothing in this release changes the watch UI/);
+    });
+
+    it("isNotUserFacing reads the convention, not any sentence with those words", () => {
+      assert.equal(isNotUserFacing("Nothing user-facing - CI only."), true);
+      assert.equal(isNotUserFacing("nothing user facing"), true);
+      assert.equal(isNotUserFacing(null), false);
+      // A real note that happens to discuss the phrase is still a real note.
+      assert.equal(isNotUserFacing("Fixed a screen that showed nothing user-facing at all."), false);
     });
 });

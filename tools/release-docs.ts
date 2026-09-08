@@ -101,6 +101,7 @@ function collectChanges(from: string | null, to: string): Change[] {
         .map((entry) => entry.trim())
         .filter((entry) => entry.length > 0);
 
+    const overrides = loadReleaseNoteOverrides();
     return lines
         .map((entry) => {
             const [sha = "", raw = "", body = ""] = entry.split("\x1f");
@@ -112,7 +113,7 @@ function collectChanges(from: string | null, to: string): Change[] {
                 subject,
                 pull,
                 watchFacing: files.some((path) => WATCH_PATHS.some((prefix) => path.startsWith(prefix))),
-                releaseNote: releaseNoteOf(body),
+                releaseNote: releaseNoteOf(body) ?? (pull === null ? null : (overrides.get(pull) ?? null)),
             };
         })
         .filter((change) => !isReleaseMechanics(change.subject));
@@ -131,6 +132,41 @@ function collectChanges(from: string | null, to: string): Change[] {
  * change with no trailer falls back to its subject, and the generator lists
  * which ones did.
  */
+/**
+ * Store wording for changes whose commits carry no `Release-note:` trailer,
+ * keyed by PR number.
+ *
+ * A trailer is the right place for this and cannot always be the place it
+ * ends up: once a change is squashed onto main its message is fixed, and the
+ * generator only finds out at release time - which is exactly when
+ * docs/releasing.md used to say "edit the generated region by hand". That
+ * advice could not work, because `--check` compares the committed listing
+ * against what the generator produces and a hand edit fails the gate the
+ * next time anyone runs it.
+ *
+ * So the correction lives here instead, where it is an input the generator
+ * reads rather than an edit it overwrites. Prefer the trailer while the
+ * commit is still being written; use this when it is too late.
+ */
+export function loadReleaseNoteOverrides(): Map<number, string> {
+    const path = join(REPO_ROOT, "docs", "release-notes.json");
+    if (!existsSync(path)) {
+        return new Map();
+    }
+    const parsed: unknown = JSON.parse(readFileSync(path, "utf8"));
+    const overrides = new Map<number, string>();
+    if (typeof parsed !== "object" || parsed === null) {
+        return overrides;
+    }
+    for (const [pull, note] of Object.entries(parsed as Record<string, unknown>)) {
+        const number = Number(pull);
+        if (!Number.isNaN(number) && typeof note === "string" && note.trim().length > 0) {
+            overrides.set(number, note.trim());
+        }
+    }
+    return overrides;
+}
+
 export function releaseNoteOf(body: string): string | null {
     for (const line of body.split("\n")) {
         const match = /^\s*Release-note:\s*(.*)$/i.exec(line);
@@ -177,12 +213,18 @@ export function isReleaseMechanics(subject: string): boolean {
  * watch-facing change says so plainly instead of dressing up tooling work.
  */
 export function headline(changes: Change[]): string {
-    const watchFacing = changes.find((change) => change.watchFacing);
+    const watchFacing = changes.find((change) => change.watchFacing && !isNotUserFacing(change.releaseNote));
     const first = watchFacing?.releaseNote ?? watchFacing?.subject;
     if (first === undefined) {
         return "tooling and test coverage";
     }
-    return first.charAt(0).toLowerCase() + first.slice(1);
+    // The first sentence only. A release note may be a paragraph - it is
+    // read as a bullet in a store listing, where the detail earns its place -
+    // but this is a document title, and v0.17.0's ran to two sentences and
+    // 180 characters before this.
+    const sentence = /^(.*?[.!?])(?:\s|$)/.exec(first.trim())?.[1] ?? first.trim();
+    const trimmed = sentence.replace(/\.$/, "");
+    return trimmed.charAt(0).toLowerCase() + trimmed.slice(1);
 }
 
 /**
@@ -205,8 +247,12 @@ export function renderReleaseNotes(
     from: string | null,
     changes: Change[],
 ): string {
-    const onWatch = changes.filter((change) => change.watchFacing);
-    const behind = changes.filter((change) => !change.watchFacing);
+    // A change that touched source/ only to move a test file is tooling, and
+    // its own trailer says so. It belongs under "Tooling and tests" here
+    // rather than nowhere: this is the changelog, so everything appears
+    // somewhere.
+    const onWatch = changes.filter((change) => change.watchFacing && !isNotUserFacing(change.releaseNote));
+    const behind = changes.filter((change) => !change.watchFacing || isNotUserFacing(change.releaseNote));
     const since = from ?? "the first commit";
 
     const parts = [
@@ -258,8 +304,22 @@ export function replaceRegion(document: string, name: string, replacement: strin
     return document.slice(0, start + open.length) + "\n" + replacement + "\n" + document.slice(end);
 }
 
+/**
+ * Does this change's release note say it is not for users?
+ *
+ * The repo already writes "Release-note: Nothing user-facing - CI reporting
+ * only" on changes that touch source/ or resources/ for reasons nobody
+ * outside the repo cares about. That is the author telling the store listing
+ * to skip it, and the generator was quoting it back into "What's new"
+ * instead - v0.17.0 was about to ship a bullet reading "Nothing user-facing
+ * - developer tooling only." to the Connect IQ store.
+ */
+export function isNotUserFacing(note: string | null): boolean {
+    return note !== null && /^\s*nothing user[- ]facing\b/i.test(note);
+}
+
 export function renderWhatsNew(version: string, changes: Change[]): string {
-    const onWatch = changes.filter((change) => change.watchFacing);
+    const onWatch = changes.filter((change) => change.watchFacing && !isNotUserFacing(change.releaseNote));
     const lines = [`## What's new — v${version}`, ""];
     if (onWatch.length === 0) {
         lines.push("Maintenance release: no changes to the watch UI or behaviour.");
