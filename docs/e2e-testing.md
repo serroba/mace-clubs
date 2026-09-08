@@ -230,24 +230,26 @@ about rather than reading off the count:
 
 | Device | Runs | Why not all seven |
 | --- | --- | --- |
-| `venu445mm` | 5 of 7 | No MENU key at all. The settings menu is reached by tapping the idle screen's lower band, which the driver now does (`openSettingsMenu`), so that file runs. The other two do not: `MaceClubsDelegate.onTap` declines once a workout is running, so the rest-options menu and the mid-workout discard confirmation have no route at all on these seven watches. That is the app's behaviour, not the driver's limit - see below. |
+| `venu445mm` | 6 of 7 | No MENU key at all, so the settings menu and the rest options menu are reached by tapping the hint band on their screens - `openSettingsMenu` and `openRestOptions` do what the watch's own hints tell an owner to do. Only `discard-confirmation` skips: it holds MENU mid-work, and on these watches you pause first and then discard, which the paused screen offers and the suite covers through `workout-summary`. |
 | `instinctcrossover` | 6 of 7 | The summary's rows sit under the watch's physical hands. The app now parks them (`WorkoutSummaryView.onShow`), which fixes it on a wrist, but the simulator paints its hands on regardless, so the test cannot see the fix. |
 
-### Two screens no one can reach on seven watches
+### How the no-MENU watches reach a menu
 
 `venu441mm`, `venu445mm`, `venux1`, `vivoactive6` and the three
-`vivoactive3` variants have no MENU key. The idle screen gives them a tap
-target into settings, but `MaceClubsDelegate.onTap` returns false once a
-workout has started - deliberately, so a stray tap cannot reach the discard
-path. The consequence is broader than the intent: on those watches there is
-no gesture, key or hold that opens the **rest options menu** or the
-**mid-workout discard confirmation**. Changing movement or side mid-rest is
-not awkward there, it is impossible.
+`vivoactive3` variants have no MENU key, so every menu they can open is
+opened by tapping a band the screen advertises: `TAP opens settings` when
+idle, `TAP options` while free-resting, `TAP discard` when paused. Taps are
+routed by position rather than taken wholesale, because a tap and the
+physical SELECT key are indistinguishable to the simulator and each of those
+screens offers both - `SELECT: work` sits beside `TAP options`.
 
-The two tests skip accordingly, and they are right to: there is nothing to
-drive. Worth deciding whether that is the intended trade, since a long press
-on the screen or a two-finger tap would separate "stray" from "deliberate"
-without reopening the accident the restriction guards against.
+`openSettingsMenu` and `openRestOptions` in `tools/e2e/open-menu.ts` pick the
+hold or the tap per device, so the tests read the same on every watch.
+
+The one route those watches still do not have is MENU held mid-work, which
+elsewhere goes straight to the discard confirmation. They pause first and
+discard from there. `discard-confirmation` skips accordingly; the paused
+route it stands in for is covered by `workout-summary`.
 
 ### The simulator is not a reliable process
 

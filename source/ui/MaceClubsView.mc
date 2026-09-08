@@ -906,6 +906,28 @@ class MaceClubsView extends WatchUi.View {
             [workout.getSets().toString(), setSwings, hr] as Array<String>,
             ["sets", setSwingsLabel, "hr"] as Array<String>
         );
+        // On the seven watches with no MENU key, this is the only way to
+        // change movement or side between sets - MaceClubsDelegate.onTap
+        // routes taps in this band to the rest options menu. Below the metric
+        // row and only while free-resting, so it never crowds a work screen.
+        if (freeResting && DeviceInput.needsMenuTapTarget()) {
+            var hintY = h * 92 / 100;
+            var hint = "TAP options";
+            dc.drawText(
+                cx,
+                hintY,
+                Layout.fitCentredLine(
+                    dc,
+                    hint,
+                    [Graphics.FONT_XTINY] as Array<Graphics.FontDefinition>,
+                    w,
+                    h,
+                    hintY
+                ),
+                hint,
+                Graphics.TEXT_JUSTIFY_CENTER
+            );
+        }
     }
 
     // A row of value-over-label columns, spread across the usable width

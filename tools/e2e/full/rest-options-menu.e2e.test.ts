@@ -8,17 +8,10 @@ import { after, before, describe, it } from "node:test";
 
 import { assertScreenShows } from "../ocr-match.ts";
 
-import { deviceProfile, Simulator } from "../simulator.ts";
+import { openRestOptions } from "../open-menu.ts";
+import { Simulator } from "../simulator.ts";
 
-// MENU is a held button, and seven shipped devices have no MENU key at all
-// (the venu 4 family, venux1, vivoactive6, the vivoactive3 variants). On
-// those there is no hotspot to press and hold, so this file skips rather
-// than clicking empty bezel and failing on an OCR mismatch. DeviceInput's
-// on-screen tap target is what covers the same route there; it needs a
-// coordinate tap the driver does not model yet.
-const suite = deviceProfile().menuHotspot === null ? describe.skip : describe;
-
-void suite("Rest options menu", () => {
+void describe("Rest options menu", () => {
     let sim: Simulator;
 
     before(async () => {
@@ -41,8 +34,8 @@ void suite("Rest options menu", () => {
         // WORK -> free-training REST.
         await sim.press("select");
 
-        // Free-resting, not paused: MENU opens Rest options, not discard.
-        await sim.hold("menu");
+        // Free-resting, not paused: the menu is Rest options, not discard.
+        await openRestOptions(sim);
 
         const joined = (await sim.readText()).join(" ");
         // The first row only. Not the "Rest options" title, which Menu2 wraps
