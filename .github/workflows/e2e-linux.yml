@@ -72,19 +72,20 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        # One per layout class, plus the memory floor. Which devices belong
-        # here is answered by the store's device report rather than by
-        # guesswork: it puts the installed base across seven screen widths,
-        # and this covers three of them.
+        # One per screen width the store's device report shows real users
+        # on, which is how this list is decided rather than by guesswork.
+        # The report spans seven widths and every one of them is here or in
+        # the reduced workflow - 176, 208, 218, 240, 280, 390 and 454. 260 is
+        # the odd one out, kept because fenix7 was here first and covers a
+        # size nothing in the report uses.
         #
-        # It should cover all seven, and the six devices that would do it are
-        # named in docs/e2e-testing.md. They are staged rather than added in
-        # one go because a device only earns a row here once it is green with
-        # its baselines committed - fr55 and vivoactive4s truncate a system
-        # menu title on a narrow screen, fenix8solar51mm reads badly under
-        # OCR, fr945 races the movement list. Each is a real finding and each
-        # needs its own fix; parking them in a red matrix would mean a suite
-        # nobody can read, which is how a UI suite stops being believed.
+        # Six of these were staged behind findings that turned out to be
+        # assertions rather than devices. fr55 and vivoactive4s "truncate a
+        # system menu title"; fenix8solar51mm "reads badly under OCR"; fr945
+        # "races the movement list". Once the tests stopped naming titles
+        # Menu2 does not promise and rows below the fold, three of them
+        # passed with no change at all. Worth remembering before staging the
+        # next one: the device is usually not the problem.
         #
         # The five 96KB devices are not here. They ship a reduced build and
         # their screens genuinely differ, so they have their own workflow and
@@ -97,6 +98,8 @@ jobs:
           - vivoactive4s # 218 round MIP, touch, no UP/DOWN - smallest touch
           - fr945 # 240 round MIP, keys only
           - fenix7 # 260 round MIP, touch with keys
+          - fenix8solar51mm # 280 round MIP, touch with keys (also tactix 8)
+          - vivoactive5 # 390 round AMOLED, touch, no UP/DOWN
           - venu3 # 454 round AMOLED, touch, no UP/DOWN
     container:
       image: ghcr.io/matco/connectiq-tester:v2.10.0
