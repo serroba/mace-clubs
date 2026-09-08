@@ -40,6 +40,8 @@ been checked against known-correct numbers. Contributing a recording from your
 own watch is the thing that changes that — see
 [CONTRIBUTING.md](CONTRIBUTING.md#calibration-recordings).
 
+Five watches with 96 KB of app memory — Instinct 2, 2S, 2X, Descent G1 and Instinct Crossover — run a reduced build: no history browser, no on-watch workout editor and no Garmin Connect motion charts. The whole app does not fit in 96 KB, and before it was trimmed it did not start on them at all.
+
 ## What it does
 
 **Keeps the tempo.** A metronome from 5 to 240 bpm, adjustable mid-workout,

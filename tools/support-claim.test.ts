@@ -61,3 +61,45 @@ test("every stated device count is qualified by where counting is validated", ()
     );
   }
 });
+
+// The same drift, one layer down. Which watches ship the reduced build is
+// decided by their memory in tools/reduced-devices.ts, and #172 shipped a fix
+// that named three of the five by hand and left descentg1 and
+// instinctcrossover crashing in the store. Prose naming them is exactly as
+// forgettable, so it fails here instead of on a listing nobody re-reads.
+test("every surface names the same reduced-build watches as the jungle", () => {
+  const jungleDevices = [...read("monkey.jungle").matchAll(/^([A-Za-z0-9_]+)\.excludeAnnotations/gm)]
+    .map((match) => match[1] ?? "")
+    .filter((device) => device !== "base");
+
+  // How each device id reads in prose, in the order the sentence uses.
+  const inProse: Record<string, string> = {
+    instinct2: "Instinct 2",
+    instinct2s: "2S",
+    instinct2x: "2X",
+    descentg1: "Descent G1",
+    instinctcrossover: "Instinct Crossover",
+  };
+
+  for (const device of jungleDevices) {
+    const name = inProse[device];
+    assert.ok(
+      name !== undefined,
+      `${device} ships the reduced build but has no prose name here - add one and put it in the sentence`,
+    );
+    for (const surface of SURFACES) {
+      assert.ok(
+        read(surface).includes(name),
+        `${surface} should name "${name}", which ships the reduced build`,
+      );
+    }
+  }
+
+  for (const surface of SURFACES) {
+    assert.match(
+      read(surface).replace(/&nbsp;/g, " "),
+      /96 KB/,
+      `${surface} should say why those watches differ, not just which they are`,
+    );
+  }
+});
