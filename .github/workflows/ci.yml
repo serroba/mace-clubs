@@ -187,6 +187,11 @@ jobs:
   memory-headroom:
     name: The app fits on the low-memory watches
     runs-on: ubuntu-latest
+    # Twenty devices at roughly 26 seconds each is about nine minutes. The
+    # cap is here because the first version of this job did not have one and
+    # sat for 1h42m after it had finished measuring, against the six-hour
+    # default, holding a pull request open.
+    timeout-minutes: 30
     container:
       # Needs the device files, the simulator and monkeydo - this is the only
       # check that runs the app rather than compiling it. Pinned, not :latest;
@@ -200,7 +205,9 @@ jobs:
       - name: Install a display and Node
         run: |
           apt-get update -qq
-          apt-get install -y -qq --no-install-recommends xvfb curl ca-certificates
+          # openbox as well as xvfb: the simulator needs a window manager,
+          # the same one tools/e2e/linux brings up.
+          apt-get install -y -qq --no-install-recommends xvfb openbox curl ca-certificates
           curl -fsSL https://deb.nodesource.com/setup_22.x | bash -
           apt-get install -y -qq --no-install-recommends nodejs
       # The build sweep proves 120 devices compile. Compiling says nothing
@@ -214,6 +221,15 @@ jobs:
       # cannot plausibly fail; the nightly run covers those, which is what
       # catches this assumption being wrong.
       - name: Measure what is left once the first screen exists
+        env:
+          # A container step gets HOME=/github/home, and the simulator reads
+          # its device files and fonts from $HOME/.Garmin. Without this the
+          # simulator starts and answers nothing, which this reported as
+          # "the simulator was not reachable" for all twenty devices - a
+          # check that was really measuring its own environment.
+          # tools/e2e/linux/run-suite.sh sets the same two for the same reason.
+          HOME: /root
+          DISPLAY: ":1"
         run: |
           openssl genrsa -out /tmp/key.pem 4096 2>/dev/null
           openssl pkcs8 -topk8 -inform PEM -outform DER -in /tmp/key.pem -out developer_key.der -nocrypt

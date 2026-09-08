@@ -12,6 +12,8 @@ import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 
 import {
+    atRiskSelection,
+    AT_RISK_LIMIT_BYTES,
     compareWithBaseline,
     CRITICAL_FREE_BYTES,
     describe as describeReading,
@@ -117,5 +119,17 @@ void describe("describe", () => {
 
     it("gives the number against the device's own total", () => {
         assert.match(describeReading(reading()), /7KB free of 92KB/);
+    });
+});
+
+void describe("atRiskSelection", () => {
+    it("says how many devices it could actually read, not just which it picked", () => {
+        // The reason this is reported at all: an SDK with one device
+        // installed silently selects that one device, and every message
+        // after it reads as though the whole tier was covered.
+        const selection = atRiskSelection(AT_RISK_LIMIT_BYTES, "/nonexistent");
+        assert.equal(selection.devices.length, 0);
+        assert.equal(selection.checked, 0);
+        assert.ok(selection.total > 100, "the manifest should still list every device");
     });
 });

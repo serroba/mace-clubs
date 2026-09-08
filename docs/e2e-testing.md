@@ -279,6 +279,42 @@ costs headroom says so on the pull request that costs it. v0.13.4 took about
 reports. Re-record with `make memory-headroom-record` when a change is worth
 its cost, and read the diff before committing it.
 
+The baselines are recorded on the branch that introduced the probe, because
+`monkey.probe.jungle` is what produces the numbers and it does not exist
+before that branch. They are a floor for future changes, not an independent
+blessing of the change that wrote them.
+
+### 208 bytes is enough to break three watches
+
+The probe's own first version cost 208 bytes and turned the reduced e2e
+suite red on descentg1, instinct2 and instinct2x. It looked free: the
+`memoryProbe` annotation compiled `reportMemory` to an empty body, and the
+two calls in `getInitialView` went to nothing. An empty private method and
+its call sites are still a method and still call sites.
+
+The failure did not look like memory. Six test files passed, and the seventh
+- the settings menu, the screen that allocates most on top of the main view
+- read garbage and took the simulator's window with it, which reads exactly
+like the OCR flake it was not. What identified it was the split:
+
+| Device | Free at ready | Reduced suite |
+| --- | --- | --- |
+| descentg1, instinct2, instinct2x | 7,464 | fails |
+| instinct2s | 7,592 | passes |
+
+The three that failed are the three with the least headroom, and the one
+that passed had 128 bytes more than they did, against a 208-byte
+regression. That is the whole margin on these watches.
+
+Two things follow. Annotate the *caller*, not a helper it calls, so the
+build that ships has no call site to pay for - `MaceClubsApp` now has two
+`getInitialView` bodies rather than one that calls a stub. And check the
+claim rather than asserting it: `monkeyc -f monkey.jungle -d instinct2` on
+this branch and on `main` produce a `.prg` of exactly the same size, which
+is the property worth having. Build both from the same directory when you
+do - the `.prg` embeds absolute source paths, so a worktree in a longer
+path is 2,752 bytes bigger for no reason at all.
+
 ### The simulator is not a reliable process
 
 It fails in at least three ways that have nothing to do with the app, all of

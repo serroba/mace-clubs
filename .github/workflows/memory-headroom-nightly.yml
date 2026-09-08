@@ -28,6 +28,9 @@ jobs:
   headroom:
     name: Headroom (shard ${{ matrix.label }}/8)
     runs-on: ubuntu-latest
+    # About fifteen devices a shard, roughly seven minutes. Capped so a
+    # scheduled run cannot sit unattended for the six-hour default, which is
+    # what the per-PR job did once it had stopped exiting on its own.
     timeout-minutes: 30
     strategy:
       fail-fast: false
@@ -54,13 +57,21 @@ jobs:
       - name: Install a display and Node
         run: |
           apt-get update -qq
-          apt-get install -y -qq --no-install-recommends xvfb curl ca-certificates
+          # openbox as well as xvfb: the simulator needs a window manager,
+          # the same one tools/e2e/linux brings up.
+          apt-get install -y -qq --no-install-recommends xvfb openbox curl ca-certificates
           curl -fsSL https://deb.nodesource.com/setup_22.x | bash -
           apt-get install -y -qq --no-install-recommends nodejs
       # Sharded the same way the build sweep is, and for the same reason: one
       # device takes about 26 seconds to build, launch and report, so all 120
       # is roughly 50 minutes in a line and 7 minutes in eight.
       - name: Measure this shard
+        env:
+          # See ci.yml's memory-headroom job: a container step gets
+          # HOME=/github/home, and the simulator reads its device files and
+          # fonts from $HOME/.Garmin.
+          HOME: /root
+          DISPLAY: ":1"
         run: |
           openssl genrsa -out /tmp/key.pem 4096 2>/dev/null
           openssl pkcs8 -topk8 -inform PEM -outform DER -in /tmp/key.pem -out developer_key.der -nocrypt

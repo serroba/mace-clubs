@@ -181,17 +181,28 @@ function ensureSimulator(): void {
     if (process.platform === "linux") {
         // The CI container has no display, and the simulator will not start
         // without one - the same Xvfb the e2e suite brings up, for the same
-        // reason. `simulator` rather than `connectiq` there: the launcher
+        // reason. `simulator` rather than `connectiq` here: the launcher
         // script is macOS-only.
+        //
+        // Mirrors platform-linux.ts's startSimulator(), because the first
+        // version of this did not and reported "the simulator was not
+        // reachable" for all twenty devices while looking like a check. Two
+        // things it got wrong: `simulator` was spelled as a bare command
+        // rather than resolved out of the SDK, and there was no window
+        // manager. Keep this in step with that one.
         process.env["DISPLAY"] ??= ":1";
-        if (spawnSync("pgrep", ["-f", "Xvfb"]).status !== 0) {
+        if (spawnSync("pgrep", ["-f", `Xvfb ${process.env["DISPLAY"]}`]).status !== 0) {
             spawn("Xvfb", [process.env["DISPLAY"], "-screen", "0", "1400x1400x24"], {
                 detached: true,
                 stdio: "ignore",
             }).unref();
             spawnSync("sleep", ["3"]);
         }
-        spawn("simulator", [], { detached: true, stdio: "ignore" }).unref();
+        if (spawnSync("pgrep", ["-f", "openbox"]).status !== 0) {
+            spawn("openbox", [], { detached: true, stdio: "ignore", env: process.env }).unref();
+        }
+        const simulatorBin = resolveTool("simulator", homedir(), process.env["PATH"] ?? "");
+        spawn(simulatorBin, [], { detached: true, stdio: "ignore", env: process.env }).unref();
         spawnSync("sleep", ["12"]);
         return;
     }
@@ -230,11 +241,28 @@ async function measure(
     }
 
     const output = await new Promise<string>((resolve) => {
-        const child = spawn(monkeydo, [prg, device], { cwd: REPO_ROOT });
+        // Its own process group: monkeydo is a wrapper script whose real
+        // work is a JVM child, and killing only the wrapper leaves that JVM
+        // alive holding the pipes - which across 120 devices is 120 orphaned
+        // JVMs, and is what kept this process alive for 1h42m after it had
+        // already printed its results.
+        const child = spawn(monkeydo, [prg, device], { cwd: REPO_ROOT, detached: true });
         let seen = "";
+        let done = false;
         const finish = (): void => {
+            if (done) {
+                return;
+            }
+            done = true;
             clearTimeout(timer);
-            child.kill("SIGKILL");
+            const pid = child.pid;
+            if (pid !== undefined) {
+                try {
+                    process.kill(-pid, "SIGKILL");
+                } catch {
+                    child.kill("SIGKILL");
+                }
+            }
             resolve(seen);
         };
         const timer = setTimeout(finish, LAUNCH_TIMEOUT_MS);
@@ -267,11 +295,30 @@ async function measure(
     };
 }
 
-/** Every manifest device at or below `limit`, in manifest order. */
-export function devicesUpTo(limit: number, devicesDir: string): string[] {
+/**
+ * Every manifest device at or below `limit`, in manifest order, and how many
+ * of them the answer is actually known for.
+ *
+ * A device with no SDK files here has no readable memory limit, and the
+ * filter cannot include it. That is fine in the CI container, which has all
+ * 120; it is not fine in silence. Run locally against an SDK with one device
+ * installed, the first version of this selected that one device, measured it
+ * and printed "every device can hold the app" - a sentence about twenty
+ * watches that had looked at one. `checked` is what makes that visible.
+ */
+export function atRiskSelection(limit: number, devicesDir: string): { devices: string[]; checked: number; total: number } {
     const devices = manifestDevices(readFileSync(join(REPO_ROOT, "manifest.xml"), "utf8"));
     const limits = readMemoryLimits(devicesDir, devices);
-    return devices.filter((device) => (limits.get(device) ?? Infinity) <= limit);
+    return {
+        devices: devices.filter((device) => (limits.get(device) ?? Infinity) <= limit),
+        checked: limits.size,
+        total: devices.length,
+    };
+}
+
+/** Every manifest device at or below `limit`, in manifest order. */
+export function devicesUpTo(limit: number, devicesDir: string): string[] {
+    return atRiskSelection(limit, devicesDir).devices;
 }
 
 async function main(): Promise<void> {
@@ -281,11 +328,27 @@ async function main(): Promise<void> {
         args.find((arg) => arg.startsWith("--devices-dir="))?.split("=")[1] ??
         join(homedir(), ".Garmin", "ConnectIQ", "Devices");
     const named = args.filter((arg) => !arg.startsWith("--"));
-    const devices = args.includes("--at-risk")
-        ? devicesUpTo(AT_RISK_LIMIT_BYTES, devicesDir)
-        : args.includes("--all")
-          ? manifestDevices(readFileSync(join(REPO_ROOT, "manifest.xml"), "utf8"))
-          : named;
+    let devices: string[];
+    if (args.includes("--at-risk")) {
+        const selection = atRiskSelection(AT_RISK_LIMIT_BYTES, devicesDir);
+        devices = selection.devices;
+        console.log(
+            `${String(selection.devices.length)} device(s) at or below ` +
+                `${String(AT_RISK_LIMIT_BYTES / 1024)}KB, from ${String(selection.checked)} of ` +
+                `${String(selection.total)} manifest devices with SDK files under ${devicesDir}`,
+        );
+        if (selection.checked < selection.total) {
+            console.warn(
+                `::warning::${String(selection.total - selection.checked)} manifest device(s) have no SDK ` +
+                    "files here, so their memory limit could not be read and they were not measured. " +
+                    "Install them in the SDK manager, or run this where they are present - CI's container has all of them.",
+            );
+        }
+    } else if (args.includes("--all")) {
+        devices = manifestDevices(readFileSync(join(REPO_ROOT, "manifest.xml"), "utf8"));
+    } else {
+        devices = named;
+    }
     if (devices.length === 0) {
         console.error("usage: memory-headroom.ts [--at-risk|--all|<device>...] [--record]");
         process.exitCode = 1;
@@ -362,9 +425,16 @@ async function main(): Promise<void> {
         process.exitCode = 1;
         return;
     }
-    console.log("\nevery device can hold the app");
+    console.log(`\nall ${String(readings.length)} device(s) measured can hold the app`);
 }
 
 if (process.argv[1] !== undefined && import.meta.url.endsWith(process.argv[1].replace(/^.*\//, ""))) {
     await main();
+    // Explicitly, rather than by running out of work. Xvfb, the window
+    // manager and the simulator are all detached children, and node will sit
+    // on those handles indefinitely once main() returns: the first version of
+    // this printed every device's result and then hung for 1h42m, holding a
+    // pull request open, until the run was cancelled by hand. A check that
+    // hangs instead of reporting is worse than no check.
+    process.exit(process.exitCode ?? 0);
 }
