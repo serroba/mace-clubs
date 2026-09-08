@@ -155,6 +155,7 @@ workflows over two device groups.
 | 280 | `fenix8solar51mm` | round MIP, 8bpp | touch with keys |
 | 390 | `vivoactive5` | round AMOLED, 16bpp | touch, no UP/DOWN |
 | 454 | `venu3` | round AMOLED, 16bpp | touch, no UP/DOWN |
+| 454 | `venu445mm` | round AMOLED, 16bpp | touch, **no MENU key** - 4 of 7 files |
 
 `.github/workflows/e2e-linux-reduced.yml` runs the **reduced** suite over
 `instinct2`, `instinct2s`, `instinct2x` and `descentg1`. The whole app does not fit in
@@ -221,19 +222,16 @@ own `compiler.json` and fails CI when the jungles disagree - because the
 first fix for this listed three devices by hand and left two more crashing
 in the store.
 
-### The one width still missing
+### Nothing is staged any more
 
-None. The store's device report spans seven screen widths and all seven are
-covered, between this matrix and the reduced one. What remains staged is a
-single device rather than a size:
+Every device the store's device report names is now driven, across the two
+workflows, and every screen width with it. Two of them are worth knowing
+about rather than reading off the count:
 
-| Device | Width | Status |
+| Device | Runs | Why not all seven |
 | --- | --- | --- |
-| `venu445mm` | 454 | not yet run. No MENU key at all, so the two menu tests skip themselves there and it would join with less coverage than its row suggests |
-
-`instinctcrossover` sits at 6 of 7 for the watch-hands reason above, and
-`fenix6xpro`, `fr170` and `venu` are covered by another device at their own
-width.
+| `venu445mm` | 4 of 7 | No MENU key at all. The discard confirmation and both menu tests reach their screens by holding one, so they skip themselves - visibly, as `# SKIP` in the log. `DeviceInput` draws an on-screen tap target that covers the same route on those watches, and the driver cannot tap a coordinate yet. Seven shipped devices are in this position; closing it would light up all of them. |
+| `instinctcrossover` | 6 of 7 | The summary's rows sit under the watch's physical hands. The app now parks them (`WorkoutSummaryView.onShow`), which fixes it on a wrist, but the simulator paints its hands on regardless, so the test cannot see the fix. |
 
 ### The simulator is not a reliable process
 
