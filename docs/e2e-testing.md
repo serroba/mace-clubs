@@ -152,6 +152,8 @@ workflows over two device groups.
 | 218 | `vivoactive4s` | round MIP, 8bpp | touch, no UP/DOWN |
 | 240 | `fr945` | round MIP, 8bpp | keys |
 | 260 | `fenix7` | round MIP, 8bpp | touch with keys |
+| 280 | `fenix8solar51mm` | round MIP, 8bpp | touch with keys |
+| 390 | `vivoactive5` | round AMOLED, 16bpp | touch, no UP/DOWN |
 | 454 | `venu3` | round AMOLED, 16bpp | touch, no UP/DOWN |
 
 `.github/workflows/e2e-linux-reduced.yml` runs the **reduced** suite over
@@ -218,23 +220,19 @@ own `compiler.json` and fails CI when the jungles disagree - because the
 first fix for this listed three devices by hand and left two more crashing
 in the store.
 
-### The widths still missing
+### The one width still missing
 
-The store's device report puts the installed base across seven screen
-widths. The devices above cover three of them. These would close it - each
-the highest-usage watch in its band:
+None. The store's device report spans seven screen widths and all seven are
+covered, between this matrix and the reduced one. What remains staged is a
+single device rather than a size:
 
-| Width | Device | Status |
+| Device | Width | Status |
 | --- | --- | --- |
-| 280 | `fenix8solar51mm` | OCR misreads the title on 280px MIP |
-| 390 | `vivoactive5` | not yet run |
-| 454 | `venu445mm` | not yet run - no MENU key at all |
+| `venu445mm` | 454 | not yet run. No MENU key at all, so the two menu tests skip themselves there and it would join with less coverage than its row suggests |
 
-They are staged deliberately. A device earns a row once it is green and its
-baselines are committed, because a permanently red job is a job people learn
-to ignore, and the first thing ignored with it is the real regression it was
-meant to catch. Add them one at a time: fix what the device shows, seed its
-baselines (see "Choosing a device" above), commit them, then add the row.
+`instinctcrossover` sits at 6 of 7 for the watch-hands reason above, and
+`fenix6xpro`, `fr170` and `venu` are covered by another device at their own
+width.
 
 ### What adding a device usually turns out to be
 
