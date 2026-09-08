@@ -263,6 +263,17 @@ export class Simulator {
         throw new Error(`screen did not change after ${String(maxAttempts)} presses of "${button}"`);
     }
 
+    /** A tap on the watch screen, positioned as a fraction of its size.
+     *
+     * The only way into the settings menu on the seven devices with no MENU
+     * key: MaceClubsDelegate.onTap routes a tap below 62% of the height to
+     * the menu, and only while idle. */
+    async tapScreen(xFraction: number, yFraction: number): Promise<void> {
+        this.platform.focus();
+        await this.platform.tapScreen(xFraction, yFraction);
+        await this.waitForStable(this.settleMs * 2, 100);
+    }
+
     /** MENU is the only held button this device exposes (a long-press of UP).
      * Both platforms implement it as a mouse press-and-hold on the skin's
      * UP-button hotspot - the simulator maps keyboard input to taps only, so
