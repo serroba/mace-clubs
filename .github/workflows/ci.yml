@@ -184,6 +184,58 @@ jobs:
           echo "Shard $((SHARD+1))/$SHARD_COUNT: $((total-fails))/$total devices build clean"
           test "$fails" -eq 0
 
+  memory-headroom:
+    name: The app fits on the low-memory watches
+    runs-on: ubuntu-latest
+    # Twenty devices at roughly 26 seconds each is about nine minutes. The
+    # cap is here because the first version of this job did not have one and
+    # sat for 1h42m after it had finished measuring, against the six-hour
+    # default, holding a pull request open.
+    timeout-minutes: 30
+    container:
+      # Needs the device files, the simulator and monkeydo - this is the only
+      # check that runs the app rather than compiling it. Pinned, not :latest;
+      # bump with the other occurrences.
+      image: ghcr.io/matco/connectiq-tester:v2.10.0
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - uses: actions/checkout@v6
+      - name: Install a display and Node
+        run: |
+          apt-get update -qq
+          # openbox as well as xvfb: the simulator needs a window manager,
+          # the same one tools/e2e/linux brings up.
+          apt-get install -y -qq --no-install-recommends xvfb openbox curl ca-certificates
+          curl -fsSL https://deb.nodesource.com/setup_22.x | bash -
+          apt-get install -y -qq --no-install-recommends nodejs
+      # The build sweep proves 120 devices compile. Compiling says nothing
+      # about whether a watch can hold what it compiled: the app grew past the
+      # Instinct 2's 96KB in v0.13.4 and crashed inside getInitialView()
+      # before drawing a frame, on 11.94% of installs, through a green
+      # pipeline, until a 1-star review said so four months later.
+      #
+      # Only the tier where the answer can change - everything at or below
+      # 128KB, about 20 devices. From 512KB up a watch has ~693KB left and
+      # cannot plausibly fail; the nightly run covers those, which is what
+      # catches this assumption being wrong.
+      - name: Measure what is left once the first screen exists
+        env:
+          # A container step gets HOME=/github/home, and the simulator reads
+          # its device files and fonts from $HOME/.Garmin. Without this the
+          # simulator starts and answers nothing, which this reported as
+          # "the simulator was not reachable" for all twenty devices - a
+          # check that was really measuring its own environment.
+          # tools/e2e/linux/run-suite.sh sets the same two for the same reason.
+          HOME: /root
+          DISPLAY: ":1"
+        run: |
+          openssl genrsa -out /tmp/key.pem 4096 2>/dev/null
+          openssl pkcs8 -topk8 -inform PEM -outform DER -in /tmp/key.pem -out developer_key.der -nocrypt
+          node --experimental-strip-types --disable-warning=ExperimentalWarning \
+            tools/memory-headroom.ts --at-risk --devices-dir=/root/.Garmin/ConnectIQ/Devices
+
   reduced-devices:
     name: Low-memory devices are on the reduced build
     runs-on: ubuntu-latest

@@ -251,6 +251,80 @@ elsewhere goes straight to the discard confirmation. They pause first and
 discard from there. `discard-confirmation` skips accordingly; the paused
 route it stands in for is covered by `workout-summary`.
 
+### Compiling is not running
+
+`ci.yml`'s build sweep proves all 120 devices compile. It says nothing about
+whether a watch can hold what it compiled, and that gap is how the app spent
+four months unable to start on 11.94% of installs.
+
+`make memory-headroom` measures what is left once the first screen exists,
+per device, by running the app with `MaceClubsApp`'s `memoryProbe` annotation
+compiled in - the one build that has it, `monkey.probe.jungle`. The numbers
+are not close:
+
+| Tier | Devices | Free after the first screen |
+| --- | --- | --- |
+| 96KB | 5 | 7-8KB |
+| 128KB | 15 | 27-53KB |
+| 512KB and up | 100 | ~693KB |
+
+So the pull-request check covers everything at or below 128KB - the tier where
+the answer can change - and a nightly run covers all 120, which is what
+catches that reasoning being wrong. A device that crashes or drops under 4KB
+fails; under 12KB warns.
+
+`tools/memory-baselines.json` records each device's number, so a change that
+costs headroom says so on the pull request that costs it. v0.13.4 took about
+2.6KB from the Instinct 2 and shipped; that is the size of drop this now
+reports. Re-record with `make memory-headroom-record` when a change is worth
+its cost, and read the diff before committing it.
+
+The baselines are recorded on the branch that introduced the probe, because
+`monkey.probe.jungle` is what produces the numbers and it does not exist
+before that branch. They are a floor for future changes, not an independent
+blessing of the change that wrote them.
+
+**They are Linux numbers, because that is where the gate runs.** The same
+build reports different headroom on the two platforms: instinct2 measures
+7,408 bytes on macOS and 7,816 in the CI container, and the gap runs from
+zero to about 408 bytes depending on the device. Baselines recorded on macOS
+and checked on Linux compare two different things, and every pull request
+carries a drift line nobody caused - which is how a useful check becomes
+noise. So `make memory-headroom` locally is for the absolute number and the
+4KB floor; the baseline comparison belongs to CI, and a local run showing a
+few hundred bytes of drift is the platform, not the change.
+
+### 208 bytes is enough to break three watches
+
+The probe's own first version cost 208 bytes and turned the reduced e2e
+suite red on descentg1, instinct2 and instinct2x. It looked free: the
+`memoryProbe` annotation compiled `reportMemory` to an empty body, and the
+two calls in `getInitialView` went to nothing. An empty private method and
+its call sites are still a method and still call sites.
+
+The failure did not look like memory. Six test files passed, and the seventh
+- the settings menu, the screen that allocates most on top of the main view
+- read garbage and took the simulator's window with it, which reads exactly
+like the OCR flake it was not. What identified it was the split:
+
+| Device | Free at ready | Reduced suite |
+| --- | --- | --- |
+| descentg1, instinct2, instinct2x | 7,464 | fails |
+| instinct2s | 7,592 | passes |
+
+The three that failed are the three with the least headroom, and the one
+that passed had 128 bytes more than they did, against a 208-byte
+regression. That is the whole margin on these watches.
+
+Two things follow. Annotate the *caller*, not a helper it calls, so the
+build that ships has no call site to pay for - `MaceClubsApp` now has two
+`getInitialView` bodies rather than one that calls a stub. And check the
+claim rather than asserting it: `monkeyc -f monkey.jungle -d instinct2` on
+this branch and on `main` produce a `.prg` of exactly the same size, which
+is the property worth having. Build both from the same directory when you
+do - the `.prg` embeds absolute source paths, so a worktree in a longer
+path is 2,752 bytes bigger for no reason at all.
+
 ### The simulator is not a reliable process
 
 It fails in at least three ways that have nothing to do with the app, all of
