@@ -306,7 +306,34 @@ jobs:
           # match literally, not a shell expansion to perform.
           rest=$(sed -n 's/^base\.excludeAnnotations = \$(BASE_EXCLUDES);//p' monkey.jungle)
           printf 'project.manifest = manifest.xml\nbase.sourcePath = bin/coverage\nbase.excludeAnnotations = %s;%s\n' "$base" "$rest" > monkey.jungle
-          HOME=/root tester.sh instinct3solar45mm 2>&1 | tee coverage-run.log
+          # tester.sh gives the simulator a flat `sleep 5` and no retry, so a
+          # simulator that segfaults on launch fails this job on code that is
+          # fine - which is what happened on main, with
+          #   tester.sh: line 58: Segmentation fault (core dumped) simulator
+          #   Unable to connect to simulator.
+          # and passed on a rerun with nothing changed. Our own driver retries
+          # the same connect for the same reason (Simulator.loadApp).
+          #
+          # Only that failure is retried. tester.sh also exits 1 when the
+          # tests genuinely fail, and retrying those would turn a real
+          # regression into an intermittent one.
+          for attempt in 1 2 3; do
+            if HOME=/root tester.sh instinct3solar45mm 2>&1 | tee coverage-run.log; then
+              break
+            fi
+            if ! grep -q "Unable to connect to simulator" coverage-run.log; then
+              echo "::error::the instrumented suite failed on its own terms, not on the simulator"
+              exit 1
+            fi
+            if [ "$attempt" = 3 ]; then
+              echo "::error::the simulator did not come up in three attempts"
+              exit 1
+            fi
+            echo "::warning::simulator did not come up (attempt $attempt/3) - retrying"
+            pkill -9 -f 'bin/simulator' || true
+            pkill -9 Xvfb || true
+            sleep 5
+          done
 
       # Printed, not uploaded. This used to also write Cobertura XML for
       # actions/upload-code-coverage, which needed a forked rafiki to produce

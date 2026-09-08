@@ -98,6 +98,23 @@ function displayIdleSeconds(): number | null {
  * knew. Checked only after a real failure, so it cannot misfire on a healthy
  * run that simply has an idle display.
  */
+/**
+ * Did this file fail because the simulator is not there, rather than because
+ * the app is wrong?
+ *
+ * The simulator is not a reliable process. Across one day of adding devices
+ * it failed three different ways - "monkeydo could not reach the simulator
+ * after 8 attempts", a SIGSEGV that left a 1.8MB core dump beside the
+ * driver, and a file whose test outlived its parent because the app never
+ * painted. None of them were the app, and every one of them was green on a
+ * rerun.
+ *
+ * That matters more the more devices there are. Twelve jobs across two
+ * workflows means a per-job flake rate that is nearly invisible still turns
+ * up somewhere on most pull requests, and a suite that is red for reasons
+ * nobody believes gets rerun by reflex - which is exactly how a real failure
+ * gets waved through.
+ */
 function abortsForEnvironment(): boolean {
     if (simulatorWindowExists()) {
         return false;
@@ -142,7 +159,17 @@ async function main(): Promise<void> {
     let failures = 0;
     for (const file of files) {
         console.log(`\n=== ${file} ===`);
-        const code = await runFile(file);
+        let code = await runFile(file);
+        // One retry, and only when the simulator is missing rather than the
+        // assertions failing. A file that fails on its own terms fails
+        // straight away: retrying those would turn a real regression into an
+        // intermittent one, which is worse than the flake this is for.
+        if (code !== 0 && !simulatorWindowExists()) {
+            console.error(`::warning::the simulator is gone after ${file} - retrying it once`);
+            killSimulatorProcess();
+            await new Promise((resolve) => setTimeout(resolve, 5000));
+            code = await runFile(file);
+        }
         if (code !== 0) {
             failures += 1;
             if (abortsForEnvironment()) {
