@@ -23,15 +23,10 @@ import { after, before, describe, it } from "node:test";
 
 import { assertScreenLacks, assertScreenShows } from "../ocr-match.ts";
 
-import { deviceProfile, Simulator } from "../simulator.ts";
+import { openSettingsMenu } from "../open-menu.ts";
+import { Simulator } from "../simulator.ts";
 
-// MENU is a held button, and seven shipped devices have no MENU key at all.
-// None of them are small enough to run this suite today, but the skip costs
-// nothing and stops a future one failing on an OCR mismatch after clicking
-// empty bezel.
-const suite = deviceProfile().menuHotspot === null ? describe.skip : describe;
-
-void suite("Settings menu (reduced build)", () => {
+void describe("Settings menu (reduced build)", () => {
     let sim: Simulator;
 
     before(async () => {
@@ -43,7 +38,7 @@ void suite("Settings menu (reduced build)", () => {
     });
 
     it("opens from idle, without the history browser", async () => {
-        await sim.hold("menu");
+        await openSettingsMenu(sim);
 
         const joined = (await sim.readText()).join(" ");
         assertScreenShows(joined, "Settings");

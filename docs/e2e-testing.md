@@ -230,8 +230,24 @@ about rather than reading off the count:
 
 | Device | Runs | Why not all seven |
 | --- | --- | --- |
-| `venu445mm` | 4 of 7 | No MENU key at all. The discard confirmation and both menu tests reach their screens by holding one, so they skip themselves - visibly, as `# SKIP` in the log. `DeviceInput` draws an on-screen tap target that covers the same route on those watches, and the driver cannot tap a coordinate yet. Seven shipped devices are in this position; closing it would light up all of them. |
+| `venu445mm` | 5 of 7 | No MENU key at all. The settings menu is reached by tapping the idle screen's lower band, which the driver now does (`openSettingsMenu`), so that file runs. The other two do not: `MaceClubsDelegate.onTap` declines once a workout is running, so the rest-options menu and the mid-workout discard confirmation have no route at all on these seven watches. That is the app's behaviour, not the driver's limit - see below. |
 | `instinctcrossover` | 6 of 7 | The summary's rows sit under the watch's physical hands. The app now parks them (`WorkoutSummaryView.onShow`), which fixes it on a wrist, but the simulator paints its hands on regardless, so the test cannot see the fix. |
+
+### Two screens no one can reach on seven watches
+
+`venu441mm`, `venu445mm`, `venux1`, `vivoactive6` and the three
+`vivoactive3` variants have no MENU key. The idle screen gives them a tap
+target into settings, but `MaceClubsDelegate.onTap` returns false once a
+workout has started - deliberately, so a stray tap cannot reach the discard
+path. The consequence is broader than the intent: on those watches there is
+no gesture, key or hold that opens the **rest options menu** or the
+**mid-workout discard confirmation**. Changing movement or side mid-rest is
+not awkward there, it is impossible.
+
+The two tests skip accordingly, and they are right to: there is nothing to
+drive. Worth deciding whether that is the intended trade, since a long press
+on the screen or a two-finger tap would separate "stray" from "deliberate"
+without reopening the accident the restriction guards against.
 
 ### The simulator is not a reliable process
 
