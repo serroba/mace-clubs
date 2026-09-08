@@ -45,14 +45,17 @@ void suite("Rest options menu", () => {
         await sim.hold("menu");
 
         const joined = (await sim.readText()).join(" ");
-        assertScreenShows(joined, "Rest options");
+        // The first row only. Not the "Rest options" title, which Menu2 wraps
+        // on a 208px Forerunner 55 and gives back as "Rest"; and not the side
+        // row, which on that screen is below the fold.
         assertScreenShows(joined, "Move");
-        assertScreenShows(joined, "Side");
 
-        // The discard row is the last item and below the fold on this
-        // screen. Scroll until it is actually visible rather than pressing a
-        // fixed number of times: a button steps one row, but a swipe flings a
-        // touch list by a variable amount and overscrolls a three-item menu.
+        // The rows below the first, scrolled to rather than asserted where
+        // they may not be. A button steps one row, but a swipe flings a touch
+        // list by a variable amount and overscrolls a three-item menu, so
+        // this presses until each is actually visible rather than a fixed
+        // number of times.
+        await sim.pressUntilVisible("down", "Side");
         await sim.pressUntilVisible("down", "Discard");
     });
 });

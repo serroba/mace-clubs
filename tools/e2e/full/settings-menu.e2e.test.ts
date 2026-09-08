@@ -34,6 +34,14 @@ void suite("Settings menu", () => {
 
         const joined = (await sim.readText()).join(" ");
         assertScreenShows(joined, "Settings");
-        assertScreenShows(joined, "History");
+
+        // History is the first row and therefore the highlighted one, which
+        // Menu2 draws already inverted - the case the OCR's two polarities
+        // exist for, and one a Forerunner 945 defeats anyway, reading the
+        // menu as "Settings Mode: intervals" with the top row missing
+        // entirely. pressUntilVisible steps off it, which un-inverts it, and
+        // returns as soon as it can be read; it checks before pressing, so a
+        // device that reads the row where it stands does not move at all.
+        await sim.pressUntilVisible("down", "History");
     });
 });

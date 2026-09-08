@@ -48,52 +48,47 @@ void describe("Free training rest screen", () => {
         // row 2 showing a duplicate of the big countdown instead - the bug
         // PR #125 fixed.
         //
-        // Established by watching it rather than by reading it. Two earlier
-        // versions of this test tried to read: one compared row 2 against
-        // the countdown, which meant finding the countdown - the largest
-        // text on the screen, and the first thing the OCR drops on several
-        // watches - and locating it by its position relative to the
-        // "SELECT: work" label, which the Instinct Crossover reads as
-        // "= ork". The other matched the clock's shape, since
-        // MaceClubsView.clockTimeLabel always emits an am/pm suffix that
-        // formatSecs never does; the Instinct 2 read that suffix as
-        // "REST 11:25\m".
+        // Told apart by the hour, which needs one reading of one row and no
+        // assumption about anything else on the screen. clockTimeLabel emits
+        // a 12-hour time whose hour is 1 to 12 - never 0, since it maps 0 to
+        // 12 - while the rest countdown is formatSecs, minutes and seconds,
+        // and has just started: it reads 0:00 and stays there for a minute.
+        // So a row 2 beginning "0:" is the countdown and nothing else.
         //
-        // What cannot be garbled is behaviour. A countdown advances every
-        // second; a wall clock changes at most once a minute. Sampling row 2
-        // three times a few seconds apart tells the two apart without
-        // needing to read either one correctly - only consistently.
-        const samples = [
-            await readRestRowTime(sim),
-            await readRestRowTime(sim, 3000),
-            await readRestRowTime(sim, 3000),
-        ];
+        // Three earlier versions of this reached for something harder.
+        // Comparing row 2 against the countdown meant finding the countdown,
+        // the largest text on the screen and the first thing the OCR drops,
+        // located by its position beside the "SELECT: work" label, which the
+        // Instinct Crossover reads as "= ork". Matching the am/pm suffix
+        // failed on an Instinct 2 reading "REST 11:25\m". Sampling the row
+        // to watch it tick assumed the samples were seconds apart, and
+        // readText runs four OCR passes: on a Forerunner 945 they were two
+        // minutes apart and the clock had genuinely advanced, 12:19 to 12:20
+        // to 12:21, which the test duly reported as a countdown.
+        const restTime = await readRestRowTime(sim);
         assert.ok(
-            samples.every((sample) => sample !== undefined),
-            `expected a time on the "REST" row in all three samples: ${JSON.stringify(samples)}`,
+            restTime !== undefined,
+            `expected a time on the "REST" row: ${JSON.stringify(await sim.readText())}`,
         );
-        const ticks = (samples[0] === samples[1] ? 0 : 1) + (samples[1] === samples[2] ? 0 : 1);
-        assert.ok(
-            ticks < 2,
-            `row 2 advances like the countdown rather than a clock: ${samples.join(" -> ")} - ` +
-                "the wall clock fix has regressed",
+        assert.notEqual(
+            restTime.split(":")[0],
+            "0",
+            `row 2 reads "${restTime}", which is the countdown rather than the wall clock - ` +
+                "the fix from PR #125 has regressed",
         );
     });
 });
 
 /**
- * The time-shaped value on the "REST" row, after an optional wait.
+ * The time-shaped value on the "REST" row.
  *
  * Retried, because OCR is probabilistic and this is small text: a single
  * read returned "REST distin" on an Instinct 2 whose screen was fine, and a
  * test that reports a shipped bug has returned on the strength of one bad
  * read is worse than one that takes another look. Only the digits are
- * returned, so a garbled suffix ("11:25\m") does not count as a change.
+ * matched, so a mangled suffix ("11:25\m") still reads.
  */
-async function readRestRowTime(sim: Simulator, waitMs = 0): Promise<string | undefined> {
-    if (waitMs > 0) {
-        await new Promise((resolve) => setTimeout(resolve, waitMs));
-    }
+async function readRestRowTime(sim: Simulator): Promise<string | undefined> {
     for (let attempt = 0; attempt < 4; attempt += 1) {
         const restRow = (await sim.readText()).find((line) => line.includes("REST"));
         const match = restRow === undefined ? null : /\d{1,2}:\d{2}/.exec(restRow);

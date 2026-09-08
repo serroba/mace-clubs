@@ -148,6 +148,8 @@ workflows over two device groups.
 | Width | Device | Display | Input |
 | --- | --- | --- | --- |
 | 176 | `instinct3solar45mm` | semi-octagon MIP, 1bpp, subwindow | keys |
+| 208 | `fr55` | round MIP, 4bpp | keys |
+| 240 | `fr945` | round MIP, 8bpp | keys |
 | 260 | `fenix7` | round MIP, 8bpp | touch with keys |
 | 454 | `venu3` | round AMOLED, 16bpp | touch, no UP/DOWN |
 
@@ -223,9 +225,7 @@ the highest-usage watch in its band:
 
 | Width | Device | Status |
 | --- | --- | --- |
-| 208 | `fr55` | truncates the picker's title (`Choose e-`) |
 | 218 | `vivoactive4s` | truncates the picker's title |
-| 240 | `fr945` | OCR drops glyphs that are already large - see PR #173. `instinctcrossover` above waits on the same fix |
 | 280 | `fenix8solar51mm` | OCR misreads the title on 280px MIP |
 | 390 | `vivoactive5` | not yet run |
 | 454 | `venu445mm` | not yet run - no MENU key at all |
@@ -235,6 +235,29 @@ baselines are committed, because a permanently red job is a job people learn
 to ignore, and the first thing ignored with it is the real regression it was
 meant to catch. Add them one at a time: fix what the device shows, seed its
 baselines (see "Choosing a device" above), commit them, then add the row.
+
+### What adding a device usually turns out to be
+
+Almost never the OCR. Every menu assertion that named a title, or a row
+other than the first, has eventually failed on some watch - and each time
+the fix was the assertion:
+
+- **Titles belong to Menu2.** It wraps them (`Rest options` reads as `Rest`
+  on a 208px Forerunner 55), truncates them (`Choose e-`), or draws none at
+  all (the Instinct Crossover). Assert a row instead.
+- **Only the first row is reliably on screen.** A 163x156 Instinct 2S fits
+  two. Scroll to the others with `pressUntilVisible`, which also tests the
+  list rather than the first screenful of it.
+- **The first row is the highlighted one**, which Menu2 draws inverted and
+  the OCR reads worst of all - on a Forerunner 945 it vanishes entirely.
+  `pressUntilVisible` steps off it, and checks before pressing, so devices
+  that can read it in place do not move.
+
+Two attempts went the other way, at the OCR. PR #173 grew 150 lines of TSV
+parsing, positional merging and confidence filtering and broke three green
+devices before being closed; a later attempt with an extra pass per screen
+doubled the suite's runtime and timed out four jobs. Both devices they were
+meant to rescue, `fr55` and `fr945`, went green on assertion changes alone.
 
 When it runs:
 
