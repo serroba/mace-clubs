@@ -234,6 +234,30 @@ single device rather than a size:
 `fenix6xpro`, `fr170` and `venu` are covered by another device at their own
 width.
 
+### The simulator is not a reliable process
+
+It fails in at least three ways that have nothing to do with the app, all of
+them green on a rerun with nothing changed:
+
+| Symptom | Where |
+| --- | --- |
+| `monkeydo could not reach the simulator after 8 attempts` | any e2e job |
+| `Segmentation fault (core dumped) simulator`, and a 1.8MB `tools/e2e/core` | the coverage job, and locally |
+| `test did not finish before its parent and was cancelled` | any e2e job, when the app never paints |
+
+Both entry points now retry, and both retry *only* this. `run-e2e.ts` runs a
+file again once when the simulator window has gone; the coverage job runs
+`tester.sh` again when the log says the simulator was unreachable. A file or
+a suite that fails on its own terms fails immediately, because retrying a
+real regression turns it into an intermittent one, which is worse than the
+flake.
+
+This matters more the more devices there are. Twelve jobs across two
+workflows means a per-job flake rate that is nearly invisible still turns up
+somewhere on most pull requests - and a suite that is red for reasons nobody
+believes gets rerun by reflex, which is how a real failure eventually gets
+waved through.
+
 ### What adding a device usually turns out to be
 
 Almost never the OCR. Every menu assertion that named a title, or a row
