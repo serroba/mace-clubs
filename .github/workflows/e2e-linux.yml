@@ -87,6 +87,15 @@ jobs:
         # passed with no change at all. Worth remembering before staging the
         # next one: the device is usually not the problem.
         #
+        # venu445mm runs four of the seven files and skips three. It has no
+        # MENU key at all, and the discard confirmation and both menu tests
+        # reach their screens by holding one. Those skips are printed as
+        # "# SKIP" in the job log rather than hidden, and four files of real
+        # coverage on a watch with an input model nothing else here has beats
+        # none - but its row is not worth the same as the others, which is
+        # why this comment says so. Closing the gap needs the driver to tap
+        # DeviceInput's on-screen target, which it cannot do yet.
+        #
         # The five 96KB devices are not here. They ship a reduced build and
         # their screens genuinely differ, so they have their own workflow and
         # their own variant of the two tests that differ - see
@@ -101,6 +110,7 @@ jobs:
           - fenix8solar51mm # 280 round MIP, touch with keys (also tactix 8)
           - vivoactive5 # 390 round AMOLED, touch, no UP/DOWN
           - venu3 # 454 round AMOLED, touch, no UP/DOWN
+          - venu445mm # 454 round AMOLED, touch, no MENU key - 4 of 7 files
     container:
       image: ghcr.io/matco/connectiq-tester:v2.10.0
     defaults:
