@@ -222,7 +222,7 @@ own `compiler.json` and fails CI when the jungles disagree - because the
 first fix for this listed three devices by hand and left two more crashing
 in the store.
 
-### Two shards per device, and why not one simulator
+### Why not one simulator, and why not more jobs
 
 Each test file starts its own simulator, which is about thirty seconds in CI
 before an assertion runs - most of a ten-minute job across seven files. The
@@ -233,11 +233,21 @@ and the pickers assert on those defaults. A shared simulator would leak one
 file's state into the next file's assertions. Restarting per file is buying
 isolation, not just simplicity.
 
-So the suite splits across two jobs per device instead (`MACE_E2E_SHARD`,
-`MACE_E2E_SHARD_COUNT`), which keeps the isolation and still halves the wall
-clock. That is free here: the e2e jobs already start within five seconds of
-each other, so nothing queues and the run costs whatever its slowest job
-costs.
+Splitting the suite across two jobs per device keeps that isolation and does
+shorten each job - the runner supports it, `MACE_E2E_SHARD` with
+`MACE_E2E_SHARD_COUNT`, and it is useful locally for running part of the
+suite. **CI does not use it, because it was measured and it was slower.**
+
+At nine devices the e2e jobs started within five seconds of each other and
+parallelism was free. Two shards each makes 18 jobs, plus 8 reduced and 25 in
+`ci.yml`: 51 at once, which is past what the runners give us. The slowest job
+fell from 654s to 458s and jobs began queueing for up to 348s, so the run as
+a whole went from ten minutes to eleven.
+
+That is the shape of the constraint: the wall clock is set by how many jobs
+can start at once, not by how long any one of them takes. More jobs is not a
+lever here; a shorter job is. Anything that adds jobs should be measured
+against the queue delay rather than the job duration.
 
 ### Nothing is staged any more
 

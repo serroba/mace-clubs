@@ -48,21 +48,12 @@ on:
 
 jobs:
   e2e-reduced:
-    name: E2E UI suite, reduced (${{ matrix.device }} ${{ matrix.shard }}/2)
+    name: E2E UI suite, reduced (${{ matrix.device }})
     runs-on: ubuntu-latest
     timeout-minutes: 30
     strategy:
       fail-fast: false
       matrix:
-        # Two shards per device rather than one job running seven files in
-        # a line. Each file costs a fresh simulator - about thirty seconds in
-        # CI before an assertion runs - and the files cannot share one: the
-        # app persists movementType and workingSide mid-workout, and the
-        # pickers assert on those defaults, so a reused simulator would leak
-        # one file's state into the next's. Splitting keeps that isolation
-        # and halves the wall clock, which is free here because the jobs
-        # already start within seconds of each other.
-        shard: [1, 2]
         # Four of the five 96KB devices. All five get the reduced build -
         # that is decided by tools/reduced-devices.ts from their memory, not
         # here - and all five start and run; this list is only about which
@@ -105,8 +96,6 @@ jobs:
       - name: Run the reduced e2e UI suite
         env:
           MACE_E2E_DEVICE: ${{ matrix.device }}
-          MACE_E2E_SHARD: ${{ matrix.shard }}
-          MACE_E2E_SHARD_COUNT: 2
           MACE_E2E_SUITE: reduced
         run: bash tools/e2e/linux/run-suite.sh
 
