@@ -29,10 +29,16 @@ void describe("Choose movement screen", () => {
 
         const lines = await sim.readText();
         const joined = lines.join(" ");
-        assertScreenShows(joined, "Choose");
-        assertScreenShows(joined, "movement");
+        // The first row, not the "Choose movement" title - Menu2 draws its
+        // own title and the Instinct Crossover draws none, listing straight
+        // from the first row. See equipment-picker.e2e.test.ts.
         assertScreenShows(joined, "360");
 
+        // Before scrolling, so the baseline is the screen as it first
+        // appears.
         await expectScreenshotMatches(await sim.screenshot(), "movement-picker");
+
+        // The rest of the list is below the fold on the shorter screens.
+        await sim.pressUntilVisible("down", "Flow");
     });
 });

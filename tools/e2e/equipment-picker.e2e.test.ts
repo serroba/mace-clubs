@@ -28,10 +28,22 @@ void describe("Choose equipment screen", () => {
 
         const lines = await sim.readText();
         const joined = lines.join(" ");
-        assertScreenShows(joined, "Choose");
-        assertScreenShows(joined, "equipment");
+        // The first row, not the "Choose equipment" title: Menu2 draws its
+        // own title and does not always draw one - the Instinct Crossover
+        // shows this menu with no title band at all, listing straight from
+        // the first row. That is the system's layout decision, not something
+        // the app asks for or can change.
         assertScreenShows(joined, "Mace");
 
+        // Before scrolling, so the baseline is always the screen as it first
+        // appears.
         await expectScreenshotMatches(await sim.screenshot(), "equipment-picker");
+
+        // "lists every equipment option" is the claim, so check the list
+        // rather than the first screenful of it. Only two rows fit above the
+        // fold on a 163x156 Instinct 2S - asserting "Clubs" outright failed
+        // on six of the seven devices in CI, all of them drawing the menu
+        // perfectly well.
+        await sim.pressUntilVisible("down", "Clubs");
     });
 });

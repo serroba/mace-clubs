@@ -165,7 +165,15 @@ widths below:
 
 | Device | Screen | Status |
 | --- | --- | --- |
-| `instinctcrossover` | 176x176 | the equipment picker's title is not read at all, though its rows are - the same shape as the `fr55` and `vivoactive4s` findings below |
+| `instinctcrossover` | 176x176 | 6 of 7. The workout summary's middle rows sit under the watch's **physical hands**, which the simulator draws over the display - `0 sets 0 work` and the equipment row are legible to neither OCR nor, at that hour, a person. Where the hands rest depends on the time of day, so the test would pass or fail by the clock |
+
+That last one is a device property rather than a defect, and it is not
+something the app can compile its way out of. It is worth knowing as a
+product question though: on a Crossover, the numbers a workout ends on can
+be behind the hands.
+
+Everything else about that watch is covered - it starts, records, and passes
+the other six files.
 
 That is not a crash. The watch starts, runs a workout and records it; what
 is missing is UI coverage, which is why it is staged rather than blocking.
@@ -217,7 +225,7 @@ the highest-usage watch in its band:
 | --- | --- | --- |
 | 208 | `fr55` | truncates the picker's title (`Choose e-`) |
 | 218 | `vivoactive4s` | truncates the picker's title |
-| 240 | `fr945` | OCR drops glyphs that are already large - see PR #173 |
+| 240 | `fr945` | OCR drops glyphs that are already large - see PR #173. `instinctcrossover` above waits on the same fix |
 | 280 | `fenix8solar51mm` | OCR misreads the title on 280px MIP |
 | 390 | `vivoactive5` | not yet run |
 | 454 | `venu445mm` | not yet run - no MENU key at all |
