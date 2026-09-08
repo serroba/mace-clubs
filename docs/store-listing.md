@@ -92,6 +92,8 @@ watch and its 25 Hz gyroscope. On other watches it still runs, falling back to
 the accelerometer where there is no gyroscope, but the counts have not been
 checked against known-correct numbers.
 
+Five watches with 96 KB of app memory — Instinct 2, 2S, 2X, Descent G1 and Instinct Crossover — run a reduced build: no history browser, no on-watch workout editor and no Garmin Connect motion charts. The whole app does not fit in 96 KB, and before it was trimmed it did not start on them at all.
+
 - Language: English
 
 ## Screenshots (need at least one)
