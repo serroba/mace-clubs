@@ -17,13 +17,10 @@ import { after, before, describe, it } from "node:test";
 
 import { assertScreenShows } from "../ocr-match.ts";
 
-import { deviceProfile, Simulator } from "../simulator.ts";
+import { openRestOptions } from "../open-menu.ts";
+import { Simulator } from "../simulator.ts";
 
-// MENU is a held button; a device without one skips rather than clicking
-// empty bezel. None of today's reduced devices are in that group.
-const suite = deviceProfile().menuHotspot === null ? describe.skip : describe;
-
-void suite("Rest options menu (reduced build)", () => {
+void describe("Rest options menu (reduced build)", () => {
     let sim: Simulator;
 
     before(async () => {
@@ -46,8 +43,8 @@ void suite("Rest options menu (reduced build)", () => {
         // WORK -> free-training REST.
         await sim.press("select");
 
-        // Free-resting, not paused: MENU opens Rest options, not discard.
-        await sim.hold("menu");
+        // Free-resting, not paused: the menu is Rest options, not discard.
+        await openRestOptions(sim);
 
         const joined = (await sim.readText()).join(" ");
         assertScreenShows(joined, "Options");
