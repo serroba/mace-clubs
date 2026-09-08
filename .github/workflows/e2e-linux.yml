@@ -66,12 +66,21 @@ on:
 
 jobs:
   e2e:
-    name: E2E UI suite (${{ matrix.device }})
+    name: E2E UI suite (${{ matrix.device }} ${{ matrix.shard }}/2)
     runs-on: ubuntu-latest
     timeout-minutes: 30
     strategy:
       fail-fast: false
       matrix:
+        # Two shards per device rather than one job running seven files in
+        # a line. Each file costs a fresh simulator - about thirty seconds in
+        # CI before an assertion runs - and the files cannot share one: the
+        # app persists movementType and workingSide mid-workout, and the
+        # pickers assert on those defaults, so a reused simulator would leak
+        # one file's state into the next's. Splitting keeps that isolation
+        # and halves the wall clock, which is free here because the jobs
+        # already start within seconds of each other.
+        shard: [1, 2]
         # One per screen width the store's device report shows real users
         # on, which is how this list is decided rather than by guesswork.
         # The report spans seven widths and every one of them is here or in
@@ -136,6 +145,8 @@ jobs:
       - name: Run the e2e UI suite
         env:
           MACE_E2E_DEVICE: ${{ matrix.device }}
+          MACE_E2E_SHARD: ${{ matrix.shard }}
+          MACE_E2E_SHARD_COUNT: 2
         run: bash tools/e2e/linux/run-suite.sh
 
       # Screenshots of whatever the driver last saw, for diagnosing a

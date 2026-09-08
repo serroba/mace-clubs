@@ -143,18 +143,56 @@ async function testFiles(dir: string, prefix: string): Promise<string[]> {
         .map((name) => `${prefix}${name}`);
 }
 
+/**
+ * This runner's slice of the suite, when CI has split it across jobs.
+ *
+ * Each file costs a fresh simulator - about thirty seconds in CI before a
+ * single assertion runs - and seven files in a line is most of a ten-minute
+ * job. They cannot share one simulator: the app persists movementType and
+ * workingSide mid-workout (MaceClubsView), and the pickers assert on those
+ * defaults, so a reused simulator would leak one file's state into the
+ * next's assertions. Restarting per file is what buys the isolation.
+ *
+ * Splitting across jobs keeps that isolation and still halves the wall
+ * clock, because the jobs already run concurrently with no queueing.
+ *
+ * MACE_E2E_SHARD is 1-based and needs MACE_E2E_SHARD_COUNT; unset means the
+ * whole suite, which is what a local run wants.
+ */
+export function shardOf(files: string[], shard: number, count: number): string[] {
+    return files.filter((_, index) => index % count === shard - 1);
+}
+
+function selectedShard(): { shard: number; count: number } {
+    const count = Number(process.env["MACE_E2E_SHARD_COUNT"] ?? "1");
+    const shard = Number(process.env["MACE_E2E_SHARD"] ?? "1");
+    if (!Number.isInteger(count) || count < 1 || !Number.isInteger(shard) || shard < 1 || shard > count) {
+        throw new Error(
+            `MACE_E2E_SHARD must be between 1 and MACE_E2E_SHARD_COUNT, got shard=${String(shard)} of ${String(count)}`,
+        );
+    }
+    return { shard, count };
+}
+
 async function main(): Promise<void> {
     const suite = selectedSuite();
-    const files = [
+    const all = [
         ...(await testFiles(E2E_DIR, "")),
         ...(await testFiles(join(E2E_DIR, suite), `${suite}/`)),
     ];
-    if (files.length === 0) {
+    if (all.length === 0) {
         console.error("no *.e2e.test.ts files found");
         process.exitCode = 1;
         return;
     }
-    console.log(`running the ${suite} suite: ${String(files.length)} file(s)`);
+    const { shard, count } = selectedShard();
+    const files = shardOf(all, shard, count);
+    const share = count === 1 ? "" : ` (shard ${String(shard)}/${String(count)} of ${String(all.length)})`;
+    console.log(`running the ${suite} suite: ${String(files.length)} file(s)${share}`);
+    if (files.length === 0) {
+        console.log("nothing in this shard");
+        return;
+    }
 
     let failures = 0;
     for (const file of files) {
@@ -186,4 +224,8 @@ async function main(): Promise<void> {
     }
 }
 
-await main();
+// Guarded so the shard maths can be unit-tested without running the suite
+// on import - the same entrypoint check the other tools use.
+if (process.argv[1] !== undefined && import.meta.url.endsWith(process.argv[1].replace(/^.*\//, ""))) {
+    await main();
+}

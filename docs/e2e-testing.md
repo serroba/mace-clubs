@@ -222,6 +222,23 @@ own `compiler.json` and fails CI when the jungles disagree - because the
 first fix for this listed three devices by hand and left two more crashing
 in the store.
 
+### Two shards per device, and why not one simulator
+
+Each test file starts its own simulator, which is about thirty seconds in CI
+before an assertion runs - most of a ten-minute job across seven files. The
+obvious saving is to start one simulator and reload the app per file, and it
+is the wrong one: the app persists `movementType` and `workingSide`
+mid-workout (`MaceClubsView`), among twenty `Properties`/`Storage` writes,
+and the pickers assert on those defaults. A shared simulator would leak one
+file's state into the next file's assertions. Restarting per file is buying
+isolation, not just simplicity.
+
+So the suite splits across two jobs per device instead (`MACE_E2E_SHARD`,
+`MACE_E2E_SHARD_COUNT`), which keeps the isolation and still halves the wall
+clock. That is free here: the e2e jobs already start within five seconds of
+each other, so nothing queues and the run costs whatever its slowest job
+costs.
+
 ### Nothing is staged any more
 
 Every device the store's device report names is now driven, across the two
@@ -272,6 +289,40 @@ So the pull-request check covers everything at or below 128KB - the tier where
 the answer can change - and a nightly run covers all 120, which is what
 catches that reasoning being wrong. A device that crashes or drops under 4KB
 fails; under 12KB warns.
+
+### The first screen is not where the app runs out
+
+The probe reads memory three times: entering `getInitialView`, once the first
+screen exists, and again with the settings menu built on top of it. The third
+is the one that decides, and it is not close to the second:
+
+| instinct2 | free |
+| --- | --- |
+| entering getInitialView | 13,640 |
+| first screen built | 7,296 |
+| settings menu on top | **2,064** |
+
+So the real margin on a 96KB watch is about two kilobytes, not seven. That is
+why #188's 208 bytes broke three of them, and why they broke *on the settings
+menu* rather than at startup. The menu is built and dropped rather than shown
+- `SettingsMenu.build()` is a pure function, so this needs nothing to drive
+the watch's buttons - which makes it a proxy for the peak rather than the
+peak itself.
+
+Two consequences for the thresholds. The floor is 1KB, not 4KB, because
+instinct2 ships today at 2,064 and works; a gate red on main is a gate
+someone deletes. And a drop is measured as a share of what the device has
+(10%, floor 128 bytes), because a flat 2KB threshold can never fire on a
+watch with 2KB left - it would be dead before the check spoke. The same
+build measured four times running returned the same number to the byte, so
+there is no noise to leave room for.
+
+**What this does not cover.** It measures the *probe* build, which carries
+the probe, not the `.prg` that ships. #188's own regression lived only in the
+shipped build - an empty annotated helper the probe build never had - so this
+check would not have caught it. It catches changes to shared code, which is
+nearly all of them; the per-device e2e suite remains the thing that actually
+opens the menu on the watch.
 
 `tools/memory-baselines.json` records each device's number, so a change that
 costs headroom says so on the pull request that costs it. v0.13.4 took about
