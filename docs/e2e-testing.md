@@ -284,6 +284,16 @@ The baselines are recorded on the branch that introduced the probe, because
 before that branch. They are a floor for future changes, not an independent
 blessing of the change that wrote them.
 
+**They are Linux numbers, because that is where the gate runs.** The same
+build reports different headroom on the two platforms: instinct2 measures
+7,408 bytes on macOS and 7,816 in the CI container, and the gap runs from
+zero to about 408 bytes depending on the device. Baselines recorded on macOS
+and checked on Linux compare two different things, and every pull request
+carries a drift line nobody caused - which is how a useful check becomes
+noise. So `make memory-headroom` locally is for the absolute number and the
+4KB floor; the baseline comparison belongs to CI, and a local run showing a
+few hundred bytes of drift is the platform, not the change.
+
 ### 208 bytes is enough to break three watches
 
 The probe's own first version cost 208 bytes and turned the reduced e2e
