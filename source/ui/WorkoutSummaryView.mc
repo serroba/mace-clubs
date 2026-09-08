@@ -117,6 +117,43 @@ class WorkoutSummaryView extends WatchUi.View {
         return [heading, line1, line2, ""];
     }
 
+    // The Instinct Crossover wears physical hands over its display, and they
+    // rest across the middle of it - exactly where this screen puts the set
+    // count, the work time and the equipment row. A full-window capture of
+    // the simulator shows them lying over "0 sets  0 work"; the text is
+    // drawn in the same white as the heading above it and is simply
+    // covered. Where they sit depends on the time of day, so on some
+    // afternoons the numbers a workout ends on are unreadable.
+    //
+    // Parking them for the duration of the summary is what the API is for.
+    // They go back to telling the time when it closes - leaving them parked
+    // would be worse than the problem, since this is still a watch.
+    //
+    // Guarded rather than assumed: setClockHandPosition is @since 3.3.0 and
+    // the manifest declares 3.1.0, so twelve devices do not have the symbol
+    // at all, and of the rest only the two Crossovers have hands to move.
+    // Everything else returns false and carries on.
+    function onShow() as Void {
+        parkHands(true);
+    }
+
+    function onHide() as Void {
+        parkHands(false);
+    }
+
+    private function parkHands(resting as Boolean) as Void {
+        if (!(WatchUi has :ANALOG_CLOCK_STATE_RESTING) || !(self has :setClockHandPosition)) {
+            return;
+        }
+        setClockHandPosition(
+            {
+                :clockState => resting
+                    ? WatchUi.ANALOG_CLOCK_STATE_RESTING
+                    : WatchUi.ANALOG_CLOCK_STATE_SYSTEM_TIME
+            }
+        );
+    }
+
     function onUpdate(dc as Dc) as Void {
         dc.setColor(Graphics.COLOR_WHITE, Graphics.COLOR_BLACK);
         dc.clear();

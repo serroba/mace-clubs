@@ -170,12 +170,13 @@ widths below:
 
 | Device | Screen | Status |
 | --- | --- | --- |
-| `instinctcrossover` | 176x176 | 6 of 7. The workout summary's middle rows sit under the watch's **physical hands**, which the simulator draws over the display - `0 sets 0 work` and the equipment row are legible to neither OCR nor, at that hour, a person. Where the hands rest depends on the time of day, so the test would pass or fail by the clock |
+| `instinctcrossover` | 176x176 | 6 of 7. The workout summary's middle rows sit under the watch's **physical hands**. The app now parks them while that screen is up (`WorkoutSummaryView.onShow`), which fixes it for owners - but the simulator paints its hands on regardless of what the app asks, so the rows stay covered here and the test stays unassertable |
 
-That last one is a device property rather than a defect, and it is not
-something the app can compile its way out of. It is worth knowing as a
-product question though: on a Crossover, the numbers a workout ends on can
-be behind the hands.
+That last one was filed as a device property that the app could not do
+anything about, and that was wrong: `WatchUi.View.setClockHandPosition` has
+existed since API 3.3.0 and moves the hands. It is fixed. What remains is
+only that the simulator cannot show the fix working, so the device stays at
+6 of 7 for a reason about the test harness rather than about the watch.
 
 Everything else about that watch is covered - it starts, records, and passes
 the other six files.
