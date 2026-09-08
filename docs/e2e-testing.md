@@ -149,6 +149,7 @@ workflows over two device groups.
 | --- | --- | --- | --- |
 | 176 | `instinct3solar45mm` | semi-octagon MIP, 1bpp, subwindow | keys |
 | 208 | `fr55` | round MIP, 4bpp | keys |
+| 218 | `vivoactive4s` | round MIP, 8bpp | touch, no UP/DOWN |
 | 240 | `fr945` | round MIP, 8bpp | keys |
 | 260 | `fenix7` | round MIP, 8bpp | touch with keys |
 | 454 | `venu3` | round AMOLED, 16bpp | touch, no UP/DOWN |
@@ -225,7 +226,6 @@ the highest-usage watch in its band:
 
 | Width | Device | Status |
 | --- | --- | --- |
-| 218 | `vivoactive4s` | truncates the picker's title |
 | 280 | `fenix8solar51mm` | OCR misreads the title on 280px MIP |
 | 390 | `vivoactive5` | not yet run |
 | 454 | `venu445mm` | not yet run - no MENU key at all |
