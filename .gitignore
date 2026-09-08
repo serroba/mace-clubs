@@ -29,3 +29,7 @@ tools/e2e/.diffs/
 cov.log
 coverage-*.log
 bin/coverage/
+
+# The Linux simulator drops a core dump beside the driver when it crashes
+# mid-suite - 1.8MB of it, right where `git add -A` will sweep it up.
+tools/e2e/core

@@ -93,6 +93,7 @@ jobs:
         # the other 115 devices ship.
         device:
           - instinct3solar45mm # 176 semi-octagon MIP, 1bpp, keys only
+          - fr945 # 240 round MIP, keys only
           - fenix7 # 260 round MIP, touch with keys
           - venu3 # 454 round AMOLED, touch, no UP/DOWN
     container:

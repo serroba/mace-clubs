@@ -40,6 +40,29 @@ const DISPLAY = process.env["DISPLAY"] ?? ":1";
 // measures from the decorated origin too, so the same offset applies there.
 const DECORATION_OFFSET = { x: 1, y: 31 } as const;
 
+// Upscale factors the OCR tries.
+//
+// 400% alone was the original, and it reads small text well - which is what
+// the Instinct's 176px screen is made of. It fails in the other direction: a
+// glyph that is already large gets magnified past what Tesseract's models
+// expect, and is dropped silently rather than misread. The movement picker's
+// "360" on a 240px Forerunner 945 is 60px tall on the watch and 240px after
+// a 400% resize; every page-segmentation mode read the title and none of
+// them read the number. The same image at 200% reads "Choose movement 360".
+//
+// So scale is a second axis alongside polarity, for the same reason: cheap
+// passes whose lines are unioned, each contributing the rows it happens to
+// render legibly.
+//
+// The union is unordered, which is only safe because nothing reads meaning
+// out of the order any more. rest-screen.e2e.test.ts used to identify the
+// countdown as the value sitting directly before the "SELECT: work" label,
+// and adding these passes broke it in two different ways before that test
+// was changed to watch row 2 tick instead. If a test ever needs reading
+// order again, it needs real coordinates - Tesseract will give them in its
+// TSV output - not an assumption about which pass ran first.
+const OCR_SCALES = [400, 200] as const;
+
 // Big enough for the largest device skin the SDK ships plus decoration
 // (descentmk351mm is 847x1089, so its window is 847x1145). A skin that does
 // not fit the virtual display gets a window clipped at the edge, and clicks
@@ -249,8 +272,9 @@ export class LinuxPlatform implements Platform {
      * The catch: a Menu2's *selected* row is drawn already inverted, so a
      * single global negate reads every normal line perfectly and garbles
      * exactly the highlighted one ("Settings" clean but "History" as
-     * "» Bila"). Both polarities are OCR'd and their lines merged, so
-     * whichever pass renders a given row dark-on-light contributes it.
+     * "» Bila"). Both polarities are OCR'd at both scales (see OCR_SCALES)
+     * and their lines merged, so whichever pass renders a given row legibly
+     * contributes it.
      *
      * Applied here rather than in captureScreen() so screenshots keep the
      * screen's real pixels for baseline comparison. */
@@ -259,22 +283,30 @@ export class LinuxPlatform implements Platform {
         const pngPath = join(dir, "shot.png");
         try {
             await writeFile(pngPath, png);
-            const passes = await Promise.all([
-                this.ocrPass(dir, pngPath, "negated", true),
-                this.ocrPass(dir, pngPath, "direct", false),
-            ]);
+            const passes = await Promise.all(
+                OCR_SCALES.flatMap((scale) => [
+                    this.ocrPass(dir, pngPath, `negated-${String(scale)}`, true, scale),
+                    this.ocrPass(dir, pngPath, `direct-${String(scale)}`, false, scale),
+                ]),
+            );
             return [...new Set(passes.flat())];
         } finally {
             await rm(dir, { recursive: true, force: true });
         }
     }
 
-    private async ocrPass(dir: string, pngPath: string, tag: string, negate: boolean): Promise<string[]> {
+    private async ocrPass(
+        dir: string,
+        pngPath: string,
+        tag: string,
+        negate: boolean,
+        scale: number,
+    ): Promise<string[]> {
         const processedPath = join(dir, `${tag}.png`);
         await execFileAsync("convert", [
             pngPath,
             "-resize",
-            "400%",
+            `${String(scale)}%`,
             ...(negate ? ["-negate"] : []),
             "-threshold",
             "50%",
