@@ -166,8 +166,26 @@ export function describe(reading: Reading): string {
     return `${first}, ${String(reading.freeAtPeak)} bytes with the settings menu on top`;
 }
 
+/**
+ * The run did not get a number, for a reason that is nothing to do with the
+ * app's memory.
+ *
+ * Worth its own verdict because the first nightly over all 120 devices
+ * reported five watches as "cannot hold the app" when the simulator had died
+ * ten devices earlier. A check that reports a measurement failure as a
+ * product failure is telling exactly the kind of lie this one exists to
+ * prevent, and it fails the build either way - not measured must never read
+ * as fine.
+ */
+export function couldNotMeasure(reading: Reading): boolean {
+    return reading.failure === "the simulator was not reachable" || reading.failure?.startsWith("did not build") === true;
+}
+
 /** Failing: crashed, never reported, or down to the last few KB. */
 export function isCritical(reading: Reading): boolean {
+    if (couldNotMeasure(reading)) {
+        return false;
+    }
     const free = headroom(reading);
     return reading.failure !== null || free === null || free < CRITICAL_FREE_BYTES;
 }
@@ -243,6 +261,15 @@ export function isTight(reading: Reading): boolean {
  * like the app failing. Starting it here is what makes this a single command
  * rather than a thing you have to set up first.
  */
+/** Stops a simulator that is running but not answering, so ensureSimulator()
+ * starts a fresh one rather than finding the broken one and returning. */
+function killSimulator(): void {
+    for (const pattern of ["ConnectIQ.app/Contents/MacOS/simulator", "bin/simulator"]) {
+        spawnSync("pkill", ["-9", "-f", pattern]);
+    }
+    spawnSync("sleep", ["2"]);
+}
+
 function ensureSimulator(): void {
     if (spawnSync("pgrep", ["-f", "ConnectIQ.app/Contents/MacOS/simulator"]).status === 0) {
         return;
@@ -442,7 +469,20 @@ async function main(): Promise<void> {
 
     const readings: Reading[] = [];
     for (const device of devices) {
-        readings.push(await measure(device, monkeyc, monkeydo, key, outDir));
+        let reading = await measure(device, monkeyc, monkeydo, key, outDir);
+        // The simulator is not a reliable process, and one that dies partway
+        // through takes the rest of the run with it: the first nightly over
+        // all 120 devices measured ten in a shard, lost the simulator, and
+        // reported the remaining five as unreachable. Bring it back and give
+        // the device one more go rather than writing off everything after
+        // the crash.
+        if (reading.failure === "the simulator was not reachable") {
+            console.warn(`::warning::the simulator was gone at ${device} - restarting it and retrying once`);
+            killSimulator();
+            ensureSimulator();
+            reading = await measure(device, monkeyc, monkeydo, key, outDir);
+        }
+        readings.push(reading);
     }
     const baselines = loadBaselines();
     for (const reading of readings) {
@@ -488,6 +528,7 @@ async function main(): Promise<void> {
         );
     }
     const failures = readings.filter(isCritical);
+    const unmeasured = readings.filter(couldNotMeasure);
     if (failures.length > 0) {
         console.error("");
         for (const reading of failures) {
@@ -497,6 +538,15 @@ async function main(): Promise<void> {
                     "in the jungles - see tools/reduced-devices.ts for how the reduced build is chosen.",
             );
         }
+    }
+    for (const reading of unmeasured) {
+        console.error(
+            `::error::${reading.device} was not measured: ${reading.failure ?? "unknown"}. That is this run ` +
+                "failing, not the device - rerun it. It is still an error, because a device nobody measured " +
+                "must not read as a device that passed.",
+        );
+    }
+    if (failures.length > 0 || unmeasured.length > 0) {
         process.exitCode = 1;
         return;
     }
