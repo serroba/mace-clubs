@@ -284,21 +284,25 @@ route it stands in for is covered by `workout-summary`.
 whether a watch can hold what it compiled, and that gap is how the app spent
 four months unable to start on 11.94% of installs.
 
-`make memory-headroom` measures what is left once the first screen exists,
-per device, by running the app with `MaceClubsApp`'s `memoryProbe` annotation
-compiled in - the one build that has it, `monkey.probe.jungle`. The numbers
-are not close:
+`make memory-headroom` measures what is left at the app's peak, per device, by
+running it with `MaceClubsApp`'s `memoryProbe` annotation compiled in - the one
+build that has it, `monkey.probe.jungle`. The numbers are not close:
 
-| Tier | Devices | Free after the first screen |
+| Tier | Devices | Free at the peak |
 | --- | --- | --- |
-| 96KB | 5 | 7-8KB |
-| 128KB | 15 | 27-53KB |
-| 512KB and up | 100 | ~693KB |
+| 96KB | 5 | ~4.8KB |
+| 128KB | 15 | 21-47KB |
+| 512KB and up | 100 | 702KB (fenix7, the one recorded) |
 
 So the pull-request check covers everything at or below 128KB - the tier where
 the answer can change - and a nightly run covers all 120, which is what
-catches that reasoning being wrong. A device that crashes or drops under 4KB
-fails; under 12KB warns.
+catches that reasoning being wrong. A device that crashes or drops under 1KB
+fails; under 4KB warns, which nothing currently does.
+
+Those figures come from `tools/memory-baselines.json`, which `make
+memory-headroom-record` writes. It is the file to read for what main measures
+today; the tables further down record what particular changes cost when they
+were made.
 
 ### The first screen is not where the app runs out
 
@@ -346,6 +350,15 @@ kind of thing the community advice is about - prefer drawn shapes to bitmaps,
 and remember that one `loadResource()` is not free even when the file is
 tiny. It was worth checking only because the peak number made the real margin
 visible.
+
+That table is the experiment, taken while the change was being made, and it is
+the only place it is written down - `MaceClubsView` used to carry its own copy
+and the two had drifted 400 bytes apart, which is how you end up unable to say
+which figure was real. What main measures today is in
+`tools/memory-baselines.json`: instinct2 records 4,832, not the 4,432 above.
+The difference has not been chased down and would need re-measuring on a
+machine with that device installed; the recorded file is the one to trust,
+because a tool wrote it.
 
 ### What the nightly is for
 

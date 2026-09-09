@@ -98,23 +98,6 @@ function displayIdleSeconds(): number | null {
  * knew. Checked only after a real failure, so it cannot misfire on a healthy
  * run that simply has an idle display.
  */
-/**
- * Did this file fail because the simulator is not there, rather than because
- * the app is wrong?
- *
- * The simulator is not a reliable process. Across one day of adding devices
- * it failed three different ways - "monkeydo could not reach the simulator
- * after 8 attempts", a SIGSEGV that left a 1.8MB core dump beside the
- * driver, and a file whose test outlived its parent because the app never
- * painted. None of them were the app, and every one of them was green on a
- * rerun.
- *
- * That matters more the more devices there are. Twelve jobs across two
- * workflows means a per-job flake rate that is nearly invisible still turns
- * up somewhere on most pull requests, and a suite that is red for reasons
- * nobody believes gets rerun by reflex - which is exactly how a real failure
- * gets waved through.
- */
 function abortsForEnvironment(): boolean {
     if (simulatorWindowExists()) {
         return false;
@@ -153,9 +136,15 @@ async function testFiles(dir: string, prefix: string): Promise<string[]> {
  * defaults, so a reused simulator would leak one file's state into the
  * next's assertions. Restarting per file is what buys the isolation.
  *
- * Splitting across jobs keeps that isolation and still halves the wall
- * clock, because the jobs already run concurrently with no queueing.
+ * Splitting across jobs keeps that isolation, and CI does not do it. It was
+ * tried in #189 and made the run a minute longer: the slowest job did fall
+ * from 654s to 458s, but 51 concurrent jobs is past the runner ceiling and
+ * they queued for up to 348 seconds where they had waited five. "The jobs
+ * already run concurrently with no queueing" was true at 38 jobs and false at
+ * 51, which is the sort of claim worth writing down with its measurement
+ * attached - see docs/e2e-testing.md.
  *
+ * So this stays for local use, where there is no queue to lose to.
  * MACE_E2E_SHARD is 1-based and needs MACE_E2E_SHARD_COUNT; unset means the
  * whole suite, which is what a local run wants.
  */
@@ -195,13 +184,28 @@ async function main(): Promise<void> {
     }
 
     let failures = 0;
+    let reached = 0;
     for (const file of files) {
+        reached += 1;
         console.log(`\n=== ${file} ===`);
         let code = await runFile(file);
         // One retry, and only when the simulator is missing rather than the
         // assertions failing. A file that fails on its own terms fails
         // straight away: retrying those would turn a real regression into an
         // intermittent one, which is worse than the flake this is for.
+        //
+        // The flake is real, though. The simulator is not a reliable process:
+        // across one day of adding devices it failed three different ways -
+        // "monkeydo could not reach the simulator after 8 attempts", a SIGSEGV
+        // that left a 1.8MB core dump beside the driver, and a file whose test
+        // outlived its parent because the app never painted. None of them were
+        // the app, and every one was green on a rerun.
+        //
+        // That matters more the more devices there are. Thirteen jobs across
+        // two workflows means a per-job flake rate that is nearly invisible
+        // still turns up somewhere on most pull requests, and a suite that is
+        // red for reasons nobody believes gets rerun by reflex - which is
+        // exactly how a real failure gets waved through.
         if (code !== 0 && !simulatorWindowExists()) {
             console.error(`::warning::the simulator is gone after ${file} - retrying it once`);
             killSimulatorProcess();
@@ -211,7 +215,9 @@ async function main(): Promise<void> {
         if (code !== 0) {
             failures += 1;
             if (abortsForEnvironment()) {
-                console.error(`Stopped after ${file}; ${String(files.length - failures)} file(s) not run.`);
+                // Files left, not failures so far: subtracting the failure
+                // count reported six files unrun when five had already passed.
+                console.error(`Stopped after ${file}; ${String(files.length - reached)} file(s) not run.`);
                 process.exitCode = 1;
                 return;
             }

@@ -5,11 +5,14 @@ import { fileURLToPath } from "node:url";
 import { test } from "node:test";
 
 import {
+    buildShardCount,
     collectSignals,
     coverageFloor,
+    fitCoverageFloor,
     manifestDeviceCount,
     matrixDevices,
     monkeyCFloor,
+    recordedHeadroomDevices,
     renderMarkdown,
 } from "./quality-report.ts";
 
@@ -28,9 +31,34 @@ test("device and matrix counts come out of the real files", () => {
     // otherwise silently report zero devices as if that were the truth.
     assert.ok(matrixDevices(ci, "name: Unit tests").length >= 5, "unit matrix should be found");
     assert.ok(matrixDevices(e2e, "matrix:").length >= 3, "e2e matrix should be found");
-    assert.equal(coverageFloor(ci), 95);
+    assert.ok((coverageFloor(ci) ?? 0) > 0, "the tree coverage floor should be set in ci.yml");
+    assert.ok((fitCoverageFloor(ci) ?? 0) > 0, "the FIT core floor should be set in ci.yml");
     assert.ok((monkeyCFloor(ci) ?? 0) > 0, "the Monkey C floor should be set in ci.yml");
     assert.equal(monkeyCFloor("nothing here"), null);
+    assert.equal(buildShardCount(ci), 8);
+});
+
+// Three `--test-coverage-lines` flags live in ci.yml and they mean different
+// things. Reading whichever comes first is how a badge ends up quoting the
+// wrong gate, so each accessor is pinned to the one it names.
+test("each coverage floor comes from its own gate", () => {
+    const ci = read(".github/workflows/ci.yml");
+    assert.notEqual(
+        coverageFloor(ci),
+        fitCoverageFloor(ci),
+        "the tree and the FIT core are held to different floors; one accessor is reading the other's gate",
+    );
+    assert.equal(coverageFloor("--test-coverage-lines=99"), null, "an unanchored flag is not the tree gate");
+    assert.equal(fitCoverageFloor("--test-coverage-lines=99"), null, "an unanchored flag is not the FIT gate");
+});
+
+test("the recorded-headroom count comes out of the baselines file", () => {
+    assert.equal(recordedHeadroomDevices('{"instinct2": 4832, "fenix7": 702520}'), 2);
+    // A device present but unmeasured must not be counted as measured - that
+    // is the distinction the whole headroom check exists to keep.
+    assert.equal(recordedHeadroomDevices('{"instinct2": 4832, "venu3": null}'), 1);
+    assert.equal(recordedHeadroomDevices("{}"), 0);
+    assert.ok(recordedHeadroomDevices(read("tools/memory-baselines.json")) > 0);
 });
 
 // The badges are the reason this file exists. A README number that no longer
@@ -48,6 +76,21 @@ test("every badge in the README states something still true", () => {
         "the devices badge disagrees with manifest.xml",
     );
 
+    const uiDriven = /badge\/driven_through_the_UI-(\d+)_devices-/.exec(readme)?.[1];
+    assert.equal(
+        Number(uiDriven),
+        matrixDevices(read(".github/workflows/e2e-linux.yml"), "matrix:").length +
+            matrixDevices(read(".github/workflows/e2e-linux-reduced.yml"), "matrix:").length,
+        "the UI-driven badge disagrees with the e2e matrices",
+    );
+
+    const headroom = /badge\/memory_headroom-(\d+)_watches_recorded-/.exec(readme)?.[1];
+    assert.equal(
+        Number(headroom),
+        recordedHeadroomDevices(read("tools/memory-baselines.json")),
+        "the headroom badge disagrees with tools/memory-baselines.json",
+    );
+
     // "%E2%89%A5" is an encoded >=; the badge promises a floor, so the floor
     // has to be the number CI actually fails below.
     const floor = /TypeScript_line_coverage-%E2%89%A5(\d+)%25/.exec(readme)?.[1];
@@ -55,6 +98,14 @@ test("every badge in the README states something still true", () => {
         Number(floor),
         coverageFloor(ci),
         "the coverage badge quotes a floor CI does not enforce",
+    );
+
+    // The badge is the tree's floor, so the prose has to be what carries the
+    // FIT core's - otherwise the higher standard is enforced and unstated.
+    assert.match(
+        readme,
+        new RegExp(`≥${String(fitCoverageFloor(ci) ?? 0)}%`),
+        "the README does not state the floor the FIT report core is held to",
     );
 
     const monkeyC = /Monkey_C_function_coverage-%E2%89%A5(\d+)%25/.exec(readme)?.[1];
@@ -85,6 +136,7 @@ test("the report renders a table and omits signals it was not given", () => {
         ci: "name: Unit tests\n      matrix:\n        device:\n          - x\n          - y\n--test-coverage-lines=95",
         e2e: "matrix:\n        device:\n          - p\n",
         e2eReduced: "matrix:\n        device:\n          - q\n          - r\n",
+        memoryBaselines: null,
         lintRules: null,
         monkeyCCoverage: null,
         typescriptCoverage: null,

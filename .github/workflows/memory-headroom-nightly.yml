@@ -4,9 +4,9 @@ name: Memory headroom (all devices)
 #
 # ci.yml measures the tier where headroom can plausibly change - everything at
 # or below 128KB, about 20 of the 120 devices - because a watch with 768KB has
-# roughly 693KB left once the first screen exists and cannot fail. That is a
-# reasonable assumption and it is still an assumption. This run checks it,
-# nightly, across every device the manifest claims to support.
+# hundreds of KB spare at the app's peak and cannot fail. That is a reasonable
+# assumption and it is still an assumption. This run checks it, nightly,
+# across every device the manifest claims to support.
 #
 # It is also the thing that catches a device nobody thought about: the first
 # fix for the Instinct 2 crash named three of the five 96KB watches by hand and
