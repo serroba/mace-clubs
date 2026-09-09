@@ -1,8 +1,14 @@
-// Unit tests for the release-paperwork generator. Everything asserted here is
-// a pure function over a list of changes - the git plumbing that produces that
-// list is exercised for real by `make release-docs`.
+// Unit tests for the release-paperwork generator. Almost everything asserted
+// here is a pure function over a list of changes - the git plumbing that
+// produces that list is exercised for real by `make release-docs`. The one
+// exception is tagCommitDate, which runs git against a repository this file
+// builds and throws away.
 
 import assert from "node:assert/strict";
+import { execFileSync } from "node:child_process";
+import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import { describe, it } from "node:test";
 
 import {
@@ -18,6 +24,7 @@ import {
     renderReleaseNotes,
     renderWhatsNew,
     replaceRegion,
+    tagCommitDate,
     type Change,
 } from "./release-docs.ts";
 
@@ -242,9 +249,46 @@ void describe("releaseDate", () => {
     it("uses the tag's own date when regenerating a released version", () => {
         // Otherwise regenerating v0.7.0 next March restamps it with March,
         // which made bringing the archive forward destructive.
-        const dated = releaseDate("0.16.0", true, "2026-08-31");
-        assert.match(dated, /^\d{4}-\d{2}-\d{2}$/);
-        assert.notEqual(dated, "2026-08-31");
+        assert.equal(
+            releaseDate("0.7.0", true, "2026-08-31", (version) => `tag-date-of-${version}`),
+            "tag-date-of-0.7.0",
+        );
+    });
+});
+
+// The other half: that the git invocation itself returns a tag's commit date
+// in the format the paperwork wants. Against a repository this test builds,
+// not against this one - asserting on v0.16.0 meant the test needed a tag
+// nobody had promised to keep, and it failed the first time CI ran it because
+// actions/checkout fetches no tags at all.
+void describe("tagCommitDate", () => {
+    it("reads the tag's commit date, not today's", () => {
+        const repo = mkdtempSync(join(tmpdir(), "release-docs-tag-"));
+        try {
+            const run = (...args: string[]): void => {
+                execFileSync("git", args, {
+                    cwd: repo,
+                    env: {
+                        ...process.env,
+                        GIT_AUTHOR_DATE: "2020-01-02T03:04:05Z",
+                        GIT_COMMITTER_DATE: "2020-01-02T03:04:05Z",
+                        GIT_AUTHOR_NAME: "Test",
+                        GIT_AUTHOR_EMAIL: "test@example.com",
+                        GIT_COMMITTER_NAME: "Test",
+                        GIT_COMMITTER_EMAIL: "test@example.com",
+                    },
+                });
+            };
+            run("init", "--quiet");
+            writeFileSync(join(repo, "file.txt"), "content\n");
+            run("add", "file.txt");
+            run("commit", "--quiet", "-m", "Only commit");
+            run("tag", "v9.9.9");
+
+            assert.equal(tagCommitDate("9.9.9", repo), "2020-01-02");
+        } finally {
+            rmSync(repo, { recursive: true, force: true });
+        }
     });
 });
 

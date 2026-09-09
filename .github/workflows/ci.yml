@@ -30,7 +30,7 @@ on:
 
 jobs:
   fit-report:
-    name: Local FIT report tests
+    name: TypeScript tooling tests
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v6
@@ -47,6 +47,22 @@ jobs:
         run: npm run typecheck --prefix tools
       - name: Lint all TypeScript
         run: npm run lint --prefix tools
+      # The whole suite, which CI did not run. Five test files ran here and in
+      # two other jobs - the FIT four below, resolve-tool in the xml job,
+      # synthetic-workout in synthetic-fit - and the other twelve ran only on
+      # a developer's machine, through the pre-push hook's `make check`.
+      #
+      # Which meant the tests that exist to stop a claim going stale were the
+      # ones nothing enforced: quality-report.test.ts checks that every README
+      # badge still states something true, support-claim.test.ts that all three
+      # surfaces agree on the device count, reduced-devices.test.ts that the
+      # jungles agree with each other. A green run said nothing about any of
+      # them, and neither did a fork's, or a push made with --no-verify.
+      #
+      # They are hermetic and fast - no SDK, no simulator, a couple of seconds
+      # for the lot - so there was never much reason not to.
+      - name: Test every TypeScript tool
+        run: npm test --prefix tools
       - name: Test report generator with coverage
         run: |
           # pipefail, or `| tee` swallows a coverage-gate failure and the
@@ -116,8 +132,9 @@ jobs:
     runs-on: ubuntu-latest
     container:
       # Pinned, not :latest - a floating tag is how v2.10.0's font and
-      # proprietary-file rework reached these jobs unannounced. Bump the
-      # three occurrences together.
+      # proprietary-file rework reached these jobs unannounced. Every place
+      # that names this image has to agree; tools/container-image.test.ts is
+      # what fails when they do not, so bumping it is one search and one test.
       image: ghcr.io/matco/connectiq-tester:v2.10.0
     steps:
       - uses: actions/checkout@v6
@@ -153,8 +170,9 @@ jobs:
     container:
       # Same image the test job's action uses: monkeyc and device files included.
       # Pinned, not :latest - a floating tag is how v2.10.0's font and
-      # proprietary-file rework reached these jobs unannounced. Bump the
-      # three occurrences together.
+      # proprietary-file rework reached these jobs unannounced. Every place
+      # that names this image has to agree; tools/container-image.test.ts is
+      # what fails when they do not, so bumping it is one search and one test.
       image: ghcr.io/matco/connectiq-tester:v2.10.0
     env:
       SHARD: ${{ matrix.shard }}
@@ -194,8 +212,8 @@ jobs:
     timeout-minutes: 30
     container:
       # Needs the device files, the simulator and monkeydo - this is the only
-      # check that runs the app rather than compiling it. Pinned, not :latest;
-      # bump with the other occurrences.
+      # check that runs the app rather than compiling it. Pinned, not :latest,
+      # and kept in step by tools/container-image.test.ts.
       image: ghcr.io/matco/connectiq-tester:v2.10.0
     defaults:
       run:
@@ -243,7 +261,7 @@ jobs:
       # Needed for the device files: each device's own compiler.json is what
       # states its watch-app memory limit, and the whole point of this job is
       # to derive the list from those rather than trust a list someone typed.
-      # Pinned, not :latest - bump with the other occurrences.
+      # Pinned, not :latest, and kept in step by tools/container-image.test.ts.
       image: ghcr.io/matco/connectiq-tester:v2.10.0
     defaults:
       run:
@@ -310,8 +328,9 @@ jobs:
       code-quality: write
     container:
       # Pinned, not :latest - a floating tag is how v2.10.0's font and
-      # proprietary-file rework reached these jobs unannounced. Bump the
-      # three occurrences together.
+      # proprietary-file rework reached these jobs unannounced. Every place
+      # that names this image has to agree; tools/container-image.test.ts is
+      # what fails when they do not, so bumping it is one search and one test.
       image: ghcr.io/matco/connectiq-tester:v2.10.0
     defaults:
       run:

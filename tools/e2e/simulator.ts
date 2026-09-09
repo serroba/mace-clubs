@@ -61,15 +61,32 @@ function createPlatform(device: DeviceProfile): Platform {
     }
 }
 
-/** Module-level so run-e2e.ts's signal handlers can clean up a simulator
- * left behind by a killed test process without constructing a driver. */
-const platform = createPlatform(loadDeviceProfile(targetDevice()));
+/**
+ * The backend for this process, built once and shared.
+ *
+ * Shared so run-e2e.ts's signal handlers can clean up a simulator left behind
+ * by a killed test process without constructing a driver.
+ *
+ * Built on first use rather than at import, because loadDeviceProfile throws
+ * when the SDK has no files for the device - and importing this module is not
+ * the same as wanting to drive a watch. run-e2e.ts imports it for its signal
+ * handlers, and its shard maths is unit-tested; at import time that threw on
+ * any machine without the SDK installed, which is every machine that only
+ * wanted to check the arithmetic. Two test files could not run in CI for that
+ * reason alone.
+ */
+let backend: Platform | null = null;
+
+function hostPlatform(): Platform {
+    backend ??= createPlatform(loadDeviceProfile(targetDevice()));
+    return backend;
+}
 
 /** The device profile the suite is running against - tests use this to skip
  * themselves on hardware that cannot reach what they check (hold("menu") on
  * a device with no MENU key, for instance). */
 export function deviceProfile(): DeviceProfile {
-    return platform.device;
+    return hostPlatform().device;
 }
 
 /** connectiq is launched `detached` (its own process group), so a Ctrl-C
@@ -78,7 +95,7 @@ export function deviceProfile(): DeviceProfile {
  * Exported so run-e2e.ts's signal handlers can call the same cleanup
  * Simulator.close() uses instead of duplicating the kill. */
 export function killSimulatorProcess(): void {
-    platform.killSimulator();
+    hostPlatform().killSimulator();
 }
 
 /** Has the simulator managed to put a window on screen? run-e2e.ts asks
@@ -86,7 +103,7 @@ export function killSimulatorProcess(): void {
  * cannot show a window right now". */
 export function simulatorWindowExists(): boolean {
     try {
-        return platform.windowExists();
+        return hostPlatform().windowExists();
     } catch {
         return false;
     }
@@ -141,12 +158,13 @@ export class Simulator {
      * process restart is slower per test file but is the version of this
      * that has actually proven reliable. */
     static async launch(options: SimulatorOptions): Promise<Simulator> {
+        const platform = hostPlatform();
         const device = options.device ?? targetDevice();
         if (device !== platform.device.id) {
             throw new Error(
                 `this process is set up for device "${platform.device.id}" but launch() was passed ` +
-                    `"${device}". The platform backend reads its screenshot geometry once at import ` +
-                    `time, so set MACE_E2E_DEVICE instead of passing a different id.`,
+                    `"${device}". The platform backend reads its screenshot geometry once, for one ` +
+                    `device, so set MACE_E2E_DEVICE instead of passing a different id.`,
             );
         }
         const prgPath = isAbsolute(options.prgPath) ? options.prgPath : join(REPO_ROOT, options.prgPath);

@@ -16,8 +16,16 @@
 // insists that every device at or below the threshold carries the reduced
 // build's exclusions. Adding a low-memory device to the manifest without
 // wiring it up now fails the build sweep instead of the store.
+//
+// Every jungle, not just monkey.jungle. There are four - the shipping one,
+// the local test build, the memory probe and the tuning search - and each
+// carries its own copy of the five device lines. The first version of this
+// check read one of them while telling the reader to "add this to every
+// jungle", so a device wired into the shipping build and missed in the probe
+// would pass here and then be measured as a full build on a watch that
+// cannot hold one. Which jungle is wrong is part of the error.
 
-import { readFileSync } from "node:fs";
+import { readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 
 /** Devices at or below this get the reduced build. 96KB is where the app
@@ -26,13 +34,22 @@ import { join } from "node:path";
 export const SMALL_MEMORY_BYTES = 96 * 1024;
 
 /** The annotations a reduced build compiles out. Order is not significant;
- * the check compares them as a set. */
+ * the check compares them as a set.
+ *
+ * launcherIcon belongs here for the same reason as the rest, and it is the
+ * one that shows why the list has to be complete rather than roughly right.
+ * launcher_icon.png is 295 bytes on disk and costs about 2.4KB of app memory
+ * once loadResource() decodes it and brings the resource tables in with it -
+ * against the 2KB a 96KB watch had left when #189 measured the peak. A
+ * device wired up with the other five and not this one compiles, starts,
+ * reports nothing wrong, and dies opening a menu. */
 export const REDUCED_EXCLUSIONS = [
     "swingDebug",
     "history",
     "customWorkout",
     "motionExport",
     "menuLabelPrefix",
+    "launcherIcon",
 ] as const;
 
 /** Product ids in the order the manifest lists them. */
@@ -114,7 +131,7 @@ export function reducedBuildProblems(
                     detail:
                         `has ${String(Math.round(limit / 1024))}KB for a watch-app and no reduced build. ` +
                         `The app does not fit: it will fail with an Out Of Memory Error before it draws a frame. ` +
-                        `Add "${device}.excludeAnnotations = $(BASE_EXCLUDES);${REDUCED_EXCLUSIONS.join(";")}" to every jungle.`,
+                        `Add "${device}.excludeAnnotations = $(BASE_EXCLUDES);${REDUCED_EXCLUSIONS.join(";")}" to this jungle.`,
                 });
             } else {
                 const missing = [...expected].filter((annotation) => !wired.has(annotation));
@@ -132,6 +149,18 @@ export function reducedBuildProblems(
         }
     }
     return problems;
+}
+
+/**
+ * The jungles in a directory listing, in a stable order.
+ *
+ * Derived rather than listed, so a fifth jungle is checked the day it is
+ * added: monkey.jungle plus monkey.<name>.jungle. Nothing else in the repo
+ * root matches, and a build file nobody checks is the shape of the problem
+ * this whole file exists for.
+ */
+export function jungleFiles(entries: string[]): string[] {
+    return entries.filter((entry) => /^monkey(\.[A-Za-z0-9]+)?\.jungle$/.test(entry)).sort();
 }
 
 /** Reads each device's compiler.json out of an SDK device directory. */
@@ -159,18 +188,28 @@ function main(): void {
         process.exitCode = 1;
         return;
     }
-    const problems = reducedBuildProblems(devices, limits, jungleReducedDevices(readFileSync("monkey.jungle", "utf8")));
-    const small = devices.filter((d) => (limits.get(d) ?? Infinity) <= SMALL_MEMORY_BYTES);
-    console.log(`checked ${String(limits.size)} of ${String(devices.length)} manifest devices against ${devicesDir}`);
-    console.log(`${String(small.length)} at or below ${String(SMALL_MEMORY_BYTES / 1024)}KB: ${small.join(", ")}`);
-    if (problems.length > 0) {
-        for (const problem of problems) {
-            console.error(`::error::${problem.device} ${problem.detail}`);
-        }
+    const jungles = jungleFiles(readdirSync("."));
+    if (jungles.length === 0) {
+        console.error("no monkey*.jungle files here - run this from the repo root");
         process.exitCode = 1;
         return;
     }
-    console.log("every low-memory device is on the reduced build");
+    const small = devices.filter((d) => (limits.get(d) ?? Infinity) <= SMALL_MEMORY_BYTES);
+    console.log(`checked ${String(limits.size)} of ${String(devices.length)} manifest devices against ${devicesDir}`);
+    console.log(`${String(small.length)} at or below ${String(SMALL_MEMORY_BYTES / 1024)}KB: ${small.join(", ")}`);
+    let failed = false;
+    for (const jungle of jungles) {
+        const problems = reducedBuildProblems(devices, limits, jungleReducedDevices(readFileSync(jungle, "utf8")));
+        for (const problem of problems) {
+            console.error(`::error file=${jungle}::${jungle}: ${problem.device} ${problem.detail}`);
+            failed = true;
+        }
+    }
+    if (failed) {
+        process.exitCode = 1;
+        return;
+    }
+    console.log(`every low-memory device is on the reduced build in all ${String(jungles.length)} jungles`);
 }
 
 if (process.argv[1] !== undefined && import.meta.url.endsWith(process.argv[1].replace(/^.*\//, ""))) {
