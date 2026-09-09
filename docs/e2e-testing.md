@@ -222,6 +222,33 @@ own `compiler.json` and fails CI when the jungles disagree - because the
 first fix for this listed three devices by hand and left two more crashing
 in the store.
 
+### Why not one simulator, and why not more jobs
+
+Each test file starts its own simulator, which is about thirty seconds in CI
+before an assertion runs - most of a ten-minute job across seven files. The
+obvious saving is to start one simulator and reload the app per file, and it
+is the wrong one: the app persists `movementType` and `workingSide`
+mid-workout (`MaceClubsView`), among twenty `Properties`/`Storage` writes,
+and the pickers assert on those defaults. A shared simulator would leak one
+file's state into the next file's assertions. Restarting per file is buying
+isolation, not just simplicity.
+
+Splitting the suite across two jobs per device keeps that isolation and does
+shorten each job - the runner supports it, `MACE_E2E_SHARD` with
+`MACE_E2E_SHARD_COUNT`, and it is useful locally for running part of the
+suite. **CI does not use it, because it was measured and it was slower.**
+
+At nine devices the e2e jobs started within five seconds of each other and
+parallelism was free. Two shards each makes 18 jobs, plus 8 reduced and 25 in
+`ci.yml`: 51 at once, which is past what the runners give us. The slowest job
+fell from 654s to 458s and jobs began queueing for up to 348s, so the run as
+a whole went from ten minutes to eleven.
+
+That is the shape of the constraint: the wall clock is set by how many jobs
+can start at once, not by how long any one of them takes. More jobs is not a
+lever here; a shorter job is. Anything that adds jobs should be measured
+against the queue delay rather than the job duration.
+
 ### Nothing is staged any more
 
 Every device the store's device report names is now driven, across the two
@@ -272,6 +299,60 @@ So the pull-request check covers everything at or below 128KB - the tier where
 the answer can change - and a nightly run covers all 120, which is what
 catches that reasoning being wrong. A device that crashes or drops under 4KB
 fails; under 12KB warns.
+
+### The first screen is not where the app runs out
+
+The probe reads memory three times: entering `getInitialView`, once the first
+screen exists, and again with the settings menu built on top of it. The third
+is the one that decides, and it is not close to the second:
+
+| instinct2 | free |
+| --- | --- |
+| entering getInitialView | 13,640 |
+| first screen built | 7,296 |
+| settings menu on top | **2,064** |
+
+So the real margin on a 96KB watch is about two kilobytes, not seven. That is
+why #188's 208 bytes broke three of them, and why they broke *on the settings
+menu* rather than at startup. The menu is built and dropped rather than shown
+- `SettingsMenu.build()` is a pure function, so this needs nothing to drive
+the watch's buttons - which makes it a proxy for the peak rather than the
+peak itself.
+
+Two consequences for the thresholds. The floor is 1KB, not 4KB, because
+instinct2 ships today at 2,064 and works; a gate red on main is a gate
+someone deletes. And a drop is measured as a share of what the device has
+(10%, floor 128 bytes), because a flat 2KB threshold can never fire on a
+watch with 2KB left - it would be dead before the check spoke. The same
+build measured four times running returned the same number to the byte, so
+there is no noise to leave room for.
+
+### What the launcher icon costs
+
+The single `loadResource()` call in `MaceClubsView` loads `launcher_icon.png`,
+which is 295 bytes on disk and about 2.4KB in app memory - the decoded bitmap
+plus the resource tables the first `loadResource()` brings with it. Measured
+on instinct2:
+
+| | with the icon | without |
+| --- | --- | --- |
+| first screen | 7,296 | 9,712 |
+| settings menu on top | **2,064** | **4,432** |
+
+More than double the headroom of the five watches that have the least, for a
+decoration on one screen, so those five now compile it out
+(`launcherIcon` / `noLauncherIcon`) and everything else keeps it. This is the
+kind of thing the community advice is about - prefer drawn shapes to bitmaps,
+and remember that one `loadResource()` is not free even when the file is
+tiny. It was worth checking only because the peak number made the real margin
+visible.
+
+**What this does not cover.** It measures the *probe* build, which carries
+the probe, not the `.prg` that ships. #188's own regression lived only in the
+shipped build - an empty annotated helper the probe build never had - so this
+check would not have caught it. It catches changes to shared code, which is
+nearly all of them; the per-device e2e suite remains the thing that actually
+opens the menu on the watch.
 
 `tools/memory-baselines.json` records each device's number, so a change that
 costs headroom says so on the pull request that costs it. v0.13.4 took about

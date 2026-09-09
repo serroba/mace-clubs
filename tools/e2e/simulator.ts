@@ -161,12 +161,17 @@ export class Simulator {
         const sim = new Simulator(options.settleMs ?? 1500, platform);
         try {
             await waitFor(() => platform.isSimulatorRunning(), 20_000, "the simulator process to start");
-            await sleep(3000); // the simulator needs time to finish booting its own UI
+            // Still a flat wait, and it has to be: on macOS the simulator
+            // puts no window on screen at all until an app is loaded, so
+            // there is nothing to poll for readiness. Waiting for a window
+            // here was tried and deadlocked for the full 30s.
+            await sleep(3000);
 
             await sim.loadApp(monkeydoBin, prgPath, device);
 
             await waitFor(() => platform.windowExists(), 30_000, "the simulator window to appear");
             await platform.prepareWindow();
+
             // Immediately after the window appears it can briefly render
             // blank before the app repaints - two consecutive blank frames
             // look "stable" to waitForStable() even though nothing real has
@@ -177,7 +182,8 @@ export class Simulator {
             // A cold simulator can take a good while to actually boot the
             // device and render its first frame after monkeydo connects -
             // observed up to ~25s. This is a one-time cost per launch(), not
-            // per test, so it's worth being generous here.
+            // per test, so it's worth being generous here. Usually already
+            // true: loadApp() returns as soon as it sees the app draw.
             await waitFor(async () => (await sim.readText()).length > 0, 45_000, "the launcher screen to render");
             // The launcher screen still has a brief reveal animation on top
             // of that first paint; wait it out so the first real interaction
@@ -195,28 +201,76 @@ export class Simulator {
         }
     }
 
-    /** monkeydo refuses to queue a load and just prints "Unable to connect"
-     * if the simulator hasn't finished booting yet - this is a known,
-     * already-documented flake (see visual_check.sh's identical retry) and
-     * needs a real retry loop, not a fixed sleep-and-hope. */
+    /** Whether the watch screen is showing anything readable yet. Tolerates
+     * the read failing outright, which is what "there is no window" looks
+     * like on macOS. */
+    private async hasScreenContent(): Promise<boolean> {
+        try {
+            return (await this.readText()).length > 0;
+        } catch {
+            return false;
+        }
+    }
+
+    /**
+     * Loads the app, retrying while monkeydo cannot reach the simulator.
+     *
+     * monkeydo has no success output. Measured: on failure it prints
+     * "Unable to connect to simulator." and exits 2 after about 5.2 seconds;
+     * on success it prints nothing at all and stays attached for as long as
+     * the app runs. So the only two things worth watching are its exit and
+     * the screen.
+     *
+     * The first version waited a flat six seconds per attempt - just past
+     * that 5.2s - and then asked whether the error had appeared. That spent
+     * six seconds on every launch to learn nothing, and then spent more
+     * waiting for the app to draw. Here the two overlap: this returns the
+     * moment the app has drawn, and only keeps waiting while neither has
+     * happened yet. A launch where the app paints in two seconds now costs
+     * two seconds rather than six plus two.
+     */
     private async loadApp(monkeydoBin: string, prgPath: string, device: string): Promise<void> {
         const maxAttempts = 8;
+        // Comfortably past the observed 5.2s failure, so "still attached and
+        // quiet" really does mean connected rather than not-yet-failed.
+        const verdictMs = 8000;
         for (let attempt = 1; attempt <= maxAttempts; attempt += 1) {
-            const chunks: Buffer[] = [];
             const child = spawn(monkeydoBin, [prgPath, device]);
-            child.stdout.on("data", (chunk: Buffer) => chunks.push(chunk));
-            child.stderr.on("data", (chunk: Buffer) => chunks.push(chunk));
+            // Drained so the pipes cannot fill and stall monkeydo; the
+            // output itself is not the signal, the exit is.
+            child.stdout.on("data", () => undefined);
+            child.stderr.on("data", () => undefined);
             this.monkeydoProcess = child;
+            // node sets exitCode/signalCode on the handle when the process
+            // goes, so this is the same fact an "exit" listener would carry
+            // without a flag the type checker has to be talked out of.
+            const gone = (): boolean => child.exitCode !== null || child.signalCode !== null;
 
-            await sleep(6000); // matches visual_check.sh's proven timing for this exact check
-            const output = Buffer.concat(chunks).toString("utf8");
-            if (!output.includes("Unable to connect")) {
+            const start = Date.now();
+            while (Date.now() - start < verdictMs) {
+                if (gone()) {
+                    break;
+                }
+                // Content on the watch screen is proof the app loaded, and
+                // it means the same thing on both platforms. Verified in the
+                // CI container: before an app loads, Linux has a window but
+                // its screen crop OCRs to nothing, and macOS has no window
+                // at all. (The window itself is not usable as the signal -
+                // on Linux one appears within a second of the simulator
+                // starting, with no app in it.)
+                if (await this.hasScreenContent()) {
+                    return;
+                }
+                await sleep(250);
+            }
+            if (!gone()) {
+                // Attached and quiet past the failure latency: connected.
                 return;
             }
             if (attempt === maxAttempts) {
                 throw new Error(`monkeydo could not reach the simulator after ${String(maxAttempts)} attempts`);
             }
-            await sleep(2000);
+            await sleep(1000);
         }
     }
 

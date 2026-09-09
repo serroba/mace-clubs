@@ -38,7 +38,7 @@ class MaceClubsView extends WatchUi.View {
     private var _lastPhase as Number?;
     private var _lastSet as Number = 0;
     private var _warnedSet as Number = 0;
-    private var _icon as WatchUi.BitmapResource;
+    private var _icon as WatchUi.BitmapResource?;
     private var _subwindow as Boolean = false;
     private var _circleRounds as Boolean = true;
     private var _freePhaseStartMs as Number = 0;
@@ -56,11 +56,34 @@ class MaceClubsView extends WatchUi.View {
         _refreshTimer = new Timer.Timer();
         _startTimer = new Timer.Timer();
         _exitTimer = new Timer.Timer();
-        _icon = WatchUi.loadResource(Rez.Drawables.LauncherIcon) as WatchUi.BitmapResource;
+        _icon = loadLauncherIcon();
         if (System has :SCREEN_SHAPE_SEMI_OCTAGON) {
             _subwindow = System.getDeviceSettings().screenShape == System.SCREEN_SHAPE_SEMI_OCTAGON;
         }
         loadSettings();
+    }
+
+    // The idle screen's crossed mace-and-club art, and the one loadResource()
+    // call the app makes.
+    //
+    // The bitmap is not what it looks like on disk. launcher_icon.png is 295
+    // bytes; loading it costs about 2.4KB of app memory - the decoded bitmap
+    // plus the resource tables that the first loadResource() call brings in
+    // with it. Measured on instinct2: 7,296 bytes free at the first screen
+    // with it, 9,792 without, and 2,064 against 4,512 with the settings menu
+    // built on top.
+    //
+    // That is more than doubling the headroom of the five watches that have
+    // the least, in exchange for a decoration on one screen, so those five
+    // draw the idle screen without it. Everywhere else it stays.
+    (:launcherIcon)
+    private function loadLauncherIcon() as WatchUi.BitmapResource? {
+        return WatchUi.loadResource(Rez.Drawables.LauncherIcon) as WatchUi.BitmapResource;
+    }
+
+    (:noLauncherIcon)
+    private function loadLauncherIcon() as WatchUi.BitmapResource? {
+        return null;
     }
 
     // Applies phone-editable settings; called at startup and from
@@ -605,16 +628,19 @@ class MaceClubsView extends WatchUi.View {
             // 31/45/70 pixel constants this used to carry: those centred a
             // 62px bitmap on a 176px screen and left it off-centre anywhere
             // the launcher icon is a different size.
-            var iconX = cx - _icon.getWidth() / 2;
-            if (_subwindow) {
-                // Shift clear of the subwindow cut-out in the top-right.
-                iconX -= Layout.scaled(w, 14);
+            var icon = _icon;
+            if (icon != null) {
+                var iconX = cx - icon.getWidth() / 2;
+                if (_subwindow) {
+                    // Shift clear of the subwindow cut-out in the top-right.
+                    iconX -= Layout.scaled(w, 14);
+                }
+                var iconY = h * 38 / 100 - icon.getHeight() - Layout.scaled(w, 8);
+                if (iconY < 2) {
+                    iconY = 2;
+                }
+                dc.drawBitmap(iconX, iconY, icon);
             }
-            var iconY = h * 38 / 100 - _icon.getHeight() - Layout.scaled(w, 8);
-            if (iconY < 2) {
-                iconY = 2;
-            }
-            dc.drawBitmap(iconX, iconY, _icon);
             // Every line below is centred text on what may be a round screen,
             // so each picks the largest face that still fits the chord at its
             // own height rather than the one face that suited the Instinct.

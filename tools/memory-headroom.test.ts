@@ -15,6 +15,8 @@ import {
     atRiskSelection,
     AT_RISK_LIMIT_BYTES,
     compareWithBaseline,
+    headroom,
+    notableDropBytes,
     CRITICAL_FREE_BYTES,
     describe as describeReading,
     isCritical,
@@ -27,7 +29,8 @@ import {
 
 const reading = (over: Partial<Reading> = {}): Reading => ({
     device: "instinct2",
-    freeAtReady: 7464,
+    freeAtReady: 7296,
+    freeAtPeak: 2016,
     totalMemory: 94024,
     failure: null,
     ...over,
@@ -56,45 +59,64 @@ void describe("parseProbe", () => {
 });
 
 void describe("verdicts", () => {
+    it("judges on the peak, not the first screen", () => {
+        // The whole point of the peak stage. 7,296 bytes at the first
+        // screen looks comfortable; the settings menu built on top of it
+        // leaves 2,064, and that is the number that decides.
+        assert.equal(headroom(reading()), 2016);
+        assert.equal(headroom(reading({ freeAtPeak: null })), 7296);
+    });
+
     it("fails a device that never reported", () => {
         // The Instinct 2's actual failure. No number comes back at all,
         // which must not read as "no problem found".
-        assert.equal(isCritical(reading({ freeAtReady: null })), true);
+        assert.equal(isCritical(reading({ freeAtReady: null, freeAtPeak: null })), true);
     });
 
     it("fails a device that crashed", () => {
         assert.equal(isCritical(reading({ failure: "ran out of memory before its first screen" })), true);
     });
 
-    it("fails a device down to its last few KB", () => {
-        assert.equal(isCritical(reading({ freeAtReady: CRITICAL_FREE_BYTES - 1 })), true);
+    it("fails a device down to its last few hundred bytes", () => {
+        assert.equal(isCritical(reading({ freeAtPeak: CRITICAL_FREE_BYTES - 1 })), true);
+        // And is not fooled by a comfortable first screen above it.
+        assert.equal(isCritical(reading({ freeAtReady: 30_000, freeAtPeak: CRITICAL_FREE_BYTES - 1 })), true);
     });
 
     it("passes the Instinct 2 as it ships today", () => {
-        // 7,464 bytes, and it runs a full workout there. The floor has to sit
-        // below what works, or the gate is red on main and nobody keeps it.
+        // 2,064 bytes with the settings menu up, and it runs a full workout
+        // there. The floor has to sit below what works, or the gate is red
+        // on main and nobody keeps it.
         assert.equal(isCritical(reading()), false);
         assert.equal(isTight(reading()), true);
     });
 
     it("says nothing about a device with room", () => {
-        const roomy = reading({ device: "fenix7", freeAtReady: 710056, totalMemory: 782336 });
+        const roomy = reading({ device: "fenix7", freeAtReady: 710056, freeAtPeak: 700000, totalMemory: 782336 });
         assert.equal(isCritical(roomy), false);
         assert.equal(isTight(roomy), false);
     });
 });
 
 void describe("baselines", () => {
-    it("reports a drop the size of the one that broke the Instinct 2", () => {
-        // v0.13.4 cost about 2.6KB and shipped. On a pull request this now
-        // says so.
-        assert.equal(isNotableDrop(reading({ freeAtReady: 7464 }), 7464 + NOTABLE_DROP_BYTES), true);
-        assert.match(compareWithBaseline(reading({ freeAtReady: 7464 }), 10_000) ?? "", /2536 bytes less than recorded/);
+    it("scales the threshold to what the device actually has", () => {
+        // A flat 2KB cannot fire on a watch with 2,064 bytes left - it would
+        // be dead before the check spoke. Ten percent of the real figure
+        // asks the same question at the right scale.
+        assert.equal(notableDropBytes(2064), 206);
+        assert.equal(notableDropBytes(29_000), NOTABLE_DROP_BYTES);
+    });
+
+    it("reports a drop against the peak", () => {
+        assert.equal(isNotableDrop(reading({ freeAtPeak: 1800 }), 2064), true);
+        assert.match(compareWithBaseline(reading({ freeAtPeak: 1800 }), 2064) ?? "", /264 bytes less than recorded/);
     });
 
     it("stays quiet about noise", () => {
-        assert.equal(compareWithBaseline(reading({ freeAtReady: 7464 }), 7500), null);
-        assert.equal(isNotableDrop(reading({ freeAtReady: 7464 }), 7500), false);
+        // The same build measured four times running gave the same number to
+        // the byte, so this floor is well clear of the simulator's own noise.
+        assert.equal(compareWithBaseline(reading({ freeAtPeak: 2100 }), 2064), null);
+        assert.equal(isNotableDrop(reading({ freeAtPeak: 2100 }), 2064), false);
     });
 
     it("says nothing about a device with no baseline yet", () => {
@@ -103,8 +125,8 @@ void describe("baselines", () => {
     });
 
     it("welcomes headroom going the other way", () => {
-        assert.match(compareWithBaseline(reading({ freeAtReady: 9000 }), 7464) ?? "", /1536 bytes more than recorded/);
-        assert.equal(isNotableDrop(reading({ freeAtReady: 9000 }), 7464), false);
+        assert.match(compareWithBaseline(reading({ freeAtPeak: 3000 }), 2064) ?? "", /936 bytes more than recorded/);
+        assert.equal(isNotableDrop(reading({ freeAtPeak: 3000 }), 2064), false);
     });
 });
 
@@ -114,11 +136,17 @@ void describe("describe", () => {
     });
 
     it("says the app never got there, rather than printing a zero", () => {
-        assert.match(describeReading(reading({ freeAtReady: null })), /did not reach its first screen/);
+        assert.match(describeReading(reading({ freeAtReady: null, freeAtPeak: null })), /did not reach its first screen/);
     });
 
     it("gives the number against the device's own total", () => {
         assert.match(describeReading(reading()), /7KB free of 92KB/);
+    });
+
+    it("says what the settings menu costs, in bytes", () => {
+        // KB would round 2,016 and 2,800 to the same "2KB", and the whole
+        // margin on these watches lives inside that rounding.
+        assert.match(describeReading(reading()), /2016 bytes with the settings menu on top/);
     });
 });
 

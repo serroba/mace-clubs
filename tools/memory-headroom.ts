@@ -41,16 +41,23 @@ const REPO_ROOT = join(dirname(fileURLToPath(import.meta.url)), "..");
  * This one catches the thing that actually went wrong: a release that eats
  * the last of the headroom on a watch that had little to begin with.
  */
-export const CRITICAL_FREE_BYTES = 4 * 1024;
+// Measured, not chosen: instinct2 ships today with 2,064 bytes left once the
+// settings menu is built, and runs a full workout there. A floor above what
+// main actually does is a gate someone deletes in a fortnight.
+export const CRITICAL_FREE_BYTES = 1024;
 
 /**
  * Below this, a watch is worth watching but is not failing.
+ *
+ * Recalibrated for the peak. 12KB was a first-screen figure; against the
+ * settings menu every 96KB device is under it, and five devices warning on
+ * every run is a warning nobody reads.
  *
  * Reported rather than enforced. The point is that the number exists at all:
  * nothing in the repo measured it, so the app crossed this line in v0.13.4
  * and nobody could see it happen until a 1-star review four months later.
  */
-export const COMFORTABLE_FREE_BYTES = 12 * 1024;
+export const COMFORTABLE_FREE_BYTES = 4 * 1024;
 
 /** Long enough for a cold simulator to load an app and print two lines. */
 const LAUNCH_TIMEOUT_MS = 45_000;
@@ -83,11 +90,27 @@ const BASELINE_PATH = join(REPO_ROOT, "tools", "memory-baselines.json");
  */
 export const NOTABLE_DROP_BYTES = 2 * 1024;
 
+/**
+ * Below this a difference is not reported at all.
+ *
+ * Run-to-run noise, measured by running the same build repeatedly - see
+ * docs/e2e-testing.md. A threshold under this would report the simulator
+ * rather than the change.
+ */
+export const REPORT_FLOOR_BYTES = 128;
+
+/** A drop worth warning about, as a share of what the device has. */
+export const DROP_FRACTION = 0.1;
+
 export interface Reading {
     readonly device: string;
     /** Free bytes once the view and its delegate exist, or null if the app
      * never got that far. */
     readonly freeAtReady: number | null;
+    /** Free bytes with the settings menu built on top of that - the most the
+     * app is known to hold at once. Null for a build whose probe predates
+     * this stage. See headroom(). */
+    readonly freeAtPeak: number | null;
     readonly totalMemory: number | null;
     readonly failure: string | null;
 }
@@ -102,6 +125,28 @@ export function parseProbe(output: string, stage: string): { total: number; used
     return { total: Number(match[1]), used: Number(match[2]), free: Number(match[3]) };
 }
 
+/**
+ * The number that decides whether a watch can run this app.
+ *
+ * A caveat that belongs next to the number: this measures the *probe* build,
+ * which carries the probe. It is not the .prg that ships, so a regression
+ * that lands only in code the probe build compiles differently will not
+ * show up here - #188's own 208 bytes were exactly that, an empty helper in
+ * the shipped build which the probe build never had. What this catches is a
+ * change to shared code, which is nearly all of them, and it is why the
+ * per-device e2e suite stays the thing that actually opens the menu.
+ *
+ * The peak where there is one, because the first screen is not where the app
+ * runs out. #188's 208-byte regression started fine on descentg1, instinct2
+ * and instinct2x and died opening settings; measured on instinct2, the first
+ * screen leaves 7,296 bytes and the settings menu leaves 2,016. A check
+ * reading only the first screen is reading the wrong number by a factor of
+ * three.
+ */
+export function headroom(reading: Reading): number | null {
+    return reading.freeAtPeak ?? reading.freeAtReady;
+}
+
 /** What the run said, in the words a reader can act on. */
 export function describe(reading: Reading): string {
     const kb = (bytes: number): string => `${String(Math.round(bytes / 1024))}KB`;
@@ -112,12 +157,19 @@ export function describe(reading: Reading): string {
         return `${reading.device}: never reported - the app did not reach its first screen`;
     }
     const total = reading.totalMemory === null ? "" : ` of ${kb(reading.totalMemory)}`;
-    return `${reading.device}: ${kb(reading.freeAtReady)} free${total} once the first screen exists`;
+    const first = `${reading.device}: ${kb(reading.freeAtReady)} free${total} once the first screen exists`;
+    if (reading.freeAtPeak === null) {
+        return first;
+    }
+    // Bytes rather than KB for the peak: this is the tight one, and "2KB"
+    // hides the difference between 2,016 bytes and 2,800.
+    return `${first}, ${String(reading.freeAtPeak)} bytes with the settings menu on top`;
 }
 
 /** Failing: crashed, never reported, or down to the last few KB. */
 export function isCritical(reading: Reading): boolean {
-    return reading.failure !== null || reading.freeAtReady === null || reading.freeAtReady < CRITICAL_FREE_BYTES;
+    const free = headroom(reading);
+    return reading.failure !== null || free === null || free < CRITICAL_FREE_BYTES;
 }
 
 /** Working, but with less room than anything else on the shelf. */
@@ -141,26 +193,46 @@ export function loadBaselines(): Map<string, number> {
 
 /** How this reading compares with what was recorded, in words. */
 export function compareWithBaseline(reading: Reading, baseline: number | undefined): string | null {
-    if (baseline === undefined || reading.freeAtReady === null) {
+    const free = headroom(reading);
+    if (baseline === undefined || free === null) {
         return null;
     }
-    const delta = reading.freeAtReady - baseline;
-    if (Math.abs(delta) < 256) {
+    const delta = free - baseline;
+    if (Math.abs(delta) < REPORT_FLOOR_BYTES) {
         return null;
     }
     const size = `${String(Math.abs(delta))} bytes`;
     return delta < 0 ? `${size} less than recorded` : `${size} more than recorded`;
 }
 
+/**
+ * How big a drop has to be before it is worth a warning, for this baseline.
+ *
+ * A flat 2KB was calibrated against the first-screen number, where the
+ * devices have 7-30KB. Against the peak it is useless: instinct2 peaks at
+ * about 2,064 free bytes, so a flat 2KB drop can never fire on the device
+ * that most needs it - the app would already be dead. A proportion of what
+ * the device actually has is the same question asked at the right scale.
+ *
+ * The floor is not arbitrary either: the same build measured four times
+ * running gave the same number to the byte, so anything above the noise is
+ * a real change.
+ */
+export function notableDropBytes(baseline: number): number {
+    return Math.max(REPORT_FLOOR_BYTES, Math.min(NOTABLE_DROP_BYTES, Math.round(baseline * DROP_FRACTION)));
+}
+
 export function isNotableDrop(reading: Reading, baseline: number | undefined): boolean {
-    if (baseline === undefined || reading.freeAtReady === null) {
+    const free = headroom(reading);
+    if (baseline === undefined || free === null) {
         return false;
     }
-    return baseline - reading.freeAtReady >= NOTABLE_DROP_BYTES;
+    return baseline - free >= notableDropBytes(baseline);
 }
 
 export function isTight(reading: Reading): boolean {
-    return !isCritical(reading) && reading.freeAtReady !== null && reading.freeAtReady < COMFORTABLE_FREE_BYTES;
+    const free = headroom(reading);
+    return !isCritical(reading) && free !== null && free < COMFORTABLE_FREE_BYTES;
 }
 
 /**
@@ -237,7 +309,7 @@ async function measure(
         { cwd: REPO_ROOT, encoding: "utf8" },
     );
     if (build.status !== 0) {
-        return { device, freeAtReady: null, totalMemory: null, failure: `did not build\n${build.stderr}` };
+        return { device, freeAtReady: null, freeAtPeak: null, totalMemory: null, failure: `did not build\n${build.stderr}` };
     }
 
     const output = await new Promise<string>((resolve) => {
@@ -269,7 +341,7 @@ async function measure(
         const read = (chunk: Buffer): void => {
             seen += chunk.toString("utf8");
             // Everything worth knowing is decided by one of these three.
-            if (/MEMPROBE ready|Out Of Memory|Unable to connect/i.test(seen)) {
+            if (/MEMPROBE peak|Out Of Memory|Unable to connect/i.test(seen)) {
                 finish();
             }
         };
@@ -280,16 +352,18 @@ async function measure(
     });
 
     if (/Unable to connect/i.test(output)) {
-        return { device, freeAtReady: null, totalMemory: null, failure: "the simulator was not reachable" };
+        return { device, freeAtReady: null, freeAtPeak: null, totalMemory: null, failure: "the simulator was not reachable" };
     }
     if (/Out Of Memory/i.test(output)) {
-        return { device, freeAtReady: null, totalMemory: null, failure: "ran out of memory before its first screen" };
+        return { device, freeAtReady: null, freeAtPeak: null, totalMemory: null, failure: "ran out of memory before its first screen" };
     }
     const ready = parseProbe(output, "ready");
     const entry = parseProbe(output, "entry");
+    const peak = parseProbe(output, "peak");
     return {
         device,
         freeAtReady: ready?.free ?? null,
+        freeAtPeak: peak?.free ?? null,
         totalMemory: ready?.total ?? entry?.total ?? null,
         failure: null,
     };
@@ -382,8 +456,9 @@ async function main(): Promise<void> {
             updated[device] = free;
         }
         for (const reading of readings) {
-            if (reading.freeAtReady !== null) {
-                updated[reading.device] = reading.freeAtReady;
+            const free = headroom(reading);
+            if (free !== null) {
+                updated[reading.device] = free;
             }
         }
         const sorted: Record<string, number> = {};
@@ -397,7 +472,7 @@ async function main(): Promise<void> {
 
     for (const reading of readings) {
         if (isNotableDrop(reading, baselines.get(reading.device))) {
-            const lost = (baselines.get(reading.device) ?? 0) - (reading.freeAtReady ?? 0);
+            const lost = (baselines.get(reading.device) ?? 0) - (headroom(reading) ?? 0);
             console.warn(
                 `::warning::${reading.device} lost ${String(lost)} bytes of headroom in this change. ` +
                     "That is the size of drop that made the app stop starting on the Instinct 2, and it " +
@@ -408,7 +483,7 @@ async function main(): Promise<void> {
     }
     for (const reading of readings.filter(isTight)) {
         console.warn(
-            `::warning::${reading.device} is down to ${String(Math.round((reading.freeAtReady ?? 0) / 1024))}KB ` +
+            `::warning::${reading.device} is down to ${String(Math.round((headroom(reading) ?? 0) / 1024))}KB ` +
                 "once its first screen exists. It works, but there is not much room for the next thing added.",
         );
     }

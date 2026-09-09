@@ -53,7 +53,31 @@ class MaceClubsApp extends Application.AppBase {
         _view = view;
         var delegate = new MaceClubsDelegate(view);
         reportMemory("ready");
+        reportPeak();
         return [view, delegate];
+    }
+
+    // What is left with the settings menu built on top of the first screen.
+    //
+    // "ready" is not the number that decides whether a watch can run this
+    // app. The 208-byte regression in #188 started fine on descentg1,
+    // instinct2 and instinct2x and then died opening settings - the screen
+    // that allocates most on top of the main view - which a check reading
+    // only the first screen cannot see. Garmin's own advice is about peak
+    // memory for this reason.
+    //
+    // Built and dropped rather than shown: SettingsMenu.build() is a pure
+    // function, so this is the real allocation without needing anything to
+    // drive the watch's buttons. It is a proxy for the peak, not the peak
+    // itself - showing the menu costs a little more - so treat it as the
+    // heaviest thing this can measure without an input driver, and keep the
+    // e2e suite as the thing that actually opens it.
+    (:memoryProbe)
+    private function reportPeak() as Void {
+        var menu = SettingsMenu.build();
+        if (menu != null) {
+            reportMemory("peak");
+        }
     }
 
     (:memoryProbe)
