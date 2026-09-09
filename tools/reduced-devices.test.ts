@@ -8,9 +8,13 @@
 // disagrees with the devices.
 
 import assert from "node:assert/strict";
+import { readdirSync, readFileSync } from "node:fs";
+import { dirname, join } from "node:path";
 import { describe, it } from "node:test";
+import { fileURLToPath } from "node:url";
 
 import {
+    jungleFiles,
     jungleReducedDevices,
     manifestDevices,
     REDUCED_EXCLUSIONS,
@@ -18,6 +22,9 @@ import {
     SMALL_MEMORY_BYTES,
     watchAppMemoryLimit,
 } from "./reduced-devices.ts";
+
+const REPO_ROOT = join(dirname(fileURLToPath(import.meta.url)), "..");
+const read = (relativePath: string): string => readFileSync(join(REPO_ROOT, relativePath), "utf8");
 
 const REDUCED_LINE = `$(BASE_EXCLUDES);${REDUCED_EXCLUSIONS.join(";")}`;
 
@@ -132,5 +139,64 @@ void describe("reducedBuildProblems", () => {
         const justOver = reducedBuildProblems(["x"], new Map([["x", SMALL_MEMORY_BYTES + 1]]), new Map());
         assert.equal(atLimit.length, 1);
         assert.deepEqual(justOver, []);
+    });
+});
+
+void describe("jungleFiles", () => {
+    it("finds the jungles and nothing else", () => {
+        assert.deepEqual(
+            jungleFiles(["monkey.jungle", "monkey.probe.jungle", "manifest.xml", "monkey.jungle.bak", "README.md"]),
+            ["monkey.jungle", "monkey.probe.jungle"],
+        );
+    });
+
+    it("finds all four of this repo's jungles", () => {
+        const found = jungleFiles(readdirSync(REPO_ROOT));
+        assert.deepEqual(found, ["monkey.jungle", "monkey.local.jungle", "monkey.probe.jungle", "monkey.tuning.jungle"]);
+    });
+});
+
+// The pair of assertions the CI job cannot make on its own. That job needs the
+// SDK's device files to know which watches are small, so it only runs in the
+// container; these two need nothing but the repo, and between them they cover
+// the two ways the jungles drift.
+void describe("the real jungles", () => {
+    const devices = new Set(manifestDevices(read("manifest.xml")));
+    const jungles = jungleFiles(readdirSync(REPO_ROOT)).map((name) => ({
+        name,
+        wired: new Map(
+            [...jungleReducedDevices(read(name))].filter(([target]) => devices.has(target)),
+        ),
+    }));
+
+    it("wire the same devices in every jungle", () => {
+        // A device on the reduced build in monkey.jungle and absent from
+        // monkey.probe.jungle would be measured as a full build on a watch
+        // that cannot hold one, and the headroom check would report a number
+        // no owner has.
+        const [first, ...rest] = jungles;
+        assert.ok(first !== undefined, "expected at least one jungle");
+        const expected = [...first.wired.keys()].sort();
+        assert.ok(expected.length > 0, "expected monkey.jungle to wire some devices");
+        for (const jungle of rest) {
+            assert.deepEqual(
+                [...jungle.wired.keys()].sort(),
+                expected,
+                `${jungle.name} does not give the reduced build to the same devices as ${first.name}`,
+            );
+        }
+    });
+
+    it("give every reduced device the whole exclusion set", () => {
+        // What launcherIcon being absent from REDUCED_EXCLUSIONS hid: the
+        // jungles excluded it, the check did not ask for it, so the next
+        // low-memory device could have been wired up without it and kept a
+        // 2.4KB bitmap on a watch with 2KB spare.
+        for (const jungle of jungles) {
+            for (const [device, wired] of jungle.wired) {
+                const missing = REDUCED_EXCLUSIONS.filter((annotation) => !wired.has(annotation));
+                assert.deepEqual(missing, [], `${jungle.name}: ${device} does not exclude ${missing.join(", ")}`);
+            }
+        }
     });
 });

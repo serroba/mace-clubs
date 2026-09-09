@@ -333,14 +333,39 @@ export function renderWhatsNew(version: string, changes: Change[]): string {
 }
 
 /**
+ * When the tag for `version` was committed, as YYYY-MM-DD.
+ *
+ * Separate from releaseDate() so both halves can be tested without either
+ * one needing the other's world: this needs a git repository with a tag in
+ * it, and `cwd` is what lets a test build a throwaway one rather than assert
+ * against this repo's own history. That assertion is what it used to do, and
+ * it failed the first time CI ran it - actions/checkout fetches no tags, so
+ * "v0.16.0" did not exist there. A test that needs a tag someone might
+ * eventually delete, in a checkout configured not to fetch tags, was testing
+ * the runner as much as the code.
+ */
+export function tagCommitDate(version: string, cwd: string = REPO_ROOT): string {
+    return execFileSync("git", ["log", "-1", "--format=%cs", `v${version}`], { cwd, encoding: "utf8" }).trim();
+}
+
+/**
  * The date a release carries. For a version that is already tagged, this is
  * the tag's own commit date rather than today: regenerating v0.7.0 next March
  * must not restamp it with next March. That made regeneration destructive, so
  * the archive could never be safely brought forward when the generator
  * changed - which is how nine product updates came to disagree with it.
+ *
+ * `tagDate` is injected the same way `today` is, and for the same reason -
+ * the decision this function makes is which of the two dates to use, and that
+ * is worth checking without a clock or a repository involved.
  */
-export function releaseDate(version: string, tagged: boolean, today: string): string {
-    return tagged ? git(["log", "-1", "--format=%cs", `v${version}`]) : today;
+export function releaseDate(
+    version: string,
+    tagged: boolean,
+    today: string,
+    tagDate: (version: string) => string = tagCommitDate,
+): string {
+    return tagged ? tagDate(version) : today;
 }
 
 /**

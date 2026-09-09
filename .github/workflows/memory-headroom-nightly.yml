@@ -92,15 +92,26 @@ jobs:
     steps:
       # A red scheduled run with nobody attached is a red run nobody reads -
       # the same trap as a permanently-red matrix job. An issue has an owner.
-      - name: Open an issue
+      #
+      # One issue, though, however long the failure lasts. This ran nightly
+      # and created unconditionally, so a device that cannot hold the app -
+      # which is a state that persists until someone changes a jungle - would
+      # have filed a fresh identical issue every morning. A tracker with seven
+      # copies of the same report is the same problem as a permanently-red
+      # job: the signal is there and nobody can see it. So the first failure
+      # opens an issue and every one after it adds a line to that issue.
+      - name: Open or update the issue
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          TITLE: A watch cannot hold the app
         run: |
-          gh issue create \
-            --repo "$GITHUB_REPOSITORY" \
-            --title "A watch cannot hold the app" \
-            --body "The nightly headroom run failed: $RUN_URL
+          # Written to a file rather than inlined: the body was a multi-line
+          # shell string whose continuation lines carried the YAML block's own
+          # indentation, so every paragraph after the first arrived with ten
+          # leading spaces and GitHub rendered them as a code block.
+          cat > /tmp/body.md <<EOF
+          The nightly headroom run failed: $RUN_URL
 
           One of the 120 devices in the manifest either crashed before drawing
           its first screen or is down to its last few KB. That is the state the
@@ -108,5 +119,20 @@ jobs:
 
           The failing shard's log names the device. See docs/e2e-testing.md and
           tools/reduced-devices.ts for how a device is moved to the reduced
-          build." \
-            --label "bug"
+          build.
+          EOF
+          # A `--search` match is fuzzy, so the title is compared exactly
+          # afterwards - reopening the right issue matters more here than
+          # finding one quickly, and a near-miss would file a duplicate while
+          # looking like it had not.
+          existing=$(gh issue list --repo "$GITHUB_REPOSITORY" --state open --label bug \
+            --search "$TITLE in:title" --json number,title \
+            --jq "[.[] | select(.title == \"$TITLE\")] | first | .number // empty")
+          if [ -n "$existing" ]; then
+            echo "still failing - adding to issue #$existing"
+            gh issue comment "$existing" --repo "$GITHUB_REPOSITORY" \
+              --body "Still failing as of tonight's run: $RUN_URL"
+          else
+            gh issue create --repo "$GITHUB_REPOSITORY" \
+              --title "$TITLE" --body-file /tmp/body.md --label "bug"
+          fi

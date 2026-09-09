@@ -12,7 +12,14 @@ jobs:
     name: Build and publish .iq package
     runs-on: ubuntu-latest
     container:
-      image: ghcr.io/matco/connectiq-tester:latest
+      # Pinned like every other consumer of this image, and checked by
+      # tools/container-image.test.ts. This was the last :latest reference in
+      # the repo, which put the one job that builds the artifact users install
+      # on a floating tag while five comments elsewhere explained why that is
+      # a bad idea. v2.10.0 is what build-shards compiles all 120 manifest
+      # devices with on every pull request, so it is the version the export
+      # is already known to handle.
+      image: ghcr.io/matco/connectiq-tester:v2.10.0
     steps:
       - uses: actions/checkout@v6
 
