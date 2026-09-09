@@ -85,6 +85,19 @@ function testLayoutFitsThisScreen(logger as Test.Logger) as Boolean {
     } else {
         Test.assertEqualMessage(nearBottom, w / 2, "a non-round screen keeps full width at every row");
     }
+
+    // The font lists and the subwindow clamp, which no test asked for. These
+    // need no font metrics - numberFonts and textFonts are constant arrays,
+    // and clearWidthBesideSubwindow is arithmetic - so unlike the rest of
+    // Layout they belong in this half of the file, which runs on every device
+    // in the CI matrix.
+    var numbers = Layout.numberFonts();
+    var texts = Layout.textFonts();
+    Test.assertMessage(numbers.size() > 1, "a headline needs more than one number font to fall back through");
+    Test.assertMessage(texts.size() > 1, "a headline needs more than one text font to fall back through");
+    var beside = Layout.clearWidthBesideSubwindow(w);
+    Test.assertMessage(beside > 0, "something has to be drawable beside the subwindow");
+    Test.assertMessage(beside <= w, "the clear width cannot exceed the screen");
     return true;
 }
 

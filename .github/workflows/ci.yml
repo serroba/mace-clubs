@@ -13,18 +13,25 @@ env:
   # rafiki has no --fail-under of its own, so the gate lives here; the badge
   # would otherwise promise something nothing checks.
   #
-  # 70, and the suite is at 70: `make coverage` reports 324/466 functions
-  # executed. This comment used to say "currently at 75%" and that was the
-  # thing worth checking rather than repeating - coverage has fallen five
-  # points to sit exactly on its own floor, which the gate cannot report
-  # because a floor only speaks when it is crossed. The next uncovered
-  # function fails CI.
+  # 74, against a measured 75: `make coverage` reports 349/466 functions
+  # executed. One point of slack, which is about four functions - enough that
+  # a feature can land with its tests in the same pull request rather than
+  # turning main red between two commits, and not enough to lose the gain
+  # quietly. It sat at 70 with a comment claiming 75, five points of slack
+  # nothing would have noticed being spent.
   #
-  # Raising this needs tests written first, and the uncovered set says which:
-  # most of WorkoutSession's recording path (onSensorData, pause, resume,
-  # appendHistoryLog, recordSwingTotal, the swing-debug pair). That is its own
-  # piece of work, not a number to edit here.
-  MONKEY_C_COVERAGE_FLOOR: "70"
+  # 100% is not the target and cannot be reached: 19 of those 466 bodies are
+  # compiled out of this build. Every annotation pair (:history/:noHistory
+  # and five more) has both halves instrumented and only one compiled, so the
+  # unused twin can never report a hit. Against what the build actually
+  # contains the figure is 349/447.
+  #
+  # What is left is the UI: MaceClubsView's draw paths and lifecycle, the
+  # delegates' onSelect/onBack/onTap, each view's onUpdate, FitFields'
+  # writers that need a live recording session. A unit test cannot press a
+  # button or supply a Dc, which is what the e2e suite is for - see
+  # `make coverage-e2e`, which measures that half.
+  MONKEY_C_COVERAGE_FLOOR: "74"
 
 # Supersede an in-flight run when the same ref is pushed again. Without this
 # a force-push leaves the old run grinding away on a commit that no longer

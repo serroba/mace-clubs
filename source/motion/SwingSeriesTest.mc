@@ -59,5 +59,12 @@ function testSwingSeriesCorrectionDoesNotInventAnEvent(logger as Test.Logger) as
     tracker.align(4);
     var point = tracker.addTotal(4);
     Test.assertEqualMessage(point[:event] as Number, 0, "manual correction is not a detected swing");
+
+    // reset() puts a tracker back to where a fresh one starts, which is what
+    // a new set needs: the next total must not read as a burst of swings
+    // detected in one second.
+    tracker.reset();
+    var afterReset = tracker.addTotal(2);
+    Test.assertEqualMessage(afterReset[:event] as Number, 2, "a reset tracker counts from zero again");
     return true;
 }
