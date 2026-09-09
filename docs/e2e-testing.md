@@ -327,6 +327,26 @@ watch with 2KB left - it would be dead before the check spoke. The same
 build measured four times running returned the same number to the byte, so
 there is no noise to leave room for.
 
+### What the launcher icon costs
+
+The single `loadResource()` call in `MaceClubsView` loads `launcher_icon.png`,
+which is 295 bytes on disk and about 2.4KB in app memory - the decoded bitmap
+plus the resource tables the first `loadResource()` brings with it. Measured
+on instinct2:
+
+| | with the icon | without |
+| --- | --- | --- |
+| first screen | 7,296 | 9,712 |
+| settings menu on top | **2,064** | **4,432** |
+
+More than double the headroom of the five watches that have the least, for a
+decoration on one screen, so those five now compile it out
+(`launcherIcon` / `noLauncherIcon`) and everything else keeps it. This is the
+kind of thing the community advice is about - prefer drawn shapes to bitmaps,
+and remember that one `loadResource()` is not free even when the file is
+tiny. It was worth checking only because the peak number made the real margin
+visible.
+
 **What this does not cover.** It measures the *probe* build, which carries
 the probe, not the `.prg` that ships. #188's own regression lived only in the
 shipped build - an empty annotated helper the probe build never had - so this

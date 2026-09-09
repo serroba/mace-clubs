@@ -14,9 +14,9 @@ BASE_EXCLUDES = noOffscreenRender
 # the noSwingDebug stubs and keeps the real path; those three devices swap
 # which side is compiled. Keep the three jungles in step - a device that
 # builds here and not there is a device nobody runs.
-base.excludeAnnotations = $(BASE_EXCLUDES);memoryProbe;noSwingDebug;noHistory;noCustomWorkout;noMotionExport;noMenuLabelPrefix
-descentg1.excludeAnnotations = $(BASE_EXCLUDES);memoryProbe;swingDebug;history;customWorkout;motionExport;menuLabelPrefix
-instinct2.excludeAnnotations = $(BASE_EXCLUDES);memoryProbe;swingDebug;history;customWorkout;motionExport;menuLabelPrefix
-instinct2s.excludeAnnotations = $(BASE_EXCLUDES);memoryProbe;swingDebug;history;customWorkout;motionExport;menuLabelPrefix
-instinct2x.excludeAnnotations = $(BASE_EXCLUDES);memoryProbe;swingDebug;history;customWorkout;motionExport;menuLabelPrefix
-instinctcrossover.excludeAnnotations = $(BASE_EXCLUDES);memoryProbe;swingDebug;history;customWorkout;motionExport;menuLabelPrefix
+base.excludeAnnotations = $(BASE_EXCLUDES);memoryProbe;noSwingDebug;noHistory;noCustomWorkout;noMotionExport;noMenuLabelPrefix;noLauncherIcon
+descentg1.excludeAnnotations = $(BASE_EXCLUDES);memoryProbe;swingDebug;history;customWorkout;motionExport;menuLabelPrefix;launcherIcon
+instinct2.excludeAnnotations = $(BASE_EXCLUDES);memoryProbe;swingDebug;history;customWorkout;motionExport;menuLabelPrefix;launcherIcon
+instinct2s.excludeAnnotations = $(BASE_EXCLUDES);memoryProbe;swingDebug;history;customWorkout;motionExport;menuLabelPrefix;launcherIcon
+instinct2x.excludeAnnotations = $(BASE_EXCLUDES);memoryProbe;swingDebug;history;customWorkout;motionExport;menuLabelPrefix;launcherIcon
+instinctcrossover.excludeAnnotations = $(BASE_EXCLUDES);memoryProbe;swingDebug;history;customWorkout;motionExport;menuLabelPrefix;launcherIcon
