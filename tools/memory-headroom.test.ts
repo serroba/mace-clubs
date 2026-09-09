@@ -13,6 +13,7 @@ import { describe, it } from "node:test";
 
 import {
     atRiskSelection,
+    couldNotMeasure,
     AT_RISK_LIMIT_BYTES,
     compareWithBaseline,
     headroom,
@@ -73,8 +74,29 @@ void describe("verdicts", () => {
         assert.equal(isCritical(reading({ freeAtReady: null, freeAtPeak: null })), true);
     });
 
+    it("does not call an unreachable simulator a device that cannot hold the app", () => {
+        // The first nightly over all 120 devices reported five watches as
+        // "cannot hold the app" when the simulator had died ten devices
+        // earlier. Wrong verdict, and the most damaging kind: it accuses the
+        // product of the tool's own failure.
+        const lost = reading({ freeAtReady: null, freeAtPeak: null, failure: "the simulator was not reachable" });
+        assert.equal(couldNotMeasure(lost), true);
+        assert.equal(isCritical(lost), false);
+    });
+
+    it("still refuses to call an unmeasured device fine", () => {
+        // Both verdicts fail the run. The difference is what it says, not
+        // whether it goes red.
+        const lost = reading({ freeAtReady: null, freeAtPeak: null, failure: "did not build\nsomething" });
+        assert.equal(couldNotMeasure(lost), true);
+    });
+
     it("fails a device that crashed", () => {
-        assert.equal(isCritical(reading({ failure: "ran out of memory before its first screen" })), true);
+        // Out of memory is a real verdict about the device, not a failed
+        // measurement, so it stays critical.
+        const oom = reading({ failure: "ran out of memory before its first screen" });
+        assert.equal(couldNotMeasure(oom), false);
+        assert.equal(isCritical(oom), true);
     });
 
     it("fails a device down to its last few hundred bytes", () => {

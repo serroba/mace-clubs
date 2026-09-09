@@ -347,6 +347,26 @@ and remember that one `loadResource()` is not free even when the file is
 tiny. It was worth checking only because the peak number made the real margin
 visible.
 
+### What the nightly is for
+
+The per-PR job checks the twenty devices at or below 128KB on the argument
+that nothing above that can plausibly fail. The first nightly run over all
+120 confirmed it - the 512KB tier reads about 693KB free with a peak around
+702KB, and the 1.2MB devices more than that - which is the point: the
+assumption is now checked rather than asserted.
+
+It also found two defects in the check itself, which is the other reason to
+run the thing you only think you need.
+
+The simulator died ten devices into one shard, and every device after it
+reported "the simulator was not reachable" - and the run announced those five
+watches as *"cannot hold the app"*. A measurement failure reported as a
+product failure is precisely the lie this check exists to prevent. Those are
+now separate verdicts: both fail the run, because a device nobody measured
+must never read as a device that passed, but they no longer say the same
+thing. And a device that comes back unreachable now restarts the simulator
+and retries once, rather than one crash writing off the rest of the shard.
+
 **What this does not cover.** It measures the *probe* build, which carries
 the probe, not the `.prg` that ships. #188's own regression lived only in the
 shipped build - an empty annotated helper the probe build never had - so this
