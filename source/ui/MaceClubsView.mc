@@ -69,13 +69,13 @@ class MaceClubsView extends WatchUi.View {
     // The bitmap is not what it looks like on disk. launcher_icon.png is 295
     // bytes; loading it costs about 2.4KB of app memory - the decoded bitmap
     // plus the resource tables that the first loadResource() call brings in
-    // with it. Measured on instinct2: 7,296 bytes free at the first screen
-    // with it, 9,792 without, and 2,064 against 4,512 with the settings menu
-    // built on top.
+    // with it. That is more than doubling the headroom of the five watches
+    // that have the least, in exchange for a decoration on one screen, so
+    // those five draw the idle screen without it. Everywhere else it stays.
     //
-    // That is more than doubling the headroom of the five watches that have
-    // the least, in exchange for a decoration on one screen, so those five
-    // draw the idle screen without it. Everywhere else it stays.
+    // The measurements are in docs/e2e-testing.md, "What the launcher icon
+    // costs", rather than repeated here - this comment carried its own copy
+    // and the two had drifted 400 bytes apart.
     (:launcherIcon)
     private function loadLauncherIcon() as WatchUi.BitmapResource? {
         return WatchUi.loadResource(Rez.Drawables.LauncherIcon) as WatchUi.BitmapResource;

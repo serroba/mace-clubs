@@ -100,7 +100,7 @@ coverage: $(DEVELOPER_KEY) | $(BIN_DIR)
 # sizes, coverage, lint rules - every figure derived from the manifest and the
 # workflow files rather than restated. CI appends the same table to its job
 # summary. Coverage is only included when a run measured it.
-# How much memory the app has left once its first screen exists, per device.
+# How much memory the app has left at its peak, per device.
 # The check whose absence let the app ship unable to start on the Instinct 2
 # for four months: the build sweep proves 120 devices compile, and compiling
 # says nothing about whether a watch can hold what it compiled.

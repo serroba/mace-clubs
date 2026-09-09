@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// How much memory the app has left once its first screen exists, per device.
+// How much memory the app has left at its peak, per device.
 //
 // This is the measurement whose absence let the app ship broken. It grew past
 // the Instinct 2's 96KB in v0.13.4 and crashed inside getInitialView() before
@@ -31,27 +31,33 @@ const REPO_ROOT = join(dirname(fileURLToPath(import.meta.url)), "..");
 /**
  * Below this, a watch is about to fail the way the Instinct 2 did.
  *
- * Empirical, not aspirational. The build that could not start had 6,216 bytes
- * before constructing its view and needed 5,928 of them, so it died with
- * everything still to do. The build that ships today has 7,224 left *after*
- * the view exists, and passes a full workout on that device - so 7KB is
- * evidently enough in practice and a floor above it would be red on main
- * from the day it landed, which is a gate nobody would keep.
+ * Measured, not chosen. #189 read the peak on instinct2 at 2,064 free bytes,
+ * with the app running a full workout there - so a floor anywhere above that
+ * would have been red on main the day it landed, and a gate red on main is a
+ * gate someone deletes in a fortnight. 1KB sits under what the tightest watch
+ * was known to survive on.
  *
- * This one catches the thing that actually went wrong: a release that eats
- * the last of the headroom on a watch that had little to begin with.
+ * That measurement is now history rather than the current state: dropping the
+ * launcher icon in the same pull request took instinct2 to 4,832
+ * (memory-baselines.json, which is written by --record and is where today's
+ * numbers live). The floor stays where it is, because what it has to be below
+ * is the tightest figure the app has ever been shown to work at, not the
+ * roomiest.
  */
-// Measured, not chosen: instinct2 ships today with 2,064 bytes left once the
-// settings menu is built, and runs a full workout there. A floor above what
-// main actually does is a gate someone deletes in a fortnight.
 export const CRITICAL_FREE_BYTES = 1024;
 
 /**
  * Below this, a watch is worth watching but is not failing.
  *
- * Recalibrated for the peak. 12KB was a first-screen figure; against the
- * settings menu every 96KB device is under it, and five devices warning on
- * every run is a warning nobody reads.
+ * A tripwire in the gap between working and dead, and nothing currently trips
+ * it: every device in memory-baselines.json is above it, the tightest at
+ * 4,832 bytes. That is the intended state, not a sign the tier is broken - it
+ * fires when a device falls into the band between the 1KB floor and here,
+ * which is the state the app was in before #189 gave those watches 2.4KB back.
+ *
+ * The number moved from 12KB with the measurement it describes. 12KB was a
+ * first-screen figure, and against the peak every 96KB device was under it -
+ * five devices warning on every run is a warning nobody reads.
  *
  * Reported rather than enforced. The point is that the number exists at all:
  * nothing in the repo measured it, so the app crossed this line in v0.13.4
@@ -66,10 +72,11 @@ const LAUNCH_TIMEOUT_MS = 45_000;
  * The tier worth checking on every pull request.
  *
  * Headroom is a property of the device's own limit, and the manifest splits
- * sharply: the five 96KB watches have 7-8KB left once the first screen
- * exists, the 128KB tier has 27-53KB, and everything from 512KB up has about
- * 693KB. A fenix cannot plausibly fail this check, so checking one per pull
- * request buys nothing and costs the minutes that make people skip it.
+ * sharply. At the peak, from memory-baselines.json: the five 96KB watches
+ * have about 4.8KB, the 128KB tier 21-47KB, and fenix7 - the one 1MB device
+ * recorded - 702KB. A fenix cannot plausibly fail this check, so checking one
+ * per pull request buys nothing and costs the minutes that make people skip
+ * it.
  *
  * The nightly run covers all 120 - that is what catches this assumption
  * being wrong.
@@ -138,8 +145,8 @@ export function parseProbe(output: string, stage: string): { total: number; used
  *
  * The peak where there is one, because the first screen is not where the app
  * runs out. #188's 208-byte regression started fine on descentg1, instinct2
- * and instinct2x and died opening settings; measured on instinct2, the first
- * screen leaves 7,296 bytes and the settings menu leaves 2,016. A check
+ * and instinct2x and died opening settings; measured on instinct2 at the time,
+ * the first screen left 7,296 bytes and the settings menu 2,064. A check
  * reading only the first screen is reading the wrong number by a factor of
  * three.
  */
@@ -162,7 +169,8 @@ export function describe(reading: Reading): string {
         return first;
     }
     // Bytes rather than KB for the peak: this is the tight one, and "2KB"
-    // hides the difference between 2,016 bytes and 2,800.
+    // would hide the difference between 2,000 bytes and 2,800 - which on
+    // these watches is most of the margin.
     return `${first}, ${String(reading.freeAtPeak)} bytes with the settings menu on top`;
 }
 
@@ -190,7 +198,6 @@ export function isCritical(reading: Reading): boolean {
     return reading.failure !== null || free === null || free < CRITICAL_FREE_BYTES;
 }
 
-/** Working, but with less room than anything else on the shelf. */
 /** The recorded headroom per device, empty when nothing has been recorded. */
 export function loadBaselines(): Map<string, number> {
     if (!existsSync(BASELINE_PATH)) {
@@ -248,9 +255,19 @@ export function isNotableDrop(reading: Reading, baseline: number | undefined): b
     return baseline - free >= notableDropBytes(baseline);
 }
 
+/** Working, but with less room than anything else on the shelf. */
 export function isTight(reading: Reading): boolean {
     const free = headroom(reading);
     return !isCritical(reading) && free !== null && free < COMFORTABLE_FREE_BYTES;
+}
+
+/** Stops a simulator that is running but not answering, so ensureSimulator()
+ * starts a fresh one rather than finding the broken one and returning. */
+function killSimulator(): void {
+    for (const pattern of ["ConnectIQ.app/Contents/MacOS/simulator", "bin/simulator"]) {
+        spawnSync("pkill", ["-9", "-f", pattern]);
+    }
+    spawnSync("sleep", ["2"]);
 }
 
 /**
@@ -261,15 +278,6 @@ export function isTight(reading: Reading): boolean {
  * like the app failing. Starting it here is what makes this a single command
  * rather than a thing you have to set up first.
  */
-/** Stops a simulator that is running but not answering, so ensureSimulator()
- * starts a fresh one rather than finding the broken one and returning. */
-function killSimulator(): void {
-    for (const pattern of ["ConnectIQ.app/Contents/MacOS/simulator", "bin/simulator"]) {
-        spawnSync("pkill", ["-9", "-f", pattern]);
-    }
-    spawnSync("sleep", ["2"]);
-}
-
 function ensureSimulator(): void {
     if (spawnSync("pgrep", ["-f", "ConnectIQ.app/Contents/MacOS/simulator"]).status === 0) {
         return;
@@ -417,11 +425,6 @@ export function atRiskSelection(limit: number, devicesDir: string): { devices: s
     };
 }
 
-/** Every manifest device at or below `limit`, in manifest order. */
-export function devicesUpTo(limit: number, devicesDir: string): string[] {
-    return atRiskSelection(limit, devicesDir).devices;
-}
-
 async function main(): Promise<void> {
     const args = process.argv.slice(2);
     const record = args.includes("--record");
@@ -491,19 +494,20 @@ async function main(): Promise<void> {
     }
 
     if (record) {
-        const updated: Record<string, number> = {};
-        for (const [device, free] of [...baselines.entries()].sort(([a], [b]) => a.localeCompare(b))) {
-            updated[device] = free;
-        }
+        // Every device keeps its recorded figure and this run's devices
+        // replace theirs, then the whole thing is written in device order -
+        // sorted once, at the end, so the file's diff shows what changed
+        // rather than what moved.
+        const updated = new Map(baselines);
         for (const reading of readings) {
             const free = headroom(reading);
             if (free !== null) {
-                updated[reading.device] = free;
+                updated.set(reading.device, free);
             }
         }
         const sorted: Record<string, number> = {};
-        for (const device of Object.keys(updated).sort((a, b) => a.localeCompare(b))) {
-            sorted[device] = updated[device] ?? 0;
+        for (const device of [...updated.keys()].sort((a, b) => a.localeCompare(b))) {
+            sorted[device] = updated.get(device) ?? 0;
         }
         writeFileSync(BASELINE_PATH, `${JSON.stringify(sorted, null, 2)}\n`);
         console.log(`\nrecorded ${String(readings.length)} device(s) in tools/memory-baselines.json`);
@@ -524,7 +528,7 @@ async function main(): Promise<void> {
     for (const reading of readings.filter(isTight)) {
         console.warn(
             `::warning::${reading.device} is down to ${String(Math.round((headroom(reading) ?? 0) / 1024))}KB ` +
-                "once its first screen exists. It works, but there is not much room for the next thing added.",
+                "at its peak. It works, but there is not much room for the next thing added.",
         );
     }
     const failures = readings.filter(isCritical);

@@ -202,7 +202,11 @@ export class Simulator {
             // observed up to ~25s. This is a one-time cost per launch(), not
             // per test, so it's worth being generous here. Usually already
             // true: loadApp() returns as soon as it sees the app draw.
-            await waitFor(async () => (await sim.readText()).length > 0, 45_000, "the launcher screen to render");
+            // hasScreenContent() rather than readText() directly: on macOS a
+            // read can throw outright when there is momentarily no window,
+            // and waitFor treats a rejection as the wait failing rather than
+            // as a poll worth repeating. That is what the helper swallows.
+            await waitFor(async () => await sim.hasScreenContent(), 45_000, "the launcher screen to render");
             // The launcher screen still has a brief reveal animation on top
             // of that first paint; wait it out so the first real interaction
             // doesn't land mid-transition.

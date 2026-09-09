@@ -70,9 +70,6 @@ export const CLUB: Taper = {
 /** Everything but the ball - the parts drawn in the mark's base colour. */
 export const SHAFTS: readonly Shape[] = [CLUB, MACE_SHAFT];
 
-/** The whole mark, as one silhouette. */
-export const MARK: readonly Shape[] = [CLUB, MACE_SHAFT, MACE_HEAD];
-
 /**
  * Signed distance to a shape in design space: negative inside, positive
  * outside, in design units. Rendering thresholds this rather than testing

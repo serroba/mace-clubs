@@ -64,10 +64,61 @@ export function matrixDevices(workflow: string, afterMarker: string): string[] {
     return devices;
 }
 
-/** The line-coverage floor CI fails below, so a badge can quote it honestly. */
+/**
+ * The line-coverage floor for the whole tooling tree, so a badge can quote it
+ * honestly.
+ *
+ * Anchored on the flag that makes this gate the tree-wide one rather than
+ * taking the first `--test-coverage-lines` in the file. ci.yml has three of
+ * them - the tree, the FIT core and the synthetic-workout fixture - and
+ * whichever happens to come first is not a fact worth building a badge on.
+ */
 export function coverageFloor(workflow: string): number | null {
-    const match = /--test-coverage-lines=(\d+)/.exec(workflow);
+    const match = /--test-coverage-exclude='tools\/e2e\/\*\*'[\s\S]*?--test-coverage-lines=(\d+)/.exec(workflow);
     return match?.[1] === undefined ? null : Number(match[1]);
+}
+
+/**
+ * The floor the FIT report core is held to, which is much higher than the
+ * tree's and for a different reason: this is the code that reads and writes
+ * what a watch recorded, where being wrong is a wrong number in someone's
+ * training log.
+ */
+export function fitCoverageFloor(workflow: string): number | null {
+    const match = /--test-coverage-include='tools\/fit-io\.ts'[\s\S]*?--test-coverage-lines=(\d+)/.exec(workflow);
+    return match?.[1] === undefined ? null : Number(match[1]);
+}
+
+/**
+ * How many shards the build sweep runs in, read out of the workflow.
+ *
+ * The report said "120 across 8 shards" with the 8 written in, in a file
+ * whose whole premise is that nothing is restated. It is one `SHARD_COUNT`
+ * away.
+ */
+export function buildShardCount(workflow: string): number | null {
+    const start = workflow.indexOf("build-shards:");
+    if (start === -1) {
+        return null;
+    }
+    const match = /SHARD_COUNT:\s*"?(\d+)"?/.exec(workflow.slice(start));
+    return match?.[1] === undefined ? null : Number(match[1]);
+}
+
+/**
+ * Devices whose memory headroom is recorded, from the baselines file.
+ *
+ * The signal the report was missing. Three pull requests built a headroom
+ * check because nothing in the repo measured what the app had left, and the
+ * quality table - which exists to carry exactly this kind of number - said
+ * nothing about it afterwards.
+ */
+export function recordedHeadroomDevices(baselinesJson: string): number {
+    const parsed: unknown = JSON.parse(baselinesJson);
+    if (typeof parsed !== "object" || parsed === null) {
+        return 0;
+    }
+    return Object.values(parsed as Record<string, unknown>).filter((free) => typeof free === "number").length;
 }
 
 /**
@@ -85,12 +136,14 @@ export function collectSignals(options: {
     ci: string;
     e2e: string;
     e2eReduced: string;
+    memoryBaselines: string | null;
     lintRules: number | null;
     monkeyCCoverage: string | null;
     typescriptCoverage: string | null;
 }): Signal[] {
-    const { manifest, ci, e2e, e2eReduced, lintRules, monkeyCCoverage, typescriptCoverage } = options;
+    const { manifest, ci, e2e, e2eReduced, memoryBaselines, lintRules, monkeyCCoverage, typescriptCoverage } = options;
     const floor = coverageFloor(ci);
+    const shards = buildShardCount(ci);
     const signals: Signal[] = [
         {
             name: "Devices supported",
@@ -99,7 +152,10 @@ export function collectSignals(options: {
         },
         {
             name: "Devices built every run",
-            value: `${String(manifestDeviceCount(manifest))} across 8 shards`,
+            value:
+                shards === null
+                    ? String(manifestDeviceCount(manifest))
+                    : `${String(manifestDeviceCount(manifest))} across ${String(shards)} shards`,
             source: "ci.yml build-shards",
         },
         {
@@ -118,11 +174,26 @@ export function collectSignals(options: {
             source: "e2e-linux.yml + e2e-linux-reduced.yml matrices",
         },
     ];
+    if (memoryBaselines !== null) {
+        signals.push({
+            name: "Devices with recorded memory headroom",
+            value: String(recordedHeadroomDevices(memoryBaselines)),
+            source: "tools/memory-baselines.json",
+        });
+    }
     if (typescriptCoverage !== null) {
         signals.push({
-            name: "TypeScript line coverage",
+            name: "TypeScript line coverage (tooling tree, less the e2e driver)",
             value: floor === null ? typescriptCoverage : `${typescriptCoverage} (floor ${String(floor)}%)`,
             source: "node --experimental-test-coverage",
+        });
+    }
+    const fitFloor = fitCoverageFloor(ci);
+    if (fitFloor !== null) {
+        signals.push({
+            name: "FIT report core line coverage",
+            value: `floor ${String(fitFloor)}%`,
+            source: "ci.yml fit coverage gate",
         });
     }
     if (monkeyCCoverage !== null) {
@@ -158,6 +229,7 @@ function main(): void {
         ci: read(".github/workflows/ci.yml"),
         e2e: read(".github/workflows/e2e-linux.yml"),
         e2eReduced: read(".github/workflows/e2e-linux-reduced.yml"),
+        memoryBaselines: read("tools/memory-baselines.json"),
         lintRules: valueOf("--lint-rules") === null ? null : Number(valueOf("--lint-rules")),
         monkeyCCoverage: valueOf("--monkey-c-coverage"),
         typescriptCoverage: valueOf("--typescript-coverage"),

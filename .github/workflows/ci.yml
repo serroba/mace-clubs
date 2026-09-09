@@ -11,7 +11,19 @@ env:
   MONKEY_C_RS_REV: 93d004f1f26af98c96dc36be10ab841f035f0dbb
   # The floor the Monkey C function-coverage badge quotes, enforced below.
   # rafiki has no --fail-under of its own, so the gate lives here; the badge
-  # would otherwise promise something nothing checks. Currently at 75%.
+  # would otherwise promise something nothing checks.
+  #
+  # 70, and the suite is at 70: `make coverage` reports 324/466 functions
+  # executed. This comment used to say "currently at 75%" and that was the
+  # thing worth checking rather than repeating - coverage has fallen five
+  # points to sit exactly on its own floor, which the gate cannot report
+  # because a floor only speaks when it is crossed. The next uncovered
+  # function fails CI.
+  #
+  # Raising this needs tests written first, and the uncovered set says which:
+  # most of WorkoutSession's recording path (onSensorData, pause, resume,
+  # appendHistoryLog, recordSwingTotal, the swing-debug pair). That is its own
+  # piece of work, not a number to edit here.
   MONKEY_C_COVERAGE_FLOOR: "70"
 
 # Supersede an in-flight run when the same ref is pushed again. Without this
@@ -63,7 +75,40 @@ jobs:
       # for the lot - so there was never much reason not to.
       - name: Test every TypeScript tool
         run: npm test --prefix tools
-      - name: Test report generator with coverage
+      # Two coverage gates, because they answer different questions.
+      #
+      # This one is the whole tooling tree, and it is new. The gate below has
+      # always covered five modules at 95%, and the badge quoting it said
+      # "TypeScript line coverage" - which read as a claim about the
+      # TypeScript in this repo while saying nothing about the other
+      # twenty-odd modules. Measured over all of them the figure is 79%, so
+      # the badge was overstating by sixteen points on a scope nobody could
+      # see. Nothing stopped a new module arriving with no tests at all.
+      #
+      # The e2e driver is excluded rather than counted. It exists to drive a
+      # GUI - spawn a simulator, click a hotspot, OCR a screenshot - and it is
+      # tested by being used: thirteen devices' worth of e2e jobs in two
+      # workflows. Unit-testing it would mean asserting against mocks of the
+      # thing whose real behaviour is the entire question, and counting it
+      # unmeasured drags the tree to 67% and reports the shape of the code
+      # rather than a gap worth closing.
+      #
+      # 75 against a measured 79: enough slack that one new CLI with an
+      # untested main() does not turn this into an obstacle, tight enough that
+      # a module with no tests at all cannot land quietly.
+      - name: Cover the whole tooling tree
+        run: |
+          set -o pipefail
+          node --experimental-strip-types --test --experimental-test-coverage \
+            --test-coverage-exclude='tools/e2e/**' \
+            --test-coverage-exclude='**/*.test.ts' \
+            --test-coverage-lines=75 \
+            tools/*.test.ts 2>&1 | tee coverage-ts.log
+      # The FIT report core, held far higher: this is the code that reads and
+      # writes what a user's watch actually recorded, where a rounding error
+      # is a wrong number in someone's training log rather than a broken
+      # build.
+      - name: Cover the FIT report core
         run: |
           # pipefail, or `| tee` swallows a coverage-gate failure and the
           # step passes on tee's exit code instead. GitHub's default shell is
@@ -78,7 +123,7 @@ jobs:
             --test-coverage-lines=95 \
             tools/analyze-workout.test.ts tools/report-fit.test.ts \
             tools/validate-workout.test.ts tools/workout-history.test.ts \
-            2>&1 | tee coverage-ts.log
+            2>&1 | tee coverage-fit.log
 
       # Quality signals into the job summary, so every run carries the numbers
       # instead of leaving them to a README that rots.
@@ -235,10 +280,10 @@ jobs:
       # pipeline, until a 1-star review said so four months later.
       #
       # Only the tier where the answer can change - everything at or below
-      # 128KB, about 20 devices. From 512KB up a watch has ~693KB left and
-      # cannot plausibly fail; the nightly run covers those, which is what
-      # catches this assumption being wrong.
-      - name: Measure what is left once the first screen exists
+      # 128KB, about 20 devices. From 512KB up a watch has hundreds of KB
+      # spare at the peak and cannot plausibly fail; the nightly run covers
+      # those, which is what catches this assumption being wrong.
+      - name: Measure what is left at the app's peak
         env:
           # A container step gets HOME=/github/home, and the simulator reads
           # its device files and fonts from $HOME/.Garmin. Without this the
