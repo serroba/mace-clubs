@@ -552,9 +552,45 @@ Every one of those runs when the e2e suite drives a workout, which is the
 argument for having it. `make coverage-e2e` measures that rather than
 asserting it: rafiki's probe is a `println`, so a captured simulator log is a
 coverage log, and `MACE_E2E_PRG` points the suite's own test files at an
-instrumented build. `make coverage-all` runs both halves against one
-instrument step and prints the union - the ids have to mean the same thing in
-both logs, which is why it instruments once and builds twice.
+instrumented build. `make coverage-all` runs both halves and prints the
+union.
+
+Measured on instinct3solar45mm:
+
+| | functions | of 466 | of the 447 compiled |
+| --- | --- | --- | --- |
+| unit tests | 349 | 75% | 78% |
+| e2e suite | 216 | 46% | 48% |
+| **both** | **389** | **83%** | **87%** |
+
+40 of the e2e suite's 216 are reached by nothing else - that is what it is
+worth, stated rather than assumed. The two halves overlap heavily because
+driving a workout runs the same session logic the unit tests call directly;
+the difference is the draw paths and the input handlers.
+
+One instrument step feeds both, because the ids have to mean the same thing
+in both logs. They are stable across runs - instrumenting twice produces an
+identical manifest - so a log kept from an earlier run can still be unioned
+with a later one, which is what makes it possible to re-run a single flaky
+file and append rather than redo the suite.
+
+### What neither suite covers
+
+58 functions, and they are a map of where the e2e suite does not go rather
+than a list of untested logic:
+
+| Screen the suite never opens | Functions |
+| --- | --- |
+| the custom-workout editor | 9 |
+| the history detail view | 8 |
+| the weight editor | 3 |
+
+Plus `FitFields`' nine writers, which need a recording session that reaches
+`save()`, and a scattering of delegate branches - the paging handlers on
+screens the suite visits but does not page.
+
+That is the useful form of a coverage number: not a grade, but a list of
+screens a real user can reach and CI cannot.
 
 ### Writing a unit test that touches Properties
 

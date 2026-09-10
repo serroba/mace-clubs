@@ -29,8 +29,12 @@ env:
   # What is left is the UI: MaceClubsView's draw paths and lifecycle, the
   # delegates' onSelect/onBack/onTap, each view's onUpdate, FitFields'
   # writers that need a live recording session. A unit test cannot press a
-  # button or supply a Dc, which is what the e2e suite is for - see
-  # `make coverage-e2e`, which measures that half.
+  # button or supply a Dc, which is what the e2e suite is for, and that half
+  # is measured rather than assumed: `make coverage-all` reports 349 from the
+  # unit tests, 216 from the e2e suite, 389 together - 83%, or 87% of the 447
+  # this build contains. 40 of the e2e suite's functions are reached by
+  # nothing else. See docs/e2e-testing.md for the 58 neither reaches, which
+  # is a list of screens CI never opens rather than of untested logic.
   MONKEY_C_COVERAGE_FLOOR: "74"
 
 # Supersede an in-flight run when the same ref is pushed again. Without this

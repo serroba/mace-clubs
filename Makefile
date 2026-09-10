@@ -11,6 +11,7 @@ MONKEYDO ?= $(shell $(TOOL_RESOLVER) monkeydo)
 # and monkey-c-linter binaries no longer exist upstream; those crates are
 # libraries now, and `cargo install` of them fails.
 RAFIKI ?= $(shell $(TOOL_RESOLVER) rafiki)
+CONNECTIQ ?= $(shell $(TOOL_RESOLVER) connectiq)
 JAVA_PATH := $(if $(findstring /,$(JAVA)),$(dir $(JAVA)):,)
 export PATH := $(JAVA_PATH)$(PATH)
 
@@ -136,8 +137,18 @@ coverage-all: $(DEVELOPER_KEY) | $(BIN_DIR)
 	"$(RAFIKI)" coverage instrument source
 	"$(MONKEYC)" -f $(BIN_DIR)/coverage/coverage.jungle -d $(DEVICE) \
 		-o $(BIN_DIR)/mace-clubs-cov-test.prg -y $(DEVELOPER_KEY) --unit-test
+	@# monkeydo does not start a simulator and says "Unable to connect" when
+	@# there is none, which `|| true` then swallows into an empty log and a
+	@# report of 0%. The e2e half below starts its own; this half has to be
+	@# given one. `make coverage` avoids the problem with rafiki's
+	@# --start-simulator, which does not hand back the log this needs.
+	@pgrep -f "ConnectIQ.app/Contents/MacOS/simulator" >/dev/null 2>&1 \
+		|| pgrep -f "bin/simulator" >/dev/null 2>&1 \
+		|| { echo "starting the simulator"; "$(CONNECTIQ)" >/dev/null 2>&1 & sleep 12; }
 	"$(MONKEYDO)" $(BIN_DIR)/mace-clubs-cov-test.prg $(DEVICE) -t \
 		> $(BIN_DIR)/coverage-unit.log 2>&1 || true
+	@grep -q COVHIT $(BIN_DIR)/coverage-unit.log \
+		|| { echo "::error::the unit half captured nothing - $$(head -1 $(BIN_DIR)/coverage-unit.log)"; exit 1; }
 	"$(MONKEYC)" -f $(BIN_DIR)/coverage/coverage.jungle -d $(DEVICE) \
 		-o $(BIN_DIR)/mace-clubs-cov.prg -y $(DEVELOPER_KEY)
 	$(RM) $(BIN_DIR)/coverage-e2e.log

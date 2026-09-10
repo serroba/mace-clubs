@@ -81,7 +81,17 @@ export function targetPrg(requested: string): string {
  */
 function coverageLogPath(): string | null {
     const path = process.env["MACE_E2E_COVERAGE_LOG"];
-    return path !== undefined && path.length > 0 ? path : null;
+    if (path === undefined || path.length === 0) {
+        return null;
+    }
+    // Against the repo root, not the working directory, for the same reason
+    // prgPath is - run-e2e.ts spawns each test file with cwd set to this
+    // directory. The first version of this did not, and "bin/coverage-e2e.log"
+    // resolved to tools/e2e/bin/, which does not exist: appendFileSync threw
+    // ENOENT inside a stdout handler, on every chunk, and the launch that was
+    // waiting for the app to draw failed with "the simulator has no window".
+    // A path bug read as a broken simulator.
+    return isAbsolute(path) ? path : join(REPO_ROOT, path);
 }
 
 function createPlatform(device: DeviceProfile): Platform {
