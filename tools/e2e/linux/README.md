@@ -23,6 +23,19 @@ docker run --rm --entrypoint bash \
 No SDK install and no Garmin account are needed: the base image carries the
 device files and, since v2.10.0, the device fonts.
 
+To iterate on one file rather than all of them:
+
+```sh
+docker run --rm --entrypoint bash \
+  -v "$(pwd):/workspace" -w /workspace \
+  mace-clubs-e2e-linux:local \
+  /workspace/tools/e2e/linux/run-file.sh full/weight-editor.e2e.test.ts
+```
+
+The container is also the answer when the macOS driver cannot run at all: that
+one needs an awake, unlocked display, and `caffeinate` keeps a display awake
+but cannot unlock one. A container does not care what the screen is doing.
+
 Two gotchas worth knowing:
 
 - The base image's own `ENTRYPOINT` is `tester.sh`, so `--entrypoint bash`
