@@ -560,10 +560,10 @@ Measured on instinct3solar45mm:
 | | functions | of 466 | of the 447 compiled |
 | --- | --- | --- | --- |
 | unit tests | 349 | 75% | 78% |
-| e2e suite | 216 | 46% | 48% |
-| **both** | **389** | **83%** | **87%** |
+| e2e suite | 224 | 48% | 50% |
+| **both** | **392** | **84%** | **87%** |
 
-40 of the e2e suite's 216 are reached by nothing else - that is what it is
+43 of the e2e suite's 224 are reached by nothing else - that is what it is
 worth, stated rather than assumed. The two halves overlap heavily because
 driving a workout runs the same session logic the unit tests call directly;
 the difference is the draw paths and the input handlers.
@@ -576,21 +576,58 @@ file and append rather than redo the suite.
 
 ### What neither suite covers
 
-58 functions, and they are a map of where the e2e suite does not go rather
+55 functions, and they are a map of where the e2e suite does not go rather
 than a list of untested logic:
 
 | Screen the suite never opens | Functions |
 | --- | --- |
 | the custom-workout editor | 9 |
 | the history detail view | 8 |
-| the weight editor | 3 |
 
 Plus `FitFields`' nine writers, which need a recording session that reaches
 `save()`, and a scattering of delegate branches - the paging handlers on
 screens the suite visits but does not page.
 
 That is the useful form of a coverage number: not a grade, but a list of
-screens a real user can reach and CI cannot.
+screens a real user can reach and CI cannot. The weight editor was the third
+entry in that table until `full/weight-editor.e2e.test.ts` opened it.
+
+### What driving the weight editor took
+
+Worth writing down, because the next screen on that list will need the same
+four things and the first three cost a run each to discover.
+
+**A visible row is not a selected row.** `pressUntilVisible` stops when the
+text can be read, and a Menu2 shows several rows at once. It stopped with
+"Mace: 8.8 lb" legible at the bottom of the screen and SELECT opened the
+custom-workout editor, which was the row actually highlighted. Counting
+presses is the way to select a row - which is a button-device idiom, so the
+test skips itself on gesture-driven watches rather than flinging a touch list
+and pressing SELECT on whatever it lands on. On this menu that would cycle a
+real setting.
+
+**The first press after a menu opens is swallowed.** The driver says so on
+`pressUntilChanged`; nine presses landed on the eighth row. Taking the first
+step through `pressUntilChanged` and the rest plain puts the count back on the
+row it names.
+
+**Assert the implement, not the title.** Landing one row off opens the club or
+bulava editor, which draws the same screen - so a test asserting only "WEIGHT"
+would pass while editing a different setting. And assert `MACE` rather than
+`MACE WEIGHT`: at FONT_SMALL, OCR reads the word as "WE HT".
+
+**Read the value line, not the screen.** Both hint lines carry a colon and one
+carries a number, so scraping every digit returned "8805" - the weight and the
+step size together. The value is the only line with digits and no colon. The
+unit is no help: "8.8 lb" comes back as "8.8 ii".
+
+A Forerunner 945 does not render that value readably at all - it reads the
+title and both hints and nothing where the number is. The screen is correct
+and a person can read it, so the test exercises the presses everywhere and
+verifies the saved value where the number comes back, reporting with
+`t.diagnostic` on the devices where it cannot. Failing there would be failing
+on legible-to-a-human text, which this suite has decided before is worse than
+the gap it covers.
 
 ### Writing a unit test that touches Properties
 
