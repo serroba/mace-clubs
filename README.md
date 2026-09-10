@@ -6,7 +6,7 @@
 [![Devices driven through the UI](https://img.shields.io/badge/driven_through_the_UI-13_devices-C08A3E)](.github/workflows/e2e-linux.yml)
 [![Memory headroom](https://img.shields.io/badge/memory_headroom-21_watches_recorded-C08A3E)](tools/memory-baselines.json)
 [![TypeScript coverage](https://img.shields.io/badge/TypeScript_line_coverage-%E2%89%A575%25-C08A3E)](.github/workflows/ci.yml)
-[![Monkey C coverage](https://img.shields.io/badge/Monkey_C_function_coverage-%E2%89%A570%25-C08A3E)](.github/workflows/ci.yml)
+[![Monkey C coverage](https://img.shields.io/badge/Monkey_C_function_coverage-%E2%89%A574%25-C08A3E)](.github/workflows/ci.yml)
 [![Lint rules](https://img.shields.io/badge/lint_rules-11-C08A3E)](https://github.com/bombsimon/monkey-c-rs)
 [![Release](https://img.shields.io/github/v/release/serroba/mace-clubs?color=C08A3E)](https://github.com/serroba/mace-clubs/releases)
 [![License](https://img.shields.io/github/license/serroba/mace-clubs?color=C08A3E)](LICENSE)

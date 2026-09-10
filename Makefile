@@ -11,10 +11,11 @@ MONKEYDO ?= $(shell $(TOOL_RESOLVER) monkeydo)
 # and monkey-c-linter binaries no longer exist upstream; those crates are
 # libraries now, and `cargo install` of them fails.
 RAFIKI ?= $(shell $(TOOL_RESOLVER) rafiki)
+CONNECTIQ ?= $(shell $(TOOL_RESOLVER) connectiq)
 JAVA_PATH := $(if $(findstring /,$(JAVA)),$(dir $(JAVA)):,)
 export PATH := $(JAVA_PATH)$(PATH)
 
-.PHONY: quality check pre-commit install-hooks doctor tools-check tool-resolver-test manifest-check xml fit-schema format format-check lint build test-build simulator-test tuning-search coverage clean brand-assets release-docs release-shots release-assets release-check
+.PHONY: quality check pre-commit install-hooks doctor tools-check tool-resolver-test manifest-check xml fit-schema format format-check lint build test-build simulator-test tuning-search coverage coverage-e2e coverage-all clean brand-assets release-docs release-shots release-assets release-check
 
 check: doctor tools-check xml fit-schema format-check lint build test-build
 
@@ -95,6 +96,73 @@ tuning-search: $(DEVELOPER_KEY) | $(BIN_DIR)
 # never swept into the build.
 coverage: $(DEVELOPER_KEY) | $(BIN_DIR)
 	"$(RAFIKI)" coverage test -d $(DEVICE) -y $(DEVELOPER_KEY) --start-simulator source
+
+# What the e2e suite covers, which the unit figure above cannot see.
+#
+# `make coverage` reports 70%, and the 30% it does not reach is mostly the
+# code a unit test cannot call: onUpdate and the draw helpers under it, the
+# delegates' onSelect/onBack/onTap, the menu builders. That code is not
+# untested - it is what the e2e suite exists to exercise, on thirteen devices.
+# Reporting only the unit number described the app as less tested than it is,
+# and the honest fix is to measure the other half rather than to argue about
+# it.
+#
+# The mechanism is the same one rafiki already uses. Its probe is a println -
+# "COVHIT <id>" the first time each function body runs - so any captured
+# simulator log is a coverage log. `instrument` even writes a jungle mirroring
+# monkey.jungle's exclusions, so the instrumented app builds as a normal app
+# rather than as a test binary. MACE_E2E_PRG points the suite's own test files
+# at it; MACE_E2E_COVERAGE_LOG keeps monkeydo's output instead of draining it.
+#
+# The suite drives one device (DEVICE), not thirteen: the annotations differ
+# per device but the function bodies do not, so a second device would re-cover
+# the same ids more slowly. Takes as long as the e2e suite does.
+coverage-e2e: $(DEVELOPER_KEY) | $(BIN_DIR)
+	"$(RAFIKI)" coverage instrument source
+	"$(MONKEYC)" -f $(BIN_DIR)/coverage/coverage.jungle -d $(DEVICE) \
+		-o $(BIN_DIR)/mace-clubs-cov.prg -y $(DEVELOPER_KEY)
+	$(RM) $(BIN_DIR)/coverage-e2e.log
+	MACE_E2E_PRG=$(BIN_DIR)/mace-clubs-cov.prg \
+		MACE_E2E_COVERAGE_LOG=$(BIN_DIR)/coverage-e2e.log \
+		caffeinate -dimsu npm run test:e2e --prefix tools
+	"$(RAFIKI)" coverage report $(BIN_DIR)/coverage-e2e.log
+
+# Both suites against one manifest: the union of what the unit tests and the
+# e2e suite reach, which is the closest thing to "what this project tests".
+#
+# One instrument step feeds both, because the function ids have to mean the
+# same thing in both logs - re-instrumenting between them would renumber
+# everything and the union would be nonsense.
+coverage-all: $(DEVELOPER_KEY) | $(BIN_DIR)
+	"$(RAFIKI)" coverage instrument source
+	"$(MONKEYC)" -f $(BIN_DIR)/coverage/coverage.jungle -d $(DEVICE) \
+		-o $(BIN_DIR)/mace-clubs-cov-test.prg -y $(DEVELOPER_KEY) --unit-test
+	@# monkeydo does not start a simulator and says "Unable to connect" when
+	@# there is none, which `|| true` then swallows into an empty log and a
+	@# report of 0%. The e2e half below starts its own; this half has to be
+	@# given one. `make coverage` avoids the problem with rafiki's
+	@# --start-simulator, which does not hand back the log this needs.
+	@pgrep -f "ConnectIQ.app/Contents/MacOS/simulator" >/dev/null 2>&1 \
+		|| pgrep -f "bin/simulator" >/dev/null 2>&1 \
+		|| { echo "starting the simulator"; "$(CONNECTIQ)" >/dev/null 2>&1 & sleep 12; }
+	"$(MONKEYDO)" $(BIN_DIR)/mace-clubs-cov-test.prg $(DEVICE) -t \
+		> $(BIN_DIR)/coverage-unit.log 2>&1 || true
+	@grep -q COVHIT $(BIN_DIR)/coverage-unit.log \
+		|| { echo "::error::the unit half captured nothing - $$(head -1 $(BIN_DIR)/coverage-unit.log)"; exit 1; }
+	"$(MONKEYC)" -f $(BIN_DIR)/coverage/coverage.jungle -d $(DEVICE) \
+		-o $(BIN_DIR)/mace-clubs-cov.prg -y $(DEVELOPER_KEY)
+	$(RM) $(BIN_DIR)/coverage-e2e.log
+	MACE_E2E_PRG=$(BIN_DIR)/mace-clubs-cov.prg \
+		MACE_E2E_COVERAGE_LOG=$(BIN_DIR)/coverage-e2e.log \
+		caffeinate -dimsu npm run test:e2e --prefix tools
+	@echo
+	@echo "== unit tests alone"
+	@"$(RAFIKI)" coverage report $(BIN_DIR)/coverage-unit.log | tail -1
+	@echo "== e2e suite alone"
+	@"$(RAFIKI)" coverage report $(BIN_DIR)/coverage-e2e.log | tail -1
+	@echo "== both"
+	@cat $(BIN_DIR)/coverage-unit.log $(BIN_DIR)/coverage-e2e.log \
+		| "$(RAFIKI)" coverage report - | tail -1
 
 # The project's quality signals as a markdown table - device counts, matrix
 # sizes, coverage, lint rules - every figure derived from the manifest and the

@@ -524,6 +524,89 @@ whenever a `v*` tag is pushed - the push that triggers the release
 workflow - under `caffeinate` so the display can't sleep mid-run. It still
 needs the screen unlocked when the push starts.
 
+## What this suite covers that the unit tests cannot
+
+`make coverage` reports Monkey C function coverage from the unit suite: 349
+of 466 function bodies, 75%. That number is not the whole picture in two
+directions, and both are worth knowing before reading it as a grade.
+
+**19 of the 466 can never be hit.** rafiki instruments the source, and the
+source carries both halves of every annotation pair - `:history` and
+`:noHistory`, and five more like them. The build compiles one half per
+device, so the other is instrumented, counted in the denominator, and
+impossible to reach. Against what the build actually contains the figure is
+349/447.
+
+**Most of the rest is this suite's job.** What the unit tests leave uncovered
+is almost entirely code a unit test cannot call:
+
+| What | Why a unit test cannot reach it |
+| --- | --- |
+| `MaceClubsView`'s draw helpers and `onUpdate` | needs a `Dc`, and CI's container has no device fonts |
+| the delegates' `onSelect` / `onBack` / `onTap` / `onMenu` | needs a real button press through `BehaviorDelegate` |
+| each view's `onUpdate` | same as above |
+| `FitFields`' writers | needs a live `ActivityRecording.Session` |
+| `WorkoutSession`'s sensor path | needs `Sensor.SensorData` the system builds |
+
+Every one of those runs when the e2e suite drives a workout, which is the
+argument for having it. `make coverage-e2e` measures that rather than
+asserting it: rafiki's probe is a `println`, so a captured simulator log is a
+coverage log, and `MACE_E2E_PRG` points the suite's own test files at an
+instrumented build. `make coverage-all` runs both halves and prints the
+union.
+
+Measured on instinct3solar45mm:
+
+| | functions | of 466 | of the 447 compiled |
+| --- | --- | --- | --- |
+| unit tests | 349 | 75% | 78% |
+| e2e suite | 216 | 46% | 48% |
+| **both** | **389** | **83%** | **87%** |
+
+40 of the e2e suite's 216 are reached by nothing else - that is what it is
+worth, stated rather than assumed. The two halves overlap heavily because
+driving a workout runs the same session logic the unit tests call directly;
+the difference is the draw paths and the input handlers.
+
+One instrument step feeds both, because the ids have to mean the same thing
+in both logs. They are stable across runs - instrumenting twice produces an
+identical manifest - so a log kept from an earlier run can still be unioned
+with a later one, which is what makes it possible to re-run a single flaky
+file and append rather than redo the suite.
+
+### What neither suite covers
+
+58 functions, and they are a map of where the e2e suite does not go rather
+than a list of untested logic:
+
+| Screen the suite never opens | Functions |
+| --- | --- |
+| the custom-workout editor | 9 |
+| the history detail view | 8 |
+| the weight editor | 3 |
+
+Plus `FitFields`' nine writers, which need a recording session that reaches
+`save()`, and a scattering of delegate branches - the paging handlers on
+screens the suite visits but does not page.
+
+That is the useful form of a coverage number: not a grade, but a list of
+screens a real user can reach and CI cannot.
+
+### Writing a unit test that touches Properties
+
+The simulator persists an app's `Application.Properties` between runs, and
+the unit suite shares one store with no teardown between tests. So a test
+that writes a property has to put it back - and back to the value
+`properties.xml` ships, not to whatever it read on the way in.
+
+Reading-then-restoring preserves the pollution instead of clearing it.
+`MaceClubsViewTest` calls `chooseWorkingSide`, which remembers the choice as
+the next session's default; the first version restored what it read, and
+`testWorkoutSummaryFallbackTextRendersWithNoData` - which builds a fresh
+session expecting no side data - stayed red across rebuilds until the
+simulator's stored data was cleared by hand. It reads "L" from a test that
+had already finished.
+
 ## Two platforms, one driver
 
 `simulator.ts` holds the platform-agnostic orchestration (launch
