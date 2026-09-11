@@ -629,6 +629,32 @@ verifies the saved value where the number comes back, reporting with
 on legible-to-a-human text, which this suite has decided before is worse than
 the gap it covers.
 
+### Paths in this directory are not what they look like
+
+`run-e2e.ts` spawns each test file with `cwd` set to `tools/e2e`, so the file
+paths it hands `node --test` resolve. Everything else in the repo - the
+Makefile, these docs, the other tools - says `bin/mace-clubs.prg` and means
+the repo root. So a relative path written under `tools/e2e` silently means a
+different, missing directory.
+
+That has cost three bugs, and only one of them looked like a path. The worst
+was `MACE_E2E_COVERAGE_LOG`: it resolved into a directory that does not
+exist, so `appendFileSync` threw ENOENT inside a stdout handler on every
+chunk, and the launch waiting for the app to draw reported **"the simulator
+has no window"**. A path bug that reads as a broken simulator costs a run to
+diagnose, and it was diagnosed twice.
+
+Two things stop the next one. `repoPath()` in `e2e/repo-path.ts` resolves
+against the repo root and passes absolute paths through, so it is safe to
+wrap anything - including a path that arrived from an environment variable,
+which is where that bug came from. And a lint rule in `tools/eslint.config.mjs`
+makes a bare relative literal in an `fs` call an error in this directory,
+because documenting the trap did not stop the second or the third.
+
+The other two bugs were in throwaway scripts written to run a single test
+file. `make e2e-file FILE=...` exists so the next person does not write a
+fourth.
+
 ### Getting test data into a test
 
 There is no mocking framework for Monkey C, and no way to stub a `Toybox`

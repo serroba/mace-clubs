@@ -12,10 +12,9 @@
 import { spawn, type ChildProcess } from "node:child_process";
 import { appendFileSync } from "node:fs";
 import { homedir } from "node:os";
-import { isAbsolute, join } from "node:path";
-import { fileURLToPath } from "node:url";
 
 import { type DeviceProfile, isGestureDriven, loadDeviceProfile } from "./device-profile.ts";
+import { repoPath } from "./repo-path.ts";
 import { resolve as resolveTool } from "../resolve-tool.ts";
 import { screenShows } from "./ocr-match.ts";
 import { screensDiffer } from "./pixel-diff.ts";
@@ -25,13 +24,10 @@ import type { Button, Platform } from "./platform.ts";
 
 export type { Button } from "./platform.ts";
 
-// tools/e2e/ -> tools/ -> repo root. `prgPath` is resolved against this,
-// not process.cwd(), so a caller's working directory never matters -
-// run-e2e.ts spawns each test file with cwd set to this directory, which
-// would otherwise silently resolve a relative "bin/mace-clubs.prg" to
-// tools/e2e/bin/mace-clubs.prg (nonexistent) instead of the real one at the
-// repo root.
-const REPO_ROOT = fileURLToPath(new URL("../..", import.meta.url));
+// Paths from here go through repoPath(), never through process.cwd():
+// run-e2e.ts spawns each test file with cwd set to this directory, so a
+// relative "bin/mace-clubs.prg" would resolve to tools/e2e/bin/ instead of
+// the repo root. repo-path.ts has the three bugs that cost.
 
 // Which device the suite runs against. Every backend's screenshot crop, MENU
 // hotspot and window size is read from that device's own simulator.json (see
@@ -79,19 +75,15 @@ export function targetPrg(requested: string): string {
  * monkeydo, and the union of what all of them reached is the number worth
  * having.
  */
+/** So a failing coverage log says so once rather than once per chunk. */
+let coverageLogFailed = false;
+
 function coverageLogPath(): string | null {
     const path = process.env["MACE_E2E_COVERAGE_LOG"];
     if (path === undefined || path.length === 0) {
         return null;
     }
-    // Against the repo root, not the working directory, for the same reason
-    // prgPath is - run-e2e.ts spawns each test file with cwd set to this
-    // directory. The first version of this did not, and "bin/coverage-e2e.log"
-    // resolved to tools/e2e/bin/, which does not exist: appendFileSync threw
-    // ENOENT inside a stdout handler, on every chunk, and the launch that was
-    // waiting for the app to draw failed with "the simulator has no window".
-    // A path bug read as a broken simulator.
-    return isAbsolute(path) ? path : join(REPO_ROOT, path);
+    return repoPath(path);
 }
 
 function createPlatform(device: DeviceProfile): Platform {
@@ -211,8 +203,7 @@ export class Simulator {
                     `device, so set MACE_E2E_DEVICE instead of passing a different id.`,
             );
         }
-        const requested = targetPrg(options.prgPath);
-        const prgPath = isAbsolute(requested) ? requested : join(REPO_ROOT, requested);
+        const prgPath = repoPath(targetPrg(options.prgPath));
         const monkeydoBin = resolveTool("monkeydo", homedir(), process.env["PATH"] ?? "");
 
         if (platform.isSimulatorRunning()) {
@@ -312,7 +303,22 @@ export class Simulator {
                 log === null
                     ? (): void => undefined
                     : (chunk: Buffer): void => {
-                          appendFileSync(log, chunk);
+                          // Reported once, by name. This runs on every chunk
+                          // the app prints, so an unguarded throw here arrives
+                          // as a stream of uncaught exceptions from inside a
+                          // stdout handler and the visible symptom is the
+                          // launch timing out - which is how a path bug came
+                          // to read as a broken simulator.
+                          try {
+                              appendFileSync(log, chunk);
+                          } catch (error) {
+                              if (!coverageLogFailed) {
+                                  coverageLogFailed = true;
+                                  console.error(
+                                      `could not write the coverage log at ${log}: ${String(error)}`,
+                                  );
+                              }
+                          }
                       };
             child.stdout.on("data", keep);
             child.stderr.on("data", keep);
