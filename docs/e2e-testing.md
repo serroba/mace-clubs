@@ -560,10 +560,10 @@ Measured on instinct3solar45mm:
 | | functions | of 466 | of the 447 compiled |
 | --- | --- | --- | --- |
 | unit tests | 349 | 75% | 78% |
-| e2e suite | 283 | 61% | 63% |
-| **both** | **404** | **87%** | **90%** |
+| e2e suite | 298 | 64% | 67% |
+| **both** | **414** | **89%** | **92%** |
 
-55 of the e2e suite's 283 are reached by nothing else - that is what it is
+65 of the e2e suite's 298 are reached by nothing else - that is what it is
 worth, stated rather than assumed. The two halves overlap heavily because
 driving a workout runs the same session logic the unit tests call directly;
 the difference is the draw paths and the input handlers.
@@ -576,26 +576,27 @@ file and append rather than redo the suite.
 
 ### What neither suite covers
 
-43 functions, and they are a map of where the e2e suite does not go rather
-than a list of untested logic. One screen is left on it:
+33 functions, and no screens. That table had three rows when it was first
+written - the weight editor, the history detail view and the custom-workout
+editor - and a test file took each of them. Every screen a user can reach is
+now drawn at least once in CI.
 
-| Screen the suite never opens | Functions |
-| --- | --- |
-| the custom-workout editor | 9 |
+What is left is scattered rather than structural:
 
-Plus `FitFields`' nine writers, which need a session that reaches the FIT
-fields themselves, and a scattering of delegate branches - the paging handlers
-on screens the suite visits but does not page.
+| What | Functions | Why |
+| --- | --- | --- |
+| `FitFields` writers | 9 | need a session that reaches the FIT fields themselves |
+| branches in the view and its delegate | 20 | paths the suite passes near but does not take - paging on screens it visits without paging, error branches, the rep-mode and challenge paths |
+| singles | 4 | one each in `MaceClubsApp`, `Layout`, `RestOptionsDelegate`, `WorkoutSummaryDelegate` |
 
-That is the useful form of a coverage number: not a grade, but a list of
-screens a real user can reach and CI cannot. The table had three rows when it
-was first written; `full/weight-editor.e2e.test.ts` and
-`full/history.e2e.test.ts` took two of them.
+That is a different kind of list from the one it replaces. A screen nobody
+draws is a hole; a branch nobody takes is a decision about what is worth
+driving, and the suite already costs ten minutes a device.
 
-### What driving the weight editor took
+### What driving these screens took
 
-Worth writing down, because the next screen on that list will need the same
-four things and the first three cost a run each to discover.
+Worth writing down, because each of the three cost runs to discover and the
+next screen-shaped test will need them again.
 
 **A visible row is not a selected row.** `pressUntilVisible` stops when the
 text can be read, and a Menu2 shows several rows at once. It stopped with
@@ -620,6 +621,21 @@ would pass while editing a different setting. And assert `MACE` rather than
 carries a number, so scraping every digit returned "8805" - the weight and the
 step size together. The value is the only line with digits and no colon. The
 unit is no help: "8.8 lb" comes back as "8.8 ii".
+
+**A number can be drawn and still be unreadable.** The custom-workout editor
+draws its value in FONT_NUMBER_MEDIUM like the weight editor does, and OCR
+returns nothing at all for it - the work field reads back as
+["WORK DUR. TION", "UP/DOWN: 0:30", "SELECT: next"], with a gap where "2:00"
+plainly is in a capture. The set count is worse: one glyph. Where the value
+matters and the text will not come, compare screenshots instead -
+`screensDiffer` from pixel-diff.ts says "this changed and then changed back",
+which is what a value stepping up and down looks like and needs no character
+recognised.
+
+**A menu title is not on screen when the menu is scrolled.** Returning from
+the custom-workout editor lands on the settings list at its ninth row, with
+"Settings" off the top. Assert the absence of the screen you left rather than
+the presence of the one you are on.
 
 A Forerunner 945 does not render that value readably at all - it reads the
 title and both hints and nothing where the number is. The screen is correct

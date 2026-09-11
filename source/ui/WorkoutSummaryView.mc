@@ -181,7 +181,9 @@ class WorkoutSummaryView extends WatchUi.View {
             cx,
             h * 79 / 100,
             Graphics.FONT_XTINY,
-            Lang.format("UP/DOWN $1$/$2$", [_page + 1, totalPages()]),
+            // The same hint fix as CustomWorkoutEditor's: this said "UP/DOWN"
+            // on watches with no UP/DOWN keys, where paging is a swipe.
+            Lang.format("$1$ $2$/$3$", [DeviceInput.pageLabel(), _page + 1, totalPages()]),
             Graphics.TEXT_JUSTIFY_CENTER
         );
         dc.drawText(cx, h * 89 / 100, Graphics.FONT_XTINY, "BACK exit", Graphics.TEXT_JUSTIFY_CENTER);

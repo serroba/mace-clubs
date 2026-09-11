@@ -85,8 +85,13 @@ class CustomWorkoutEditorView extends WatchUi.View {
         return _sets.toString();
     }
 
+    // Named after the affordance this watch has, like every other hint in the
+    // app: 30 of the 120 manifest devices have no UP/DOWN keys, and on those
+    // this screen was telling its owner to press a button that is not there.
+    // DeviceInput exists for exactly this - see its header, and the four other
+    // screens that were already asking it.
     private function stepLabel() as String {
-        return _field == FIELD_SETS ? "UP/DOWN: 1" : "UP/DOWN: 0:30";
+        return Lang.format("$1$: $2$", [DeviceInput.pageLabel(), _field == FIELD_SETS ? "1" : "0:30"]);
     }
 
     function onUpdate(dc as Dc) as Void {
