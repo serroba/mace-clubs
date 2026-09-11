@@ -31,10 +31,11 @@ env:
   # writers that need a live recording session. A unit test cannot press a
   # button or supply a Dc, which is what the e2e suite is for, and that half
   # is measured rather than assumed: `make coverage-all` reports 349 from the
-  # unit tests, 283 from the e2e suite, 404 together - 87%, or 90% of the 447
-  # this build contains. 55 of the e2e suite's functions are reached by
-  # nothing else. See docs/e2e-testing.md for the 43 neither reaches, which
-  # is a list of screens CI never opens rather than of untested logic.
+  # unit tests, 298 from the e2e suite, 414 together - 89%, or 92% of the 447
+  # this build contains. 65 of the e2e suite's functions are reached by
+  # nothing else. The 33 neither reaches are branches now rather than
+  # screens: every screen a user can reach is drawn at least once in CI.
+  # docs/e2e-testing.md has the breakdown.
   MONKEY_C_COVERAGE_FLOOR: "74"
 
 # Supersede an in-flight run when the same ref is pushed again. Without this
