@@ -60,6 +60,41 @@ export default tseslint.config(
         },
     },
     {
+        // The e2e driver runs with cwd = tools/e2e, not the repo root:
+        // run-e2e.ts spawns each test file from this directory so that the
+        // paths it hands `node --test` resolve. Every other part of the repo -
+        // the Makefile, the docs, the other tools - says "bin/mace-clubs.prg"
+        // and means the repo root, so a relative path written here silently
+        // means a different, missing directory.
+        //
+        // It has cost three bugs and only one of them looked like a path; see
+        // e2e/repo-path.ts. Documenting it did not stop the second or the
+        // third, so it is a lint error now: pass filesystem paths through
+        // repoPath() and the question does not arise.
+        files: ["e2e/**/*.ts"],
+        rules: {
+            "no-restricted-syntax": [
+                "error",
+                {
+                    selector:
+                        "CallExpression[callee.name=/^(appendFile|copyFile|createReadStream|createWriteStream|mkdir|open|readFile|readdir|rm|stat|unlink|writeFile)(Sync)?$/]" +
+                        "[arguments.0.type='Literal'][arguments.0.value=/^[^/]/]",
+                    message:
+                        "Relative path in tools/e2e: this code runs with cwd=tools/e2e, so it will not " +
+                        "resolve where you mean. Wrap it in repoPath() from ./repo-path.ts.",
+                },
+                {
+                    selector:
+                        "CallExpression[callee.property.name=/^(appendFile|copyFile|createReadStream|createWriteStream|mkdir|open|readFile|readdir|rm|stat|unlink|writeFile)(Sync)?$/]" +
+                        "[arguments.0.type='Literal'][arguments.0.value=/^[^/]/]",
+                    message:
+                        "Relative path in tools/e2e: this code runs with cwd=tools/e2e, so it will not " +
+                        "resolve where you mean. Wrap it in repoPath() from ./repo-path.ts.",
+                },
+            ],
+        },
+    },
+    {
         files: ["eslint.config.mjs"],
         extends: [tseslint.configs.disableTypeChecked],
         rules: {

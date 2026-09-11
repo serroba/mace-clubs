@@ -15,7 +15,7 @@ CONNECTIQ ?= $(shell $(TOOL_RESOLVER) connectiq)
 JAVA_PATH := $(if $(findstring /,$(JAVA)),$(dir $(JAVA)):,)
 export PATH := $(JAVA_PATH)$(PATH)
 
-.PHONY: quality check pre-commit install-hooks doctor tools-check tool-resolver-test manifest-check xml fit-schema format format-check lint build test-build simulator-test tuning-search coverage coverage-e2e coverage-all clean brand-assets release-docs release-shots release-assets release-check
+.PHONY: quality check pre-commit install-hooks doctor tools-check tool-resolver-test manifest-check xml fit-schema format format-check lint build test-build simulator-test tuning-search coverage coverage-e2e coverage-all e2e-image e2e-image-if-missing e2e-docker e2e-file clean brand-assets release-docs release-shots release-assets release-check
 
 check: doctor tools-check xml fit-schema format-check lint build test-build
 
@@ -163,6 +163,45 @@ coverage-all: $(DEVELOPER_KEY) | $(BIN_DIR)
 	@echo "== both"
 	@cat $(BIN_DIR)/coverage-unit.log $(BIN_DIR)/coverage-e2e.log \
 		| "$(RAFIKI)" coverage report - | tail -1
+
+# The e2e suite in the Linux container, which is the answer whenever the
+# macOS driver cannot run: that one needs an awake, unlocked display, and
+# caffeinate keeps a display awake but cannot unlock one. A container does not
+# care what the screen is doing.
+#
+# These exist because their absence kept producing throwaway scripts. Writing
+# the weight-editor test meant six runs of one file, and each hand-rolled
+# runner was a fresh chance to write a path relative to the wrong directory -
+# which is two of the three bugs behind tools/e2e/repo-path.ts.
+#
+#   make e2e-docker                              # the whole suite
+#   make e2e-file FILE=full/history.e2e.test.ts  # one file, for iterating
+#   make e2e-file FILE=... DEVICE=venu3          # ... on another watch
+#
+# DEVICE is the same variable every other target uses, defaulting to the
+# gyro-validated Instinct 3 Solar.
+E2E_IMAGE ?= mace-clubs-e2e-linux:local
+
+e2e-image:
+	docker build -t $(E2E_IMAGE) -f tools/e2e/linux/Dockerfile .
+
+# Built if absent, so a first run needs no separate step; `make e2e-image`
+# rebuilds it after a Dockerfile change.
+e2e-docker: | e2e-image-if-missing
+	docker run --rm --entrypoint bash \
+		-e MACE_E2E_DEVICE=$(DEVICE) \
+		-v "$(CURDIR):/workspace" -w /workspace $(E2E_IMAGE) \
+		/workspace/tools/e2e/linux/run-suite.sh
+
+e2e-file: | e2e-image-if-missing
+	@test -n "$(FILE)" || { echo "usage: make e2e-file FILE=full/history.e2e.test.ts [DEVICE=venu3]"; exit 1; }
+	docker run --rm --entrypoint bash \
+		-e MACE_E2E_DEVICE=$(DEVICE) \
+		-v "$(CURDIR):/workspace" -w /workspace $(E2E_IMAGE) \
+		/workspace/tools/e2e/linux/run-file.sh "$(FILE)"
+
+e2e-image-if-missing:
+	@docker image inspect $(E2E_IMAGE) >/dev/null 2>&1 || $(MAKE) e2e-image
 
 # The project's quality signals as a markdown table - device counts, matrix
 # sizes, coverage, lint rules - every figure derived from the manifest and the
