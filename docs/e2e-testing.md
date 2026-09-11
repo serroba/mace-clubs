@@ -560,10 +560,10 @@ Measured on instinct3solar45mm:
 | | functions | of 466 | of the 447 compiled |
 | --- | --- | --- | --- |
 | unit tests | 349 | 75% | 78% |
-| e2e suite | 224 | 48% | 50% |
-| **both** | **392** | **84%** | **87%** |
+| e2e suite | 283 | 61% | 63% |
+| **both** | **404** | **87%** | **90%** |
 
-43 of the e2e suite's 224 are reached by nothing else - that is what it is
+55 of the e2e suite's 283 are reached by nothing else - that is what it is
 worth, stated rather than assumed. The two halves overlap heavily because
 driving a workout runs the same session logic the unit tests call directly;
 the difference is the draw paths and the input handlers.
@@ -576,21 +576,21 @@ file and append rather than redo the suite.
 
 ### What neither suite covers
 
-55 functions, and they are a map of where the e2e suite does not go rather
-than a list of untested logic:
+43 functions, and they are a map of where the e2e suite does not go rather
+than a list of untested logic. One screen is left on it:
 
 | Screen the suite never opens | Functions |
 | --- | --- |
 | the custom-workout editor | 9 |
-| the history detail view | 8 |
 
-Plus `FitFields`' nine writers, which need a recording session that reaches
-`save()`, and a scattering of delegate branches - the paging handlers on
-screens the suite visits but does not page.
+Plus `FitFields`' nine writers, which need a session that reaches the FIT
+fields themselves, and a scattering of delegate branches - the paging handlers
+on screens the suite visits but does not page.
 
 That is the useful form of a coverage number: not a grade, but a list of
-screens a real user can reach and CI cannot. The weight editor was the third
-entry in that table until `full/weight-editor.e2e.test.ts` opened it.
+screens a real user can reach and CI cannot. The table had three rows when it
+was first written; `full/weight-editor.e2e.test.ts` and
+`full/history.e2e.test.ts` took two of them.
 
 ### What driving the weight editor took
 
@@ -628,6 +628,52 @@ verifies the saved value where the number comes back, reporting with
 `t.diagnostic` on the devices where it cannot. Failing there would be failing
 on legible-to-a-human text, which this suite has decided before is worse than
 the gap it covers.
+
+### Getting test data into a test
+
+There is no mocking framework for Monkey C, and no way to stub a `Toybox`
+module: `Application.Storage` is the real thing in a test build. What exists
+instead is three routes, and which one applies depends on where the test runs.
+
+**Pass the data in.** The best option, and the one most of this app is already
+shaped for. `HistoryDetailView` takes the record as a constructor argument
+rather than reading Storage, so `HistoryDetailViewTest` hands it a fabricated
+one (`HistoryDetailFixtures`) and no storage is involved at all. `SmoothnessLog`
+says the same thing in its own header: the read and write live in the callers
+so the retention policy stays testable as a pure function. This is the same
+dependency-injection idea the Connect IQ community reaches for - the usual
+advice on the forums and in the third-party tutorials is to subclass your own
+class and add setters, because there is nothing else to reach for.
+
+**Set it directly.** A `(:test)` function runs inside the app on the
+simulator, so `Storage.setValue(...)` and `Properties.setValue(...)` simply
+work. Useful for the code that genuinely reads storage - `HistoryMenu.read()`,
+for instance. Two things to know before doing it: the suite shares one store
+with no teardown between tests, and the simulator keeps that store between
+runs, so a test that writes has to put the value back, and back to what
+`properties.xml` ships rather than to whatever it read. The next section is
+that hazard in full.
+
+**Record it.** From an e2e test none of the above is available - the test is a
+Node process on the host, outside the watch, and it can no more call
+`Storage.setValue` than a phone can. The simulator's store is a binary file at
+`APPS/DATA/MEDIA/OBJSTORE/<DEVICE>/<DEVICE>.SEN` under the temp directory, in
+a format with no documented writer; `monkeydo -a <source>:<dest>` will push a
+file into the simulator, which is how file-shaped inputs get in, but there is
+nothing to write into that one.
+
+So an e2e test that needs saved state makes it the way a user does.
+`full/history.e2e.test.ts` runs a workout, completes a set, saves, lets the
+app exit, and relaunches - `WorkoutSession.save()` calls `appendHistoryLog()`,
+and Storage outlives the app. That is slower than seeding would be and it is
+also a better test: the record being browsed is one the app wrote, in the
+shape the app writes, rather than a fixture that agrees with the reader
+because the same person wrote both.
+
+The remaining option, not taken here, is a seeding path in the app behind an
+annotation compiled only into a test build. It would be faster and it would
+mean the e2e suite no longer drives the same binary a user installs, which is
+most of what makes it worth running.
 
 ### Writing a unit test that touches Properties
 
