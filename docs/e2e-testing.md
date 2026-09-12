@@ -770,6 +770,28 @@ typography.
 
 ## Known flakiness
 
+**OCR misreads small numbers, run to run.** Tesseract on a 176px Instinct
+screen returned `30` for a work screen plainly showing `55 bpm`, and `90` for
+one showing `50` - both with junk tokens trailing the real ones, so the whole
+capture was poor - while a second run of the identical sequence read every
+step correctly. Screenshots taken at the same moments proved the app was right
+both times.
+
+Two things follow for a test that has to assert a number. Retry the read: a
+value that is genuinely wrong never appears however many times it is read,
+while a mangled capture is gone by the next one. And prefer asserting a value
+the OCR handles over the one you happen to be changing - `tempo.e2e.test.ts`
+checks that UP moves the tempo *off* its default rather than that it reads 55,
+because the default is the one figure that comes back reliably. Neither
+loosens the assertion; `press()` has already settled, so a screen still
+showing the old value means the press did not land.
+
+Note also that anything shorter than four characters is matched exactly by
+`ocr-match` (`FUZZY_MIN_LENGTH`), which is what keeps `55` from passing on a
+screen reading `50` - they are one edit apart, and a fuzzy match would accept
+either for the other.
+
+
 The Connect IQ simulator is a real (JVM-backed) GUI app with no automation
 API, launched fresh for every test file for reliable isolation - expect a
 one-time ~10-30s cold-boot cost per file, and note it degrades further under
