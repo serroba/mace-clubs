@@ -29,6 +29,12 @@
   .finding { display:flex; gap:8px; padding:7px 0; border-top:1px solid var(--grid); } .finding b { flex:0 0 58px; text-transform:uppercase; font-size:11px; letter-spacing:.04em; } .finding span,.finding a { min-width:0; overflow-wrap:anywhere; }
   .finding-warning b { color:var(--warn); } .finding-error b { color:var(--error); } .finding-info b { color:var(--muted); } .finding a { color:inherit; }
   .provenance { color:var(--muted); font-size:12px; margin:10px 0 0; overflow-wrap:anywhere; } :target { outline:3px solid var(--warn); outline-offset:3px; }
+  .set-table { width:100%; border-collapse:collapse; margin-top:18px; font-variant-numeric:tabular-nums; }
+  .set-table th, .set-table td { border-bottom:1px solid var(--grid); padding:6px 8px; text-align:right; white-space:nowrap; }
+  .set-table th { color:var(--muted); font-weight:600; font-size:13px; }
+  .set-table th:first-child, .set-table td:first-child { text-align:left; }
+  .set-table tbody tr:last-child td { border-bottom:none; }
+  .set-table .missing { color:var(--muted); }
   .signals { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:12px; } .signal { border:1px solid var(--grid); background:var(--surface); padding:14px; min-width:0; }
   .signal-head { display:flex; justify-content:space-between; gap:8px; align-items:baseline; } .signal-head h3 { margin:0; font-size:15px; } .confidence { color:var(--muted); font-size:11px; text-transform:uppercase; letter-spacing:.04em; }
   .signal-value { display:block; font-size:25px; margin:6px 0 2px; } .signal p { color:var(--muted); font-size:12px; margin:0; } .signal-unavailable .signal-value { color:var(--muted); }
@@ -46,7 +52,8 @@
   <section id="rhythm-section"><h2>Set rhythm comparison</h2><p class="note">Each work set is normalized from 0–100%, making cadence drift and pacing differences directly comparable.</p><svg id="rhythm" role="img" aria-label="Normalized swing cadence by set"></svg></section>
   <section id="smooth-time-section"><h2>Smoothness over time</h2><p class="note">The rolling repeatability score becomes available after four valid motion windows. Work and rest phases are shaded for context.</p><svg id="smooth-time" role="img" aria-label="Smoothness score over time"></svg></section>
   <section id="gyro-planes-section"><h2>Rotation plane</h2><p class="note">Each dot is one raw gyroscope sample during a work set, projected onto a plane (deg/s on each axis). A tight ring or elongated blob off-center from zero shows a consistent, dominant rotation plane; a diffuse scatter near the origin shows little rotation in that plane. Calibration recordings only ("Swing calibration logging").</p><div class="gyro-planes" id="gyro-planes"></div></section>
-  <section><h2>Set consistency</h2><p class="note">Smoothness is a repeatability score from wrist motion; very short sets are flagged and excluded from trend interpretation.</p><svg id="sets" role="img" aria-label="Smoothness and duration by set"></svg></section>
+  <section><h2>Set consistency</h2><p class="note">Smoothness is a repeatability score from wrist motion; very short sets are flagged and excluded from trend interpretation.</p><svg id="sets" role="img" aria-label="Smoothness and duration by set"></svg>
+    <table class="set-table" id="set-table"><thead><tr><th>Set</th><th>Work</th><th>Swings</th><th>Rhythm</th><th>Peak</th><th>Load</th></tr></thead><tbody></tbody></table></section>
   <section><h2>Within-session signals</h2><p class="note" id="signal-disclaimer"></p><div class="signals" id="signals"></div></section>
   <p class="insight" id="insight"></p>
   <div class="tooltip" id="tooltip" role="tooltip"></div>
@@ -135,5 +142,30 @@ function drawSets(){
 }
 const first=valid.slice(0,3).map(d=>d.smoothness).filter(Number.isFinite),last=valid.slice(-3).map(d=>d.smoothness).filter(Number.isFinite),avg=a=>a.length?a.reduce((x,y)=>x+y,0)/a.length:null,delta=avg(last)-avg(first),anomalies=work.filter(d=>d.elapsed<10);
 document.getElementById('insight').textContent=!first.length||!last.length?'Not enough comparable smoothness data for a session trend.':anomalies.length?`Set ${anomalies.map(d=>d.set).join(', ')} lasted under 10 seconds and is excluded from the smoothness comparison. Across comparable sets, the last three averaged ${Math.abs(delta).toFixed(1)} points ${delta<0?'lower':'higher'} than the first three.`:`Across comparable sets, the last three averaged ${Math.abs(delta).toFixed(1)} points ${delta<0?'lower':'higher'} than the first three.`;
+// The per-set numbers as a table, beside the chart of the same data. The
+// chart answers "what shape was this session"; the rows answer "what exactly
+// happened in set 10", and a session worth opening a report for wants both -
+// the arc that prompted this read 67, 79, 85, 56, 64, 64, 69, 71, 77, 49, 45,
+// 46, and the last three turned out to be fatigue the athlete could confirm.
+//
+// A dash rather than a zero where nothing was measured: a set nothing counted
+// and a set of no swings are different claims. Not redrawn on resize - it is
+// text, and reflows on its own.
+(function drawSetTable(){
+  const body=document.querySelector('#set-table tbody');
+  if(!body) return;
+  const num=(value,suffix)=>{const td=document.createElement('td');if(value===null||value===undefined||!Number.isFinite(value)||value<0){td.textContent='\u2014';td.className='missing';}else{td.textContent=suffix?`${value}${suffix}`:String(value);}return td;};
+  const text=value=>{const td=document.createElement('td');td.textContent=value;return td;};
+  for(const lap of work){
+    const row=document.createElement('tr');
+    row.append(text(String(lap.set)));
+    row.append(text(fmt(lap.elapsed)));
+    row.append(num(lap.swings));
+    row.append(num(lap.smoothness));
+    row.append(num(lap.motion_peak,' mg'));
+    row.append(num(lap.exposure));
+    body.append(row);
+  }
+})();
 let lastWidth=0;new ResizeObserver(entries=>{const width=Math.round(entries[0].contentRect.width);if(width===lastWidth)return;lastWidth=width;drawTimeline();drawRhythm();drawSmoothTime();drawGyroPlanes();drawSets();}).observe(document.querySelector('main'));
 </script></body></html>
