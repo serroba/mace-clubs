@@ -175,9 +175,15 @@ class WorkoutSummaryView extends WatchUi.View {
     private function smoothnessLines() as Array<String> {
         var smooth = SummaryText.sessionSmoothness(_workout);
         // .equals(), not ==: Monkey C's == on Strings is reference equality.
-        var line1 = smooth.equals("") ? "not enough motion" : smooth;
+        // "not enough swings", not "not enough motion": the score is the
+        // evenness of the gaps between swings now, so what is missing when
+        // there is no score is swings to time, not movement.
+        var line1 = smooth.equals("") ? "not enough swings" : smooth;
         var windows = _workout.getSmoothnessWindows();
-        var line2 = windows > 0 ? Lang.format("$1$s of motion", [windows]) : "";
+        // The count is gaps between swings, which is one fewer than the
+        // swings it timed - said as swings because that is what the athlete
+        // counted.
+        var line2 = windows > 0 ? Lang.format("$1$ swings timed", [windows + 1]) : "";
         // Kept as short as "PAUSED"/"DONE!" so the subwindow layout's shifted
         // heading (see onUpdate) never runs into the physical cut-out.
         // "RHYTHM" is the same six characters "SMOOTH" was, so the fit holds.

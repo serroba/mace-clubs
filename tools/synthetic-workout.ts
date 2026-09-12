@@ -233,10 +233,20 @@ export function buildFit(windows: readonly Window[], destination: string): void 
 
     let swingTotal = 0;
     let recentEvents: number[] = [];
-    let smoothReference: [number, number, number] | null = null;
-    let smoothTotal = 0;
-    let smoothWindows = 0;
-    let validWindows = 0;
+    // The Rhythm Score, mirroring SwingSeries.steadiness: the scatter of the
+    // gaps between swings over their mean. This fixture's swing train is
+    // exactly periodic, so once there are three gaps the score is a flat 100 -
+    // trivially perfect, because nothing here is trying to be a realistic
+    // athlete. It is presentation data for the report renderer, and the model
+    // itself is tested in Monkey C and against a real recording.
+    //
+    // It used to reimplement the model this replaced - the same 45/35/20
+    // weights, the same floors, the same 0.8/0.2 adaptation - which made it a
+    // second copy of an algorithm that has now changed underneath it.
+    let lastSwingSecond = -1;
+    let gaps = 0;
+    let gapTotal = 0;
+    let gapSquares = 0;
     for (const window of windows) {
         // The committed fixture mirrors the production record contract. Its
         // deterministic event shape is presentation data; Monkey C tests own
@@ -247,29 +257,25 @@ export function buildFit(windows: readonly Window[], destination: string): void 
         recentEvents = recentEvents.slice(-10);
         const cadence = pythonRound(
             (recentEvents.reduce((total, value) => total + value, 0) * 60) / recentEvents.length);
-        if (window.phase === "work" && window.dynamic_rms >= 40) {
-            if (smoothReference === null) {
-                smoothReference = [window.dynamic_rms, window.dynamic_peak, window.crossings];
-            } else {
-                if (validWindows >= 4) {
-                    const differences = [
-                        Math.abs(window.dynamic_rms - smoothReference[0]) / Math.max(Math.abs(smoothReference[0]), 40),
-                        Math.abs(window.dynamic_peak - smoothReference[1]) / Math.max(Math.abs(smoothReference[1]), 80),
-                        Math.abs(window.crossings - smoothReference[2]) / Math.max(Math.abs(smoothReference[2]), 2),
-                    ] as [number, number, number];
-                    smoothTotal += Math.max(0, Math.min(100, Math.trunc(
-                        100 - 100 * (0.45 * differences[0] + 0.35 * differences[1] + 0.20 * differences[2]))));
-                    smoothWindows += 1;
+        if (event > 0) {
+            if (lastSwingSecond >= 0) {
+                const span = window.second - lastSwingSecond;
+                if (span > 0 && span <= 10) {
+                    gaps += 1;
+                    gapTotal += span;
+                    gapSquares += span * span;
                 }
-                smoothReference = [
-                    0.8 * smoothReference[0] + 0.2 * window.dynamic_rms,
-                    0.8 * smoothReference[1] + 0.2 * window.dynamic_peak,
-                    0.8 * smoothReference[2] + 0.2 * window.crossings,
-                ];
             }
-            validWindows += 1;
+            lastSwingSecond = window.second;
         }
-        const smoothScore = smoothWindows !== 0 ? pythonRound(smoothTotal / smoothWindows) : 0;
+        // Zero rather than -1 where there is nothing to report: the field is
+        // a uint8 and cannot carry the app's "unscored" sentinel.
+        let smoothScore = 0;
+        if (gaps >= 3 && gapTotal > 0) {
+            const mean = gapTotal / gaps;
+            const variance = Math.max(0, gapSquares / gaps - mean * mean);
+            smoothScore = Math.max(0, Math.min(100, Math.trunc(100 - 100 * (Math.sqrt(variance) / mean))));
+        }
         const record: Encodable<RecordMesg> = {
             mesgNum: MESG.record,
             timestamp: new Date(START_MS + window.second * 1000),

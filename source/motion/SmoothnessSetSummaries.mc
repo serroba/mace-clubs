@@ -1,32 +1,30 @@
 import Toybox.Lang;
 
-// Converts cumulative Smoothness.Tracker snapshots into bounded per-set
-// summaries. A single session reference remains in the tracker, so every set
-// is compared consistently without repeating the four-window warm-up.
+// Bounded per-set Rhythm Scores.
+//
+// Took cumulative Smoothness.Tracker snapshots and subtracted them, back when
+// a set score was the mean of its windows. The score is now a statistic over
+// a set's swing gaps rather than a running total, so the set hands over a
+// finished number and the count it was computed from - see
+// SwingSeries.steadiness and docs/smoothness-physics.md.
 class SmoothnessSetSummaries {
-    const MIN_WINDOWS = 3;
+    const MIN_SAMPLES = 3;
 
-    private var _baselineTotal as Number = 0;
-    private var _baselineWindows as Number = 0;
     private var _open as Boolean = false;
     private var _summaries as Array<Number> = [];
 
     function initialize() {}
 
-    function begin(scoreTotal as Number, scoredWindows as Number) as Void {
-        _baselineTotal = scoreTotal;
-        _baselineWindows = scoredWindows;
+    function begin() as Void {
         _open = true;
     }
 
-    function complete(scoreTotal as Number, scoredWindows as Number) as Void {
+    function complete(score as Number, samples as Number) as Void {
         if (!_open) {
             return;
         }
-        var windows = scoredWindows - _baselineWindows;
-        var total = scoreTotal - _baselineTotal;
-        _summaries.add(windows > 0 ? total / windows : -1);
-        _summaries.add(windows);
+        _summaries.add(samples > 0 ? score : -1);
+        _summaries.add(samples);
         _open = false;
     }
 
@@ -47,7 +45,7 @@ class SmoothnessSetSummaries {
         if (index < 0 || index >= count()) {
             return -1;
         }
-        return windows(index) < MIN_WINDOWS ? -1 : _summaries[index * 2];
+        return windows(index) < MIN_SAMPLES ? -1 : _summaries[index * 2];
     }
 
     function windows(index as Number) as Number {

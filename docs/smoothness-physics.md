@@ -8,104 +8,95 @@
 
 ## Purpose and privacy boundary
 
-The smoothness score is an on-watch estimate of how repeatable the athlete's
-wrist motion is during one workout. Raw accelerometer samples never leave the
-watch through this feature. The app keeps only compact session summaries in
-Connect IQ application storage; saving the activity can still include the
-existing opt-in one-second motion fields in the user's FIT file.
+The Rhythm Score is an on-watch estimate of how evenly the athlete's swings
+are spaced during one workout. Raw accelerometer and gyroscope samples never
+leave the watch through this feature. The app keeps only compact session
+summaries in Connect IQ application storage; saving the activity can still
+include the existing opt-in one-second motion fields in the user's FIT file.
 
 The score is not a measurement of mace-head force, joint loading, technique,
-or injury risk. A watch measures the acceleration of the wrist and is affected
-by strap fit, watch orientation, grip, exercise choice, hand changes, and
-deliberate changes in range of motion.
+or injury risk. It is the timing of detected swings and nothing more, and it
+inherits whatever the detector gets wrong: a missed swing lengthens a gap, and
+a false one splits it.
 
-## Sensor model
+## What it measures
 
-For each 25 Hz, one-second window, the accelerometer reports a vector
+The gaps between detected swings, and how evenly they are spaced.
 
-```text
-a_measured(t) = a_linear(t) + g(t) + noise(t)
-```
-
-where `g(t)` is gravity expressed in the rotating watch frame. Simply using
-the magnitude `|a_measured|` leaves a roughly 1 g offset and makes orientation
-changes look like effort changes. The app therefore estimates the slowly
-varying component with the per-axis window mean and subtracts it:
+For a span of swings at times `t0 < t1 < ... < tn`, the gaps are
+`g_i = t_i - t_(i-1)`, and the score is the coefficient of variation of those
+gaps, inverted onto 0-100:
 
 ```text
-a_dynamic(t) = a_measured(t) - mean_window(a_measured)
+score = clamp(100 - 100 * sd(g) / mean(g), 0, 100)
 ```
 
-This is a deliberately cheap high-pass approximation suitable for older
-Connect IQ devices. It suppresses constant gravity but cannot perfectly
-separate gravity from linear acceleration during a fast rotation.
+100 is a metronome. Scatter over mean is the right shape because it is
+scale-free: swinging slowly and evenly scores the same as swinging quickly and
+evenly, which is what makes this a rhythm score rather than a pace one. Gaps
+are quantised to the one-second record interval, and more than one swing in a
+second is treated as evenly spaced inside the gap that closed - only reachable
+above 60 swings a minute, where calling that gap zero would score a burst as
+perfect rhythm.
 
-Each valid window produces three orientation-resistant summaries:
+Two gaps are discarded rather than scored. Anything longer than ten seconds is
+a pause, not rhythm - a dropped implement, a rest taken mid-set, a run the
+detector missed - and counting it would report a break in training as a break
+in timing. Fewer than three gaps says more about the detector than the
+athlete, and reports no score at all.
 
-- dynamic RMS: `sqrt(mean(|a_dynamic|^2))`, a proxy for typical wrist effort;
-- dynamic peak: `max(|a_dynamic|)`, a proxy for the strongest transient; and
-- crossing count: sign changes of demeaned `|a_measured|`, a coarse timing and
-  periodicity proxy.
+The score therefore requires swing detection. Turning the Rhythm Score on
+turns the swing counter on with it (`WorkoutSession.startCapture`), because
+without detected swings there are no gaps to measure. The gyroscope costs
+battery: a measured 59-minute session spent 1.0%.
 
-The smoothness model does not use athlete mass, implement mass, lever arm, or
-the separately captured gyroscope stream, so the app intentionally does not
-label any value as force or torque. Computing
-`F = m a` would be misleading because the measured acceleration is at the
-wrist, not at the mace centre of mass, and the required masses and geometry
-are unknown.
+### What this replaced, and why
 
-## Repeatability score
+Until September 2026 the score compared each one-second window of wrist
+acceleration - dynamic RMS, dynamic peak, and zero crossings, weighted
+45/35/20 - against an exponentially weighted reference for the session, and
+scored the difference. Two things were wrong with it, and both are visible in
+the 12-set session recorded in `fit-files/24302940509_ACTIVITY.fit`:
 
-After a short warm-up of four valid one-second windows, the app compares each
-new window with an exponentially weighted reference for the same session.
-For metric `x`, the normalized difference is:
+**It ran against effort.** A swing is impulsive. At 20 swings a minute some
+one-second windows hold a swing and some hold the gap between two, so the
+window-to-window difference grows with how hard the athlete swings. Across
+those 12 sets the old score correlated **-0.70** with the swing count: the
+hardest sets scored worst.
 
-```text
-d(x, reference) = |x - reference| / max(|reference|, floor)
-```
+| set | 3 | 9 | 10 | 12 |
+| --- | --- | --- | --- | --- |
+| peak acceleration (mg) | 1838 | 1838 | 1644 | 1614 |
+| swings | 85 | 77 | 49 | 46 |
+| old score | 39 | 40 | 48 | 42 |
 
-Floors prevent noise near zero from dominating. Dynamic RMS, dynamic peak,
-and crossing count use weights 45%, 35%, and 20%. The weighted difference is
-mapped to a bounded score:
+**It could not fall with fatigue, by construction.** The reference adapted at
+20% per window, so an athlete slowing down was compared against their own
+slowing. Softer, slower movement also varies less second to second, so the
+score rose. Sets 10-12 of that session were confirmed as genuine fatigue by
+the athlete, and scored 48/45/42 against 39-40 when fresh - while swing count,
+peak acceleration and load exposure all fell together.
 
-```text
-window_score = clamp(100 - 100 * weighted_difference, 0, 100)
-```
+Interval steadiness inverts both. On the same session it correlates **+0.69**
+with the swing count, and reads 51/52/51 while fresh, 55/55/56 at the
+athlete's best, and 44/50/47 through the three fatigued sets: the gaps both
+lengthen (2.2s to 4.1s) and scatter (sd 1.07 to 2.14). Tiredness shows up as
+raggedness, which is what a practitioner means by losing their rhythm.
 
-The displayed session score is the arithmetic mean of scored windows. The
-reference adapts slowly (20% new observation, 80% previous reference), so it
-can follow fatigue or a planned tempo change without treating a single odd
-swing as the new normal. Pauses and the five-second start delay do not add
-samples because sensor capture begins with the recorded workout.
+The old model is gone rather than deprecated - `Smoothness.Tracker`,
+`windowScore` and `normalizedDifference` were deleted, and removing them gave
+the 96KB watches 328 bytes back.
 
 ## Per-set summaries
 
-The tracker keeps one calibration and adaptive reference for the whole
-workout. At the beginning and end of each work set, the app snapshots the
-cumulative score total and scored-window count. The set score is the difference
-between those snapshots:
+A set opens a scoring span when its work phase begins and closes it when the
+set is marked complete, so the gap spanning a rest is never counted as rhythm.
+The set score is the steadiness of that span's gaps; the session score is the
+steadiness of every gap in the session, which is not the mean of the set
+scores and is not meant to be.
 
-```text
-set_score = (score_total_end - score_total_start)
-            / (scored_windows_end - scored_windows_start)
-```
-
-This avoids repeating the four-window warm-up for every set and makes all sets
-comparable against the same session reference. Scoring closes when a set ends
-and reopens when the next work interval begins, so movement during rest does
-not contaminate the following set. Free training opens the next set immediately
-after the athlete marks the previous one complete.
-
-A set needs at least three scored one-second windows. Shorter sets remain
-counted but display `not enough motion` rather than a low-confidence score. Set
-summaries are transient, watch-local values used on the pause/completion screen;
-they do not add FIT fields or alter the feature's privacy boundary.
-
-This first version measures consistency between one-second windows. It does
-not yet align individual swing waveforms to beats, distinguish left and right
-hands, or compare acceleration at the exact start and end of each swing.
-Those require validated cycle segmentation and should be added only after
-examining the watch-local results against labelled practice sessions.
+A set with fewer than three gaps displays `not enough swings` rather than a
+low-confidence number.
 
 ## Progress over time
 
@@ -116,16 +107,40 @@ network request, private cloud, or cross-user dataset is involved.
 
 Scores are comparable only when the exercise, hand, tempo, implement, watch
 placement, and strap tightness are reasonably consistent. A higher score means
-"more similar to this session's recent wrist-motion pattern," not universally
-better technique. The algorithm and storage format should remain versioned so
-future physics changes do not silently masquerade as athlete progress.
+"more evenly spaced swings", not universally better technique - a deliberately
+slow set is not less steady than a fast one, only a less even one is.
 
-## Validation plan
+The model is versioned in both stores, because two different quantities that
+both land in 0-100 cannot be told apart by looking. The per-equipment trend
+key gained an `_r2` suffix, so a delta never subtracts a windowed score from a
+gap-steadiness one; the saved session log marks each record with the model
+that wrote it (`SmoothnessLog.DETAIL_MAGIC` 20260912, against 20260816 for the
+windowed model, readable through `scoredByWindows()`). Sessions saved before
+the change keep their detail and their scores, and simply never contribute to
+a trend across the boundary.
 
-1. Repeat one movement at fixed tempo and check that the score stabilizes.
-2. Introduce controlled timing and amplitude changes and verify that the score
-   decreases without saturating at zero.
-3. Repeat with different strap tightness, hands, and mace weights to quantify
-   sensitivity to conditions.
-4. Compare one-second summaries with manually labelled video or beat timing
-   before implementing per-swing phase, start/end symmetry, or force language.
+## Validation
+
+What has been done, on `fit-files/24302940509_ACTIVITY.fit` - 12 sets of club
+work whose per-set counts and fatigue the athlete confirmed:
+
+- the score correlates +0.69 with swing count, where the old model correlated
+  -0.70;
+- it falls across the three sets confirmed as fatigue, which the old model
+  rewarded.
+
+What has not, and would strengthen it:
+
+1. A second labelled recording. One athlete, one session, one implement is a
+   direction, not a calibration.
+2. A synthetic waveform the swing counter actually bites on. `SyntheticMotion`
+   was built for the windowed model and produces fewer than three gaps per
+   span, so the production pipeline no longer has an end-to-end rhythm
+   assertion - the model is tested directly against controlled gap sequences
+   instead.
+3. Fixed-tempo work against a metronome, to see how close to 100 a human gets
+   and whether the scale needs stretching: this session sat between 44 and 56,
+   which is a narrow band to show an athlete.
+4. Whether raggedness or lengthening should dominate. They move together under
+   fatigue here, and a coefficient of variation deliberately ignores the
+   lengthening.

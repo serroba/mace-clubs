@@ -1,51 +1,72 @@
 import Toybox.Lang;
 import Toybox.Test;
+// The Rhythm Score, which is the steadiness of the gaps between swings.
+//
+// Four tests of the model this replaced were deleted with it: they asserted
+// that identical one-second acceleration windows score 100 and that doubling
+// every metric scores under 30. Both were true of that model, and both are
+// why it ran against effort - see docs/smoothness-physics.md.
+//
+// Asserted in one function rather than four because a --unit-test build
+// allows 253 module-level symbols and this suite sits at the ceiling.
 (:test)
-function testSmoothnessStableWindowsScoreOneHundred(logger as Test.Logger) as Boolean {
-    var tracker = new Smoothness.Tracker();
-    for (var i = 0; i < 5; i++) {
-        tracker.add(MotionTestFixtures.smoothFeatures(500, 900, 4));
+function testRhythmScoresTheEvennessOfSwingGaps(logger as Test.Logger) as Boolean {
+    // A metronome. Every gap identical, so there is no scatter to report.
+    var steady = new SwingSeries.Tracker();
+    var total = 0;
+    for (var second = 0; second < 40; second++) {
+        total += second % 2 == 0 ? 1 : 0;
+        steady.addTotal(total);
     }
-    Test.assertEqualMessage(tracker.getScoredWindows(), 1, "four windows warm up before scoring");
-    Test.assertEqualMessage(tracker.getScore(), 100, "identical motion windows are fully repeatable");
-    return true;
-}
+    Test.assertEqualMessage(steady.getSteadiness(), 100, "evenly spaced swings are perfect rhythm");
 
-(:test)
-function testSmoothnessRejectsStillWindows(logger as Test.Logger) as Boolean {
-    var tracker = new Smoothness.Tracker();
+    // The same number of swings, raggedly spaced. Same mean gap, so a pace
+    // measure could not tell these apart - which is the point of measuring
+    // scatter instead.
+    var ragged = new SwingSeries.Tracker();
+    var raggedTotal = 0;
+    var pattern = [1, 3, 1, 5, 1, 3, 1, 5, 1, 3] as Array<Number>;
+    var second = 0;
+    for (var i = 0; i < pattern.size(); i++) {
+        second += pattern[i];
+        raggedTotal++;
+        for (var fill = 0; fill < pattern[i]; fill++) {
+            ragged.addTotal(fill == pattern[i] - 1 ? raggedTotal : raggedTotal - 1);
+        }
+    }
+    Test.assertMessage(
+        ragged.getSteadiness() < 80,
+        Lang.format("ragged spacing should score well below a metronome, got $1$", [ragged.getSteadiness()])
+    );
+
+    // Too few gaps to say anything. Three gaps is four swings.
+    var sparse = new SwingSeries.Tracker();
+    sparse.addTotal(1);
+    sparse.addTotal(1);
+    sparse.addTotal(2);
+    Test.assertEqualMessage(sparse.getSteadiness(), -1, "two swings are not a rhythm");
+
+    // A pause inside a set is not a gap in rhythm. Twenty still seconds
+    // between two swings would otherwise report a rest as terrible timing.
+    var paused = new SwingSeries.Tracker();
+    var pausedTotal = 0;
     for (var i = 0; i < 8; i++) {
-        Test.assertMessage(
-            !tracker.add(MotionTestFixtures.smoothFeatures(10, 20, 0)),
-            "still window is ignored"
-        );
+        pausedTotal += i % 2 == 0 ? 1 : 0;
+        paused.addTotal(pausedTotal);
     }
-    Test.assertEqualMessage(tracker.getScoredWindows(), 0, "stillness never becomes a scored swing");
-    Test.assertEqualMessage(tracker.getScore(), -1, "no score is shown without enough movement");
-    return true;
-}
+    var before = paused.getGaps();
+    for (var i = 0; i < 20; i++) {
+        paused.addTotal(pausedTotal);
+    }
+    pausedTotal++;
+    paused.addTotal(pausedTotal);
+    Test.assertEqualMessage(paused.getGaps(), before, "a twenty-second pause adds no rhythm gap");
 
-(:test)
-function testSmoothnessPenalizesDifferentEffortAndTiming(logger as Test.Logger) as Boolean {
-    var tracker = new Smoothness.Tracker();
-    for (var i = 0; i < 4; i++) {
-        tracker.add(MotionTestFixtures.smoothFeatures(500, 900, 4));
-    }
-    tracker.add(MotionTestFixtures.smoothFeatures(1000, 1800, 8));
-    Test.assertMessage(tracker.getScore() < 30, "doubling every motion metric scores as inconsistent");
-    return true;
-}
-
-(:test)
-function testTrackerScoreTotalAccumulatesScoredWindows(logger as Test.Logger) as Boolean {
-    var tracker = new Smoothness.Tracker();
-    Test.assertEqualMessage(tracker.getScoreTotal(), 0, "no total before any motion");
-    for (var i = 0; i < 5; i++) {
-        tracker.add(MotionTestFixtures.smoothFeatures(500, 900, 4));
-    }
-    Test.assertEqualMessage(tracker.getScoreTotal(), 100, "one perfect scored window totals 100");
-    tracker.add(MotionTestFixtures.smoothFeatures(500, 900, 4));
-    Test.assertEqualMessage(tracker.getScoreTotal(), 200, "each further perfect window adds 100");
+    // A set boundary opens a fresh span while the session keeps every gap.
+    Test.assertMessage(paused.getSessionGaps() >= before, "the session span outlives the set span");
+    paused.openSpan();
+    Test.assertEqualMessage(paused.getGaps(), 0, "a new set starts with no gaps of its own");
+    Test.assertMessage(paused.getSessionGaps() > 0, "opening a set does not clear the session");
     return true;
 }
 
@@ -53,7 +74,7 @@ function testTrackerScoreTotalAccumulatesScoredWindows(logger as Test.Logger) as
 function testSetSummaryTracksOpenState(logger as Test.Logger) as Boolean {
     var summaries = new SmoothnessSetSummaries();
     Test.assertMessage(!summaries.isOpen(), "nothing is open before the first work phase");
-    summaries.begin(0, 0);
+    summaries.begin();
     Test.assertMessage(summaries.isOpen(), "begin opens a set window");
     summaries.complete(100, 1);
     Test.assertMessage(!summaries.isOpen(), "complete closes the set window");
@@ -75,48 +96,34 @@ function testSmoothnessHistoryKeepsLatestTwelveSessions(logger as Test.Logger) a
 
 (:test)
 function testSetSummaryUsesCumulativeSnapshotDifference(logger as Test.Logger) as Boolean {
-    var sets = new SmoothnessSetSummaries();
-    sets.begin(0, 0);
-    sets.complete(360, 4);
-    sets.begin(360, 4);
-    sets.complete(600, 7);
-
-    Test.assertEqualMessage(sets.count(), 2, "two completed boundaries create two summaries");
-    Test.assertEqualMessage(sets.score(0), 90, "first set averages its four scored windows");
-    Test.assertEqualMessage(sets.windows(0), 4, "first set retains its confidence count");
-    Test.assertEqualMessage(sets.score(1), 80, "second set uses only the cumulative difference");
-    Test.assertEqualMessage(sets.windows(1), 3, "second set excludes earlier windows");
+    var summaries = new SmoothnessSetSummaries();
+    summaries.begin();
+    summaries.complete(64, 40);
+    summaries.begin();
+    summaries.complete(51, 30);
+    Test.assertEqualMessage(summaries.count(), 2, "one summary per completed set");
+    Test.assertEqualMessage(summaries.score(0), 64, "a set keeps the score it was handed");
+    Test.assertEqualMessage(summaries.windows(0), 40, "and the sample count behind it");
+    Test.assertEqualMessage(summaries.score(1), 51, "the next set is scored independently");
     return true;
 }
 
 (:test)
 function testSetSummaryRejectsShortSet(logger as Test.Logger) as Boolean {
     var sets = new SmoothnessSetSummaries();
-    sets.begin(0, 0);
+    sets.begin();
     sets.complete(180, 2);
 
     Test.assertEqualMessage(sets.count(), 1, "short completed set is retained");
-    Test.assertEqualMessage(sets.score(0), -1, "fewer than three scored seconds is not enough motion");
+    Test.assertEqualMessage(sets.score(0), -1, "fewer than three gaps is not a rhythm");
     Test.assertEqualMessage(sets.windows(0), 2, "short set keeps its observed window count");
-    return true;
-}
-
-(:test)
-function testSetSummaryExcludesClosedRestWindow(logger as Test.Logger) as Boolean {
-    var sets = new SmoothnessSetSummaries();
-    sets.begin(0, 0);
-    sets.complete(360, 4);
-    sets.begin(460, 5);
-    sets.complete(730, 8);
-
-    Test.assertEqualMessage(sets.score(1), 90, "new baseline excludes samples accumulated while closed");
     return true;
 }
 
 (:test)
 function testSetSummaryCompletesBoundaryOnce(logger as Test.Logger) as Boolean {
     var sets = new SmoothnessSetSummaries();
-    sets.begin(0, 0);
+    sets.begin();
     sets.complete(360, 4);
     sets.complete(720, 8);
 
@@ -127,7 +134,7 @@ function testSetSummaryCompletesBoundaryOnce(logger as Test.Logger) as Boolean {
 (:test)
 function testSetSummaryPreservesMissingBoundary(logger as Test.Logger) as Boolean {
     var sets = new SmoothnessSetSummaries();
-    sets.begin(0, 0);
+    sets.begin();
     sets.complete(360, 4);
     sets.completeMissing();
 
