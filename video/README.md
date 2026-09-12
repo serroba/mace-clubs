@@ -103,3 +103,33 @@ FIT field, so there's no independent anchor tying "cue N in the video" to
 3. For future recordings: avoid sharing via WhatsApp if possible (strips
    metadata) - AirDrop/cable transfer keeps `creation_time`, which would
    make anchoring trivial.
+
+## Tracing a swing for the website
+
+A second, unrelated use of the same footage: the figure in the "why it is
+built this way" section of `docs/index.html` is one real 360 out of
+`videos/2026-08-22-recB-segment.mp4`, traced rather than drawn.
+
+```sh
+ffmpeg -ss 25.8 -t 2.3 -i videos/2026-08-22-recB-segment.mp4 \
+    -vf fps=30 -q:v 2 /tmp/swing/f_%03d.jpg
+swift scripts/trace-pose.swift /tmp/swing/*.jpg > /tmp/swing/pose.jsonl
+swift scripts/trace-mace.swift /tmp/swing/pose.jsonl /tmp/swing > /tmp/swing/mace.jsonl
+node --experimental-strip-types ../tools/build-swing-figure.ts \
+    /tmp/swing/pose.jsonl /tmp/swing/mace.jsonl --from 12 --to 66 --step 1
+```
+
+`--from` and `--to` are frame indices into that extraction and want to land
+on the same mace angle at both ends, or the loop jumps; 12 and 66 are the
+revolution in this clip, and 55 frames of it at 30fps is the `--swing: 1.833s`
+the page plays it at. The last step writes the `<svg class="swinger">` that
+goes into `docs/index.html`; `../tools/swing-figure.ts` is where the work
+actually happens and is the thing with tests.
+
+Both tracers use macOS's Vision framework and a bit of pixel arithmetic, no
+installed dependency, for the same reason `tools/e2e/ocr.swift` does. Vision
+finds the body; it does not find implements, so the mace is found by its
+brass instead - which works except through the fast third of the revolution,
+where the head smears and washes out. Those frames are recovered by fitting a
+monotone curve through the angles either side rather than by trying harder to
+see them.

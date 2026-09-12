@@ -75,3 +75,20 @@ test("images carry alt text, or are marked decorative", () => {
     );
   }
 });
+
+test("inline SVG is either labelled or hidden from a screen reader", () => {
+  // The captures used to be <img>, and the alt-text rule above covered them.
+  // They are drawn SVG now, and an unlabelled <svg> is announced as "graphic"
+  // or skipped entirely - so the same argument applies, in the form SVG takes
+  // it: role="img" plus an aria-label, or aria-hidden for the parts bin and
+  // the ornaments that say nothing the page does not already say.
+  for (const tag of readFileSync(join(SITE, "index.html"), "utf8").match(/<svg\b[^>]*>/g) ?? []) {
+    if (tag.includes(`aria-hidden="true"`)) continue;
+    assert.match(tag, /role="img"/, `<svg> with neither role="img" nor aria-hidden: ${tag.slice(0, 90)}`);
+    const label = /\baria-label="([^"]*)"/.exec(tag)?.[1];
+    assert.ok(
+      label !== undefined && label.length >= 10,
+      `<svg role="img"> with no usable aria-label: ${tag.slice(0, 90)}`,
+    );
+  }
+});

@@ -55,12 +55,12 @@ shipping a bullet reading "Nothing user-facing - developer tooling only." to
 the Connect IQ store, because #168 moved a test file under `source/` and was
 classified watch-facing for it.
 
-**The website shows those captures directly**, from the versioned path
-`store-assets/vx.y.z/instinct3solar45mm/`. After `make release-shots`, point
-`docs/index.html`'s three `.screens` figures and its hero `img` at the new
-version, or the site keeps advertising the previous release's screens.
-`tools/site-assets.test.ts` fails if a path stops resolving, but nothing can
-tell you the screenshots are merely stale, so this one is on you.
+**The captures are for the store listing, not the website.** The site used to
+show them directly and had to be repointed at `store-assets/vx.y.z/` every
+release; it now draws its own screens as SVG, so there is nothing to repoint.
+What that costs is that a screen the app changes no longer changes on the site
+by itself: if a layout or a string moves, the SVG in `docs/index.html` has to
+move with it. Compare it against the fresh captures while you have them open.
 
 **Product-update notes** come from the commits between the previous tag and
 the release, split into *On the watch* and *Tooling and tests* by which paths
