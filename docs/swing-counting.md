@@ -25,6 +25,50 @@ That is a small evidence base; treat these constants as a reasonable first
 cut, not a settled result. See [CONTRIBUTING.md](../CONTRIBUTING.md#calibration-recordings)
 for how to contribute another labelled recording.
 
+## A session confirmed against the athlete, set by set
+
+Activity 24302940509: 12 sets of two-handed Indian club work, 2 x 4 kg, 58:54,
+Instinct 3 Solar 45 mm, app build 20. The recording is
+`fit-files/24302940509_ACTIVITY.fit`, kept in the repo with its owner's
+agreement - `.fit` files are gitignored by default, because a recording is a
+person's training data, and this one is the exception.
+
+```sh
+node --experimental-strip-types tools/analyze-fit.ts fit-files/24302940509_ACTIVITY.fit
+```
+
+| set | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10 | 11 | 12 |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| swings | 67 | 79 | 85 | 56 | 64 | 64 | 69 | 71 | 77 | 49 | 45 | 46 |
+| rhythm | 40 | 40 | 39 | 46 | 46 | 46 | 39 | 40 | 40 | 48 | 45 | 42 |
+
+The athlete reported 50-70 swings per set, per arm. Both clubs move together
+and the watch counts the wrist it is on, so a per-set count *is* a per-arm
+count: 772 across 12 sets, averaging 64, lands inside that range.
+
+**The drop in sets 10-12 is real fatigue, not the detector failing.** Asked
+directly, the athlete confirmed being tired by then. That is the more useful
+half of this session - a counter that quietly degrades and a counter that
+tracks a genuine 30% decline in volume look identical in a total, and only
+ground truth separates them. It also says `HIGH_MG = 1700` is placed low
+enough to catch tired, softer swings, which is the case it would be expected
+to miss. Per-second work peaks that session: median 1682 mg, p90 2456.
+
+This is weaker evidence than `recB` and `recC` above - those carry labelled
+per-set counts recorded deliberately, while this is a recollection confirmed
+after the fact - and it is stronger than the four unlabelled recordings the
+tooling otherwise runs against. Treat it as a field check rather than a
+calibration input.
+
+### The Rhythm Score rose as the athlete tired
+
+48/45/42 across the three most fatigued sets, against 39-40 when fresh and
+swinging 67-85. Slower, more deliberate swinging genuinely is more evenly
+spaced, so the score may be reporting exactly what it measures. But a
+practitioner reading 48 on their last set could reasonably take it as their
+best, and it was their most exhausted. Unresolved, and recorded here because
+the ground truth that raises the question came with it.
+
 ## Replay-testing this algorithm against real recordings
 
 Rather than a second, TypeScript reimplementation of the counter that can
