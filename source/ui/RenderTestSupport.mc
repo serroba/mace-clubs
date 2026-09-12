@@ -7,6 +7,24 @@ import Toybox.WatchUi;
 // factory; 3.1 devices still construct them directly.
 (:test)
 module RenderTestSupport {
+    // Whether this build draws the summary's per-set chart. The five 96KB
+    // watches compile it out - it costs 1,864 bytes of the ~4,800 they have
+    // left - so a test asserting page counts has to ask rather than assume.
+    //
+    // Here rather than beside the test that needs it because a --unit-test
+    // build allows 253 members in module `globals` and this suite is at the
+    // ceiling. A function inside a module is a member of that module, not of
+    // globals, so this pair costs nothing against the limit.
+    (:setChart)
+    function chartPages() as Number {
+        return 1;
+    }
+
+    (:noSetChart)
+    function chartPages() as Number {
+        return 0;
+    }
+
     function offscreenDc() as Graphics.Dc {
         var options = {:width => 176, :height => 176};
         var bitmap;

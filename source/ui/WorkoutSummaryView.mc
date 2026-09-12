@@ -7,7 +7,26 @@ import Toybox.WatchUi;
 // through a handful of aggregate screens, then one page per completed set
 // (the same detail line the pre-save paused/done browse already used).
 class WorkoutSummaryView extends WatchUi.View {
-    const FIXED_PAGES = 4;
+    // The aggregate pages, in order. Two of them are conditional: a session
+    // has to have something to say before it costs a page.
+    //
+    // The balance page in particular. It reports left/right set counts, and a
+    // two-handed session has none - a real 12-set club workout showed
+    // "BALANCE / n/a / 0 left 0 right" as page 4 of 16, between the athlete
+    // and the per-set pages, and it will read that way for every session they
+    // ever record. A page that is always empty for a whole way of training is
+    // worse than one page fewer.
+    const PAGE_OVERVIEW = 0;
+    const PAGE_SET_CHART = 1;
+    const PAGE_RHYTHM = 2;
+    const PAGE_LOAD = 3;
+    const PAGE_BALANCE = 4;
+    const PAGE_SET = 5;
+
+    // The bars live between these, clear of the heading above and the paging
+    // hint below.
+    const CHART_TOP_PERCENT = 34;
+    const CHART_BASE_PERCENT = 62;
 
     private var _workout as WorkoutSession;
     private var _page as Number = 0;
@@ -21,9 +40,88 @@ class WorkoutSummaryView extends WatchUi.View {
         }
     }
 
+    /** Swings recorded for a set, or -1 where nothing counted them. */
+    (:setChart)
+    private function setSwings(index as Number) as Number {
+        var block = _workout.getBlock(index);
+        return block == null ? -1 : (block as WorkBlockSummary).getSwings();
+    }
+
+    /** The highest per-set swing count, or 0 when none were counted. */
+    (:setChart)
+    private function peakSetSwings() as Number {
+        var peak = 0;
+        for (var i = 0; i < _workout.getSets(); i++) {
+            var swings = setSwings(i);
+            if (swings > peak) {
+                peak = swings;
+            }
+        }
+        return peak;
+    }
+
+    /**
+     * Whether the per-set chart has anything to draw.
+     *
+     * Two sets at least - one bar is not a comparison - and a counted swing
+     * somewhere, since a session with counting off would draw twelve bars of
+     * nothing.
+     *
+     * Paired with a twin that is always false, because the chart is the first
+     * thing to give way where the app will not otherwise fit. Measured on
+     * instinct2: drawing it costs 1,864 bytes, taking the peak headroom on a
+     * 96KB watch from 4,832 bytes to 2,968 - 39% of everything those watches
+     * have left, for a picture of numbers already on the set pages. Those
+     * five give it up, the way they give up history and the custom-workout
+     * editor. See the jungles and tools/reduced-devices.ts.
+    */
+    (:setChart)
+    private function hasSetChart() as Boolean {
+        return _workout.getSets() >= 2 && peakSetSwings() > 0;
+    }
+
+    (:noSetChart)
+    private function hasSetChart() as Boolean {
+        return false;
+    }
+
+    /** Whether any set was worked on a named side. */
+    private function hasBalance() as Boolean {
+        var counts = _workout.getSideSetCounts();
+        return counts[0] > 0 || counts[1] > 0;
+    }
+
+    private function aggregatePages() as Number {
+        return 3 + (hasSetChart() ? 1 : 0) + (hasBalance() ? 1 : 0);
+    }
+
+    /** What sits at this page index, given which aggregates this session earned. */
+    private function kindAt(page as Number) as Number {
+        if (page == 0) {
+            return PAGE_OVERVIEW;
+        }
+        var index = page;
+        if (hasSetChart()) {
+            if (index == 1) {
+                return PAGE_SET_CHART;
+            }
+            index--;
+        }
+        if (index == 1) {
+            return PAGE_RHYTHM;
+        }
+        if (index == 2) {
+            return PAGE_LOAD;
+        }
+        if (index == 3 && hasBalance()) {
+            return PAGE_BALANCE;
+        }
+        return PAGE_SET;
+    }
+
     function totalPages() as Number {
         var sets = _workout.getSets();
-        return FIXED_PAGES + (sets > 0 ? sets : 0);
+        return aggregatePages() + (sets > 0 ? sets : 0);
     }
 
     function cyclePage(direction as Number) as Void {
@@ -95,12 +193,18 @@ class WorkoutSummaryView extends WatchUi.View {
         return ["LOAD", line1, line2, line3];
     }
 
+    // No "n/a" fallback any more: Movement.balanceLabel returns an empty
+    // string only when both counts are zero, and that session no longer gets
+    // this page at all - see hasBalance(). The fallback and the page that
+    // showed it were the same mistake.
     private function balanceLines() as Array<String> {
         var counts = _workout.getSideSetCounts();
-        var balance = Movement.balanceLabel(counts[0], counts[1]);
-        var line1 = balance.equals("") ? "n/a" : balance;
-        var line2 = Lang.format("$1$ left  $2$ right", [counts[0], counts[1]]);
-        return ["BALANCE", line1, line2, ""];
+        return [
+            "BALANCE",
+            Movement.balanceLabel(counts[0], counts[1]),
+            Lang.format("$1$ left  $2$ right", [counts[0], counts[1]]),
+            ""
+        ];
     }
 
     private function setLines(index as Number) as Array<String> {
@@ -168,6 +272,9 @@ class WorkoutSummaryView extends WatchUi.View {
         var lines = currentLines();
 
         dc.drawText(headingX, h * 18 / 100, Graphics.FONT_MEDIUM, lines[0], Graphics.TEXT_JUSTIFY_CENTER);
+        if (kindAt(_page) == PAGE_SET_CHART) {
+            drawSetChart(dc, w, h);
+        }
         if (!lines[1].equals("")) {
             dc.drawText(cx, h * 38 / 100, Graphics.FONT_SMALL, lines[1], Graphics.TEXT_JUSTIFY_CENTER);
         }
@@ -189,23 +296,106 @@ class WorkoutSummaryView extends WatchUi.View {
         dc.drawText(cx, h * 89 / 100, Graphics.FONT_XTINY, "BACK exit", Graphics.TEXT_JUSTIFY_CENTER);
     }
 
+    /**
+     * One bar per set, scaled to the busiest.
+     *
+     * The per-set pages already carry every number; what they cannot show is
+     * the shape. A real 12-set session ran 67, 79, 85, 56, 64, 64, 69, 71,
+     * 77, 49, 45, 46 - and the athlete confirmed the last three were genuine
+     * fatigue. Read one page at a time that is twelve numbers to hold in your
+     * head; read as bars it is one glance, and it is the glance worth having
+     * while deciding whether there is another set in you.
+     *
+     * Deliberately unlabelled. At 176px twelve bars leave about ten pixels
+     * each, which is a shape and not a table - the caption under it gives the
+     * range, and the exact figures are a few presses away on the set pages.
+     *
+     * Drawn between the chord at the chart's own height rather than the full
+     * width: on a round screen the widest row is the middle, and these bars
+     * sit just below it.
+    */
+    (:setChart)
+    private function drawSetChart(dc as Dc, w as Number, h as Number) as Void {
+        var sets = _workout.getSets();
+        var peak = peakSetSwings();
+        if (sets <= 0 || peak <= 0) {
+            return;
+        }
+        var base = h * CHART_BASE_PERCENT / 100;
+        var top = h * CHART_TOP_PERCENT / 100;
+        var full = base - top;
+        var half = Layout.usableHalfWidth(w, h, base);
+        var span = half * 2 * 84 / 100;
+        var left = w / 2 - span / 2;
+        var slot = span / sets;
+        // A gap between bars until there is no room for one; past about
+        // twenty sets they become a single block, which still reads as a
+        // shape.
+        var barWidth = slot > 3 ? slot - 2 : slot;
+        if (barWidth < 1) {
+            barWidth = 1;
+        }
+        dc.setColor(Palette.ACCENT, Graphics.COLOR_TRANSPARENT);
+        for (var i = 0; i < sets; i++) {
+            var swings = setSwings(i);
+            // An uncounted set is a floor-height stub rather than a gap, so
+            // the run of sets stays readable as a run.
+            var barHeight = swings <= 0 ? 1 : full * swings / peak;
+            if (barHeight < 1) {
+                barHeight = 1;
+            }
+            dc.fillRectangle(left + i * slot, base - barHeight, barWidth, barHeight);
+        }
+        dc.setColor(Palette.TEXT, Graphics.COLOR_TRANSPARENT);
+    }
+
+    (:noSetChart)
+    private function drawSetChart(dc as Dc, w as Number, h as Number) as Void {}
+
     // [heading, line1, line2, line3] for the current page; exposed (not just
     // used from onUpdate) so tests can assert on content, not just that
     // rendering doesn't crash.
     function currentLines() as Array<String> {
-        return _page < FIXED_PAGES ? fixedPageLines(_page) : setLines(_page - FIXED_PAGES);
-    }
-
-    private function fixedPageLines(page as Number) as Array<String> {
-        if (page == 0) {
+        var kind = kindAt(_page);
+        if (kind == PAGE_OVERVIEW) {
             return overviewLines();
         }
-        if (page == 1) {
+        if (kind == PAGE_SET_CHART) {
+            return setChartLines();
+        }
+        if (kind == PAGE_RHYTHM) {
             return smoothnessLines();
         }
-        if (page == 2) {
+        if (kind == PAGE_LOAD) {
             return swingsAndLoadLines();
         }
-        return balanceLines();
+        if (kind == PAGE_BALANCE) {
+            return balanceLines();
+        }
+        return setLines(_page - aggregatePages());
+    }
+
+    // Heading and caption only: the middle of this page is drawn, not
+    // written. The caption gives the bars a scale, since a shape with no
+    // numbers on it could be any range at all.
+    (:setChart)
+    private function setChartLines() as Array<String> {
+        var peak = peakSetSwings();
+        var low = peak;
+        for (var i = 0; i < _workout.getSets(); i++) {
+            var swings = setSwings(i);
+            if (swings >= 0 && swings < low) {
+                low = swings;
+            }
+        }
+        return ["SETS", "", "", Lang.format("$1$-$2$ per set", [low, peak])];
+    }
+
+    // Never reached - kindAt() cannot return PAGE_SET_CHART where hasSetChart
+    // is the always-false twin - but currentLines() is compiled on every
+    // device and refers to this by name.
+    (:noSetChart)
+    private function setChartLines() as Array<String> {
+        return ["", "", "", ""];
     }
 }
