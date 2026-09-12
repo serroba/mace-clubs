@@ -440,6 +440,27 @@
   .roll--secs { animation-name: roll-secs; animation-timing-function: steps(12); }
   .roll--tens { animation-name: roll-tens; animation-timing-function: step-end; }
   .roll--count { animation-name: roll-count; animation-timing-function: steps(10); }
+  /* Heart rate. Not a counter, so not a steps() roll: it is a written-out
+     wander, one stop every two seconds, drifting 88 to 97 across the work
+     block. The range is this athlete's own - the two recordings in this repo
+     average 82 and 84 and peak at 106 and 112 - so it climbs into effort
+     without ever claiming a number they have not actually hit. A digit place
+     holds its value between stops, which is what step-end is for. */
+  .roll--hr { animation-name: roll-hr; animation-timing-function: step-end; transform: translateY(-160px); }
+  .roll--hrtens { animation-name: roll-hrtens; animation-timing-function: step-end; transform: translateY(-160px); }
+  @keyframes roll-hr {
+    0%      { transform: translateY(-160px) }
+    16.67%  { transform: translateY(-20px) }
+    33.33%  { transform: translateY(0) }
+    50%     { transform: translateY(-60px) }
+    66.67%  { transform: translateY(-100px) }
+    83.33%  { transform: translateY(-80px) }
+    100%    { transform: translateY(-140px) }
+  }
+  @keyframes roll-hrtens {
+    0%      { transform: translateY(-160px) }
+    16.67%  { transform: translateY(-180px) }
+  }
   @keyframes roll-secs { from { transform: translateY(0) } to { transform: translateY(-240px) } }
   /* Ten of the twelve seconds in, the tens column turns over. */
   @keyframes roll-tens { 0%, 83.2% { transform: translateY(0) } 83.4% { transform: translateY(-20px) } }
@@ -785,7 +806,7 @@
       <div class="device device--hero">
         <div class="device__case">
         <svg class="screen screen--sim device__screen" viewBox="0 0 176 176" role="img"
-             aria-label="A whole session on an Instinct 3 Solar, running in a loop: the start screen; choosing the mace; choosing the 360; a countdown; twelve seconds of work with the clock running and the swing count climbing one per beat; the paused summary; and the summary it saves, reading one set, 0:11 of work and nine swings.">
+             aria-label="A whole session on an Instinct 3 Solar, running in a loop: the start screen; choosing the mace; choosing the 360; a countdown; twelve seconds of work with the clock running, the heart rate drifting up and the swing count climbing one per beat; the paused summary; and the summary it saves, reading one set, 0:11 of work and nine swings.">
           <rect width="176" height="176" fill="#050403"/>
           <circle class="s-sub" cx="139" cy="34" r="27"/>
           <g class="phase phase--start">
@@ -832,7 +853,8 @@
             <text class="s-dim" x="88" y="112" text-anchor="middle" font-size="15" textLength="34" lengthAdjust="spacingAndGlyphs">bpm</text>
             <text x="48" y="143" text-anchor="middle" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="24">0</text>
             <text class="s-dim" x="48" y="163" text-anchor="middle" font-size="14" textLength="32" lengthAdjust="spacingAndGlyphs">sets</text>
-            <text x="128" y="143" text-anchor="middle" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="24">--</text>
+            <g class="s-hr" transform="translate(120.8 143) scale(1.2)"><g clip-path="url(#cell)"><use href="#digits" class="roll roll--hrtens"/></g></g>
+            <g class="s-hr" transform="translate(135.2 143) scale(1.2)"><g clip-path="url(#cell)"><use href="#digits" class="roll roll--hr"/></g></g>
             <text class="s-dim" x="128" y="163" text-anchor="middle" font-size="14" textLength="19" lengthAdjust="spacingAndGlyphs">hr</text>
             <!-- The subwindow carries the swing count, which is the number this
                  whole app exists to produce. -->
@@ -995,7 +1017,7 @@
         <div class="device device--small">
           <div class="device__case">
             <svg class="screen device__screen" viewBox="0 0 176 176" role="img"
-                 aria-label="The work screen, running: elapsed time and the work block's own clock counting up, 50 bpm pulsing on the beat, the set and heart-rate readouts below, and the swing count in the subwindow climbing one per beat.">
+                 aria-label="The work screen, running: elapsed time and the work block's own clock counting up, 50 bpm pulsing on the beat, the set count and a heart rate drifting up through the high eighties and nineties below, and the swing count in the subwindow climbing one per beat.">
               <rect width="176" height="176" fill="#050403"/>
               <circle class="s-sub" cx="139" cy="34" r="27"/>
               <g font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="17" font-weight="700" fill="#F4EFE6">
@@ -1011,7 +1033,8 @@
               <text class="s-dim" x="88" y="112" text-anchor="middle" font-size="15" textLength="34" lengthAdjust="spacingAndGlyphs">bpm</text>
               <text x="48" y="143" text-anchor="middle" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="24">0</text>
               <text class="s-dim" x="48" y="163" text-anchor="middle" font-size="14" textLength="32" lengthAdjust="spacingAndGlyphs">sets</text>
-              <text x="128" y="143" text-anchor="middle" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="24">--</text>
+              <g class="s-hr" transform="translate(120.8 143) scale(1.2)"><g clip-path="url(#cell)"><use href="#digits" class="roll roll--hrtens"/></g></g>
+              <g class="s-hr" transform="translate(135.2 143) scale(1.2)"><g clip-path="url(#cell)"><use href="#digits" class="roll roll--hr"/></g></g>
               <text class="s-dim" x="128" y="163" text-anchor="middle" font-size="14" textLength="19" lengthAdjust="spacingAndGlyphs">hr</text>
               <!-- The subwindow carries the swing count, which is the number this
                    whole app exists to produce. -->
