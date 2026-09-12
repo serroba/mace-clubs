@@ -31,5 +31,5 @@
 
         "skipLibCheck": false
     },
-    "include": ["*.ts", "e2e/*.ts", "e2e/linux/*.ts"]
+    "include": ["*.ts", "e2e/*.ts", "e2e/full/*.ts", "e2e/reduced/*.ts", "e2e/linux/*.ts"]
 }

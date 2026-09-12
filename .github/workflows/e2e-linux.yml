@@ -72,13 +72,45 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        # One per layout class the app actually renders differently:
-        # semi-octagon with a subwindow, plain round MIP, and the large round
-        # AMOLED where the fixed-pixel layout used to break outright.
+        # One per screen width the store's device report shows real users
+        # on, which is how this list is decided rather than by guesswork.
+        # The report spans seven widths and every one of them is here or in
+        # the reduced workflow - 176, 208, 218, 240, 280, 390 and 454. 260 is
+        # the odd one out, kept because fenix7 was here first and covers a
+        # size nothing in the report uses.
+        #
+        # Six of these were staged behind findings that turned out to be
+        # assertions rather than devices. fr55 and vivoactive4s "truncate a
+        # system menu title"; fenix8solar51mm "reads badly under OCR"; fr945
+        # "races the movement list". Once the tests stopped naming titles
+        # Menu2 does not promise and rows below the fold, three of them
+        # passed with no change at all. Worth remembering before staging the
+        # next one: the device is usually not the problem.
+        #
+        # venu445mm runs four of the seven files and skips three. It has no
+        # MENU key at all, and the discard confirmation and both menu tests
+        # reach their screens by holding one. Those skips are printed as
+        # "# SKIP" in the job log rather than hidden, and four files of real
+        # coverage on a watch with an input model nothing else here has beats
+        # none - but its row is not worth the same as the others, which is
+        # why this comment says so. Closing the gap needs the driver to tap
+        # DeviceInput's on-screen target, which it cannot do yet.
+        #
+        # The five 96KB devices are not here. They ship a reduced build and
+        # their screens genuinely differ, so they have their own workflow and
+        # their own variant of the two tests that differ - see
+        # e2e-linux-reduced.yml. This job runs the full suite, which is what
+        # the other 115 devices ship.
         device:
-          - instinct3solar45mm
-          - fenix7
-          - venu3
+          - instinct3solar45mm # 176 semi-octagon MIP, 1bpp, keys only
+          - fr55 # 208 round MIP, 4bpp, keys only - smallest round screen
+          - vivoactive4s # 218 round MIP, touch, no UP/DOWN - smallest touch
+          - fr945 # 240 round MIP, keys only
+          - fenix7 # 260 round MIP, touch with keys
+          - fenix8solar51mm # 280 round MIP, touch with keys (also tactix 8)
+          - vivoactive5 # 390 round AMOLED, touch, no UP/DOWN
+          - venu3 # 454 round AMOLED, touch, no UP/DOWN
+          - venu445mm # 454 round AMOLED, touch, no MENU key - 4 of 7 files
     container:
       image: ghcr.io/matco/connectiq-tester:v2.10.0
     defaults:

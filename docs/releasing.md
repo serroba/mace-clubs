@@ -38,9 +38,22 @@ written for whoever maintains this repo and should stay that way — "Stop the
 paused headline hiding behind the Instinct's subwindow" is a good commit
 subject and a useless line in a store listing. A change with no trailer falls
 back to its subject, and `make release-docs` prints which ones did, so the last
-chance to fix the wording is the moment before tagging. Fixing it means either
-amending the trailer or editing `docs/store-listing.md`'s generated region by
-hand before you commit the paperwork.
+chance to fix the wording is the moment before tagging.
+
+Fixing it means amending the trailer while the commit is still being written,
+or - once it is squashed onto main and its message is fixed - adding the
+wording to `docs/release-notes.json`, keyed by PR number. Editing
+`store-listing.md`'s generated region by hand does not work, though this file
+used to say it did: `--check` compares the committed listing against what the
+generator produces, so the edit fails the gate on the next release.
+
+**A trailer reading "Nothing user-facing" keeps the change out of the store
+listing**, which is what its author meant by writing it. It still appears in
+the product update under *Tooling and tests* - that document is the record of
+what shipped, so nothing vanishes from it. v0.17.0 was one command away from
+shipping a bullet reading "Nothing user-facing - developer tooling only." to
+the Connect IQ store, because #168 moved a test file under `source/` and was
+classified watch-facing for it.
 
 **The website shows those captures directly**, from the versioned path
 `store-assets/vx.y.z/instinct3solar45mm/`. After `make release-shots`, point

@@ -26,6 +26,23 @@ function testAddSetCounts(logger as Test.Logger) as Boolean {
     ws.addSet();
     ws.addSet();
     Test.assertEqualMessage(ws.getSets(), 3, "three marks count three sets");
+
+    // UP/DOWN correction before a set is committed. With no swing counter
+    // running there is nothing to correct, and the guard is the whole point:
+    // rep mode asks this on every press, including on the watches and in the
+    // modes where counting is off.
+    ws.adjustCurrentSetSwings(1);
+    ws.adjustCurrentSetSwings(-1);
+    ws.adjustCurrentSetSwings(0);
+    Test.assertEqualMessage(ws.getCurrentSetSwings(), 0, "correction does nothing while nothing is counting");
+
+    // pause() and resume() are called by the delegate on every BACK and every
+    // resume, and there is no recording session here. They have to be safe
+    // rather than throw: the same code path runs before start() during the
+    // countdown, which is exactly when a user changes their mind.
+    ws.pause();
+    ws.resume();
+    Test.assertMessage(!ws.isRecording(), "pausing and resuming without a session records nothing");
     return true;
 }
 
@@ -225,7 +242,7 @@ function testBlocksWithoutSwingCounterCarryNoCount(logger as Test.Logger) as Boo
 // fallback to the ActivityRecording sport symbols. fenix5 used to be
 // excluded here precisely because that fallback did not exist and
 // Activity.SPORT_TRAINING (@since 3.2.0) threw on it.
-(:test, :liveSessionSmoke)
+(:test, :liveSessionSmoke, :swingDebug)
 function testStartWithDebugLoggingDoesNotThrow(logger as Test.Logger) as Boolean {
     Application.Properties.setValue("swingDebugEnabled", true);
     var session = new WorkoutSession();

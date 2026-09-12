@@ -6,6 +6,7 @@ import Toybox.WatchUi;
 // One saved session, beginning with a compact workout overview. DOWN opens the
 // first set and UP/DOWN then wrap through every set and back to the overview.
 // Legacy smoothness-only records keep their original per-set presentation.
+(:history)
 class HistoryDetailView extends WatchUi.View {
     private var _rec as Array<Storage.ValueType>;
     private var _count as Number;

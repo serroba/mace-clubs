@@ -120,8 +120,10 @@ Two consequences worth knowing:
 
 - **Baselines are per platform *and* per device**, under
   `tools/e2e/baselines/<platform>/<device>/`. Screen sizes differ outright,
-  so they are not interchangeable. All three matrix devices have both their
-  macOS and Linux baselines committed.
+  so they are not interchangeable. `instinct3solar45mm`, `fenix7` and `venu3`
+  have both their macOS and Linux baselines committed; `instinct2` has Linux
+  baselines only. The other four reduced devices have none yet and will seed
+  them on their first run of the reduced workflow.
 
   Adding a *new* device is two steps, because its baselines do not exist yet:
   the first run **seeds** them and compares nothing (it says so, as a
@@ -137,15 +139,352 @@ Two consequences worth knowing:
 
 ## Running in CI
 
-The suite runs on **Linux**, headlessly, on GitHub-hosted runners -
-`.github/workflows/e2e-linux.yml` - as a matrix over
-`instinct3solar45mm`, `fenix7` and `venu3`: one per layout class the app
-renders differently (semi-octagon with a subwindow, plain round MIP, large
-round AMOLED). The same test files run on every platform and device; only
-the driver's backend differs (see "Two platforms, one driver" below).
-Device fonts and skins are fetched at job time through Garmin's own
-authenticated API (see `tools/e2e/linux/README.md`), so nothing
-proprietary lives in an image or this repo.
+The suite runs on **Linux**, headlessly, on GitHub-hosted runners, as two
+workflows over two device groups.
+
+`.github/workflows/e2e-linux.yml` runs the **full** suite - what 115 of the
+120 devices ship:
+
+| Width | Device | Display | Input |
+| --- | --- | --- | --- |
+| 176 | `instinct3solar45mm` | semi-octagon MIP, 1bpp, subwindow | keys |
+| 208 | `fr55` | round MIP, 4bpp | keys |
+| 218 | `vivoactive4s` | round MIP, 8bpp | touch, no UP/DOWN |
+| 240 | `fr945` | round MIP, 8bpp | keys |
+| 260 | `fenix7` | round MIP, 8bpp | touch with keys |
+| 280 | `fenix8solar51mm` | round MIP, 8bpp | touch with keys |
+| 390 | `vivoactive5` | round AMOLED, 16bpp | touch, no UP/DOWN |
+| 454 | `venu3` | round AMOLED, 16bpp | touch, no UP/DOWN |
+| 454 | `venu445mm` | round AMOLED, 16bpp | touch, **no MENU key** - 4 of 7 files |
+
+`.github/workflows/e2e-linux-reduced.yml` runs the **reduced** suite over
+`instinct2`, `instinct2s`, `instinct2x` and `descentg1`. The whole app does not fit in
+96KB, so the reduced build compiles out the history browser, the on-watch
+workout editor, motion export and calibration logging, and shortens the
+rest-options rows and the discard prompt that their older Menu2 font clips
+off a 176px screen.
+
+Five devices ship that build, not four. Which ones is decided by
+`tools/reduced-devices.ts` from each device's own memory limit, and all five
+start and run; the one missing from the matrix is staged the same way as the
+widths below:
+
+| Device | Screen | Status |
+| --- | --- | --- |
+| `instinctcrossover` | 176x176 | 6 of 7. The workout summary's middle rows sit under the watch's **physical hands**. The app now parks them while that screen is up (`WorkoutSummaryView.onShow`), which fixes it for owners - but the simulator paints its hands on regardless of what the app asks, so the rows stay covered here and the test stays unassertable |
+
+That last one was filed as a device property that the app could not do
+anything about, and that was wrong: `WatchUi.View.setClockHandPosition` has
+existed since API 3.3.0 and moves the hands. It is fixed. What remains is
+only that the simulator cannot show the fix working, so the device stays at
+6 of 7 for a reason about the test harness rather than about the watch.
+
+Everything else about that watch is covered - it starts, records, and passes
+the other six files.
+
+That is not a crash. The watch starts, runs a workout and records it; what
+is missing is UI coverage, which is why it is staged rather than blocking.
+
+`instinct2s` is worth a note as the shape of mistake this suite invites. Its
+side row read as `eet he`, which looks exactly like the clipped text we had
+just fixed twice, and the fix looked obvious: shorten the label again. It
+was not clipped. Only two rows fit above the fold on a 156px-tall screen and
+the assertion was reading half of a row at the bottom edge - the test needed
+to scroll to it, as it already did for the row below. A screenshot of the
+scrolled screen settled in one run what the wording change would have
+shipped as a permanent product change to five watches.
+
+### Two suites, not one suite with conditionals
+
+Most screens render the same everywhere and live in `tools/e2e/`; both
+workflows run them. The two that differ have a file each in
+`tools/e2e/full/` and `tools/e2e/reduced/`, selected by `MACE_E2E_SUITE`:
+
+| Shared | Full only | Reduced only |
+| --- | --- | --- |
+| discard-confirmation | settings-menu | settings-menu |
+| equipment-picker | rest-options-menu | rest-options-menu |
+| movement-picker | | |
+| rest-screen | | |
+| workout-summary | | |
+
+This started as a conditional inside the shared files, asking a helper
+whether the device under test had a given feature compiled out. It read
+fine and was wrong in a way worth remembering: it put the jungle's device
+list inside an assertion, so the same fact had to stay right in two places,
+and "this device has no history row" and "the history row is broken" became
+the same green result. A file per variant says what its build shows and
+nothing else.
+
+Which devices are reduced is not written down in either workflow as the
+source of truth. `tools/reduced-devices.ts` derives it from each device's
+own `compiler.json` and fails CI when the jungles disagree - because the
+first fix for this listed three devices by hand and left two more crashing
+in the store.
+
+### Why not one simulator, and why not more jobs
+
+Each test file starts its own simulator, which is about thirty seconds in CI
+before an assertion runs - most of a ten-minute job across seven files. The
+obvious saving is to start one simulator and reload the app per file, and it
+is the wrong one: the app persists `movementType` and `workingSide`
+mid-workout (`MaceClubsView`), among twenty `Properties`/`Storage` writes,
+and the pickers assert on those defaults. A shared simulator would leak one
+file's state into the next file's assertions. Restarting per file is buying
+isolation, not just simplicity.
+
+Splitting the suite across two jobs per device keeps that isolation and does
+shorten each job - the runner supports it, `MACE_E2E_SHARD` with
+`MACE_E2E_SHARD_COUNT`, and it is useful locally for running part of the
+suite. **CI does not use it, because it was measured and it was slower.**
+
+At nine devices the e2e jobs started within five seconds of each other and
+parallelism was free. Two shards each makes 18 jobs, plus 8 reduced and 25 in
+`ci.yml`: 51 at once, which is past what the runners give us. The slowest job
+fell from 654s to 458s and jobs began queueing for up to 348s, so the run as
+a whole went from ten minutes to eleven.
+
+That is the shape of the constraint: the wall clock is set by how many jobs
+can start at once, not by how long any one of them takes. More jobs is not a
+lever here; a shorter job is. Anything that adds jobs should be measured
+against the queue delay rather than the job duration.
+
+### Nothing is staged any more
+
+Every device the store's device report names is now driven, across the two
+workflows, and every screen width with it. Two of them are worth knowing
+about rather than reading off the count:
+
+| Device | Runs | Why not all seven |
+| --- | --- | --- |
+| `venu445mm` | 6 of 7 | No MENU key at all, so the settings menu and the rest options menu are reached by tapping the hint band on their screens - `openSettingsMenu` and `openRestOptions` do what the watch's own hints tell an owner to do. Only `discard-confirmation` skips: it holds MENU mid-work, and on these watches you pause first and then discard, which the paused screen offers and the suite covers through `workout-summary`. |
+| `instinctcrossover` | 6 of 7 | The summary's rows sit under the watch's physical hands. The app now parks them (`WorkoutSummaryView.onShow`), which fixes it on a wrist, but the simulator paints its hands on regardless, so the test cannot see the fix. |
+
+### How the no-MENU watches reach a menu
+
+`venu441mm`, `venu445mm`, `venux1`, `vivoactive6` and the three
+`vivoactive3` variants have no MENU key, so every menu they can open is
+opened by tapping a band the screen advertises: `TAP opens settings` when
+idle, `TAP options` while free-resting, `TAP discard` when paused. Taps are
+routed by position rather than taken wholesale, because a tap and the
+physical SELECT key are indistinguishable to the simulator and each of those
+screens offers both - `SELECT: work` sits beside `TAP options`.
+
+`openSettingsMenu` and `openRestOptions` in `tools/e2e/open-menu.ts` pick the
+hold or the tap per device, so the tests read the same on every watch.
+
+The one route those watches still do not have is MENU held mid-work, which
+elsewhere goes straight to the discard confirmation. They pause first and
+discard from there. `discard-confirmation` skips accordingly; the paused
+route it stands in for is covered by `workout-summary`.
+
+### Compiling is not running
+
+`ci.yml`'s build sweep proves all 120 devices compile. It says nothing about
+whether a watch can hold what it compiled, and that gap is how the app spent
+four months unable to start on 11.94% of installs.
+
+`make memory-headroom` measures what is left at the app's peak, per device, by
+running it with `MaceClubsApp`'s `memoryProbe` annotation compiled in - the one
+build that has it, `monkey.probe.jungle`. The numbers are not close:
+
+| Tier | Devices | Free at the peak |
+| --- | --- | --- |
+| 96KB | 5 | ~4.8KB |
+| 128KB | 15 | 21-47KB |
+| 512KB and up | 100 | 702KB (fenix7, the one recorded) |
+
+So the pull-request check covers everything at or below 128KB - the tier where
+the answer can change - and a nightly run covers all 120, which is what
+catches that reasoning being wrong. A device that crashes or drops under 1KB
+fails; under 4KB warns, which nothing currently does.
+
+Those figures come from `tools/memory-baselines.json`, which `make
+memory-headroom-record` writes. It is the file to read for what main measures
+today; the tables further down record what particular changes cost when they
+were made.
+
+### The first screen is not where the app runs out
+
+The probe reads memory three times: entering `getInitialView`, once the first
+screen exists, and again with the settings menu built on top of it. The third
+is the one that decides, and it is not close to the second:
+
+| instinct2 | free |
+| --- | --- |
+| entering getInitialView | 13,640 |
+| first screen built | 7,296 |
+| settings menu on top | **2,064** |
+
+So the real margin on a 96KB watch is about two kilobytes, not seven. That is
+why #188's 208 bytes broke three of them, and why they broke *on the settings
+menu* rather than at startup. The menu is built and dropped rather than shown
+- `SettingsMenu.build()` is a pure function, so this needs nothing to drive
+the watch's buttons - which makes it a proxy for the peak rather than the
+peak itself.
+
+Two consequences for the thresholds. The floor is 1KB, not 4KB, because
+instinct2 ships today at 2,064 and works; a gate red on main is a gate
+someone deletes. And a drop is measured as a share of what the device has
+(10%, floor 128 bytes), because a flat 2KB threshold can never fire on a
+watch with 2KB left - it would be dead before the check spoke. The same
+build measured four times running returned the same number to the byte, so
+there is no noise to leave room for.
+
+### What the launcher icon costs
+
+The single `loadResource()` call in `MaceClubsView` loads `launcher_icon.png`,
+which is 295 bytes on disk and about 2.4KB in app memory - the decoded bitmap
+plus the resource tables the first `loadResource()` brings with it. Measured
+on instinct2:
+
+| | with the icon | without |
+| --- | --- | --- |
+| first screen | 7,296 | 9,712 |
+| settings menu on top | **2,064** | **4,432** |
+
+More than double the headroom of the five watches that have the least, for a
+decoration on one screen, so those five now compile it out
+(`launcherIcon` / `noLauncherIcon`) and everything else keeps it. This is the
+kind of thing the community advice is about - prefer drawn shapes to bitmaps,
+and remember that one `loadResource()` is not free even when the file is
+tiny. It was worth checking only because the peak number made the real margin
+visible.
+
+That table is the experiment, taken while the change was being made, and it is
+the only place it is written down - `MaceClubsView` used to carry its own copy
+and the two had drifted 400 bytes apart, which is how you end up unable to say
+which figure was real. What main measures today is in
+`tools/memory-baselines.json`: instinct2 records 4,832, not the 4,432 above.
+The difference has not been chased down and would need re-measuring on a
+machine with that device installed; the recorded file is the one to trust,
+because a tool wrote it.
+
+### What the nightly is for
+
+The per-PR job checks the twenty devices at or below 128KB on the argument
+that nothing above that can plausibly fail. The first nightly run over all
+120 confirmed it - the 512KB tier reads about 693KB free with a peak around
+702KB, and the 1.2MB devices more than that - which is the point: the
+assumption is now checked rather than asserted.
+
+It also found two defects in the check itself, which is the other reason to
+run the thing you only think you need.
+
+The simulator died ten devices into one shard, and every device after it
+reported "the simulator was not reachable" - and the run announced those five
+watches as *"cannot hold the app"*. A measurement failure reported as a
+product failure is precisely the lie this check exists to prevent. Those are
+now separate verdicts: both fail the run, because a device nobody measured
+must never read as a device that passed, but they no longer say the same
+thing. And a device that comes back unreachable now restarts the simulator
+and retries once, rather than one crash writing off the rest of the shard.
+
+**What this does not cover.** It measures the *probe* build, which carries
+the probe, not the `.prg` that ships. #188's own regression lived only in the
+shipped build - an empty annotated helper the probe build never had - so this
+check would not have caught it. It catches changes to shared code, which is
+nearly all of them; the per-device e2e suite remains the thing that actually
+opens the menu on the watch.
+
+`tools/memory-baselines.json` records each device's number, so a change that
+costs headroom says so on the pull request that costs it. v0.13.4 took about
+2.6KB from the Instinct 2 and shipped; that is the size of drop this now
+reports. Re-record with `make memory-headroom-record` when a change is worth
+its cost, and read the diff before committing it.
+
+The baselines are recorded on the branch that introduced the probe, because
+`monkey.probe.jungle` is what produces the numbers and it does not exist
+before that branch. They are a floor for future changes, not an independent
+blessing of the change that wrote them.
+
+**They are Linux numbers, because that is where the gate runs.** The same
+build reports different headroom on the two platforms: instinct2 measures
+7,408 bytes on macOS and 7,816 in the CI container, and the gap runs from
+zero to about 408 bytes depending on the device. Baselines recorded on macOS
+and checked on Linux compare two different things, and every pull request
+carries a drift line nobody caused - which is how a useful check becomes
+noise. So `make memory-headroom` locally is for the absolute number and the
+4KB floor; the baseline comparison belongs to CI, and a local run showing a
+few hundred bytes of drift is the platform, not the change.
+
+### 208 bytes is enough to break three watches
+
+The probe's own first version cost 208 bytes and turned the reduced e2e
+suite red on descentg1, instinct2 and instinct2x. It looked free: the
+`memoryProbe` annotation compiled `reportMemory` to an empty body, and the
+two calls in `getInitialView` went to nothing. An empty private method and
+its call sites are still a method and still call sites.
+
+The failure did not look like memory. Six test files passed, and the seventh
+- the settings menu, the screen that allocates most on top of the main view
+- read garbage and took the simulator's window with it, which reads exactly
+like the OCR flake it was not. What identified it was the split:
+
+| Device | Free at ready | Reduced suite |
+| --- | --- | --- |
+| descentg1, instinct2, instinct2x | 7,464 | fails |
+| instinct2s | 7,592 | passes |
+
+The three that failed are the three with the least headroom, and the one
+that passed had 128 bytes more than they did, against a 208-byte
+regression. That is the whole margin on these watches.
+
+Two things follow. Annotate the *caller*, not a helper it calls, so the
+build that ships has no call site to pay for - `MaceClubsApp` now has two
+`getInitialView` bodies rather than one that calls a stub. And check the
+claim rather than asserting it: `monkeyc -f monkey.jungle -d instinct2` on
+this branch and on `main` produce a `.prg` of exactly the same size, which
+is the property worth having. Build both from the same directory when you
+do - the `.prg` embeds absolute source paths, so a worktree in a longer
+path is 2,752 bytes bigger for no reason at all.
+
+### The simulator is not a reliable process
+
+It fails in at least three ways that have nothing to do with the app, all of
+them green on a rerun with nothing changed:
+
+| Symptom | Where |
+| --- | --- |
+| `monkeydo could not reach the simulator after 8 attempts` | any e2e job |
+| `Segmentation fault (core dumped) simulator`, and a 1.8MB `tools/e2e/core` | the coverage job, and locally |
+| `test did not finish before its parent and was cancelled` | any e2e job, when the app never paints |
+
+Both entry points now retry, and both retry *only* this. `run-e2e.ts` runs a
+file again once when the simulator window has gone; the coverage job runs
+`tester.sh` again when the log says the simulator was unreachable. A file or
+a suite that fails on its own terms fails immediately, because retrying a
+real regression turns it into an intermittent one, which is worse than the
+flake.
+
+This matters more the more devices there are. Twelve jobs across two
+workflows means a per-job flake rate that is nearly invisible still turns up
+somewhere on most pull requests - and a suite that is red for reasons nobody
+believes gets rerun by reflex, which is how a real failure eventually gets
+waved through.
+
+### What adding a device usually turns out to be
+
+Almost never the OCR. Every menu assertion that named a title, or a row
+other than the first, has eventually failed on some watch - and each time
+the fix was the assertion:
+
+- **Titles belong to Menu2.** It wraps them (`Rest options` reads as `Rest`
+  on a 208px Forerunner 55), truncates them (`Choose e-`), or draws none at
+  all (the Instinct Crossover). Assert a row instead.
+- **Only the first row is reliably on screen.** A 163x156 Instinct 2S fits
+  two. Scroll to the others with `pressUntilVisible`, which also tests the
+  list rather than the first screenful of it.
+- **The first row is the highlighted one**, which Menu2 draws inverted and
+  the OCR reads worst of all - on a Forerunner 945 it vanishes entirely.
+  `pressUntilVisible` steps off it, and checks before pressing, so devices
+  that can read it in place do not move.
+
+Two attempts went the other way, at the OCR. PR #173 grew 150 lines of TSV
+parsing, positional merging and confidence filtering and broke three green
+devices before being closed; a later attempt with an extra pass per screen
+doubled the suite's runtime and timed out four jobs. Both devices they were
+meant to rescue, `fr55` and `fr945`, went green on assertion changes alone.
 
 When it runs:
 
@@ -184,6 +523,214 @@ Releases are additionally gated locally: the `pre-push` hook
 whenever a `v*` tag is pushed - the push that triggers the release
 workflow - under `caffeinate` so the display can't sleep mid-run. It still
 needs the screen unlocked when the push starts.
+
+## What this suite covers that the unit tests cannot
+
+`make coverage` reports Monkey C function coverage from the unit suite: 349
+of 466 function bodies, 75%. That number is not the whole picture in two
+directions, and both are worth knowing before reading it as a grade.
+
+**19 of the 466 can never be hit.** rafiki instruments the source, and the
+source carries both halves of every annotation pair - `:history` and
+`:noHistory`, and five more like them. The build compiles one half per
+device, so the other is instrumented, counted in the denominator, and
+impossible to reach. Against what the build actually contains the figure is
+349/447.
+
+**Most of the rest is this suite's job.** What the unit tests leave uncovered
+is almost entirely code a unit test cannot call:
+
+| What | Why a unit test cannot reach it |
+| --- | --- |
+| `MaceClubsView`'s draw helpers and `onUpdate` | needs a `Dc`, and CI's container has no device fonts |
+| the delegates' `onSelect` / `onBack` / `onTap` / `onMenu` | needs a real button press through `BehaviorDelegate` |
+| each view's `onUpdate` | same as above |
+| `FitFields`' writers | needs a live `ActivityRecording.Session` |
+| `WorkoutSession`'s sensor path | needs `Sensor.SensorData` the system builds |
+
+Every one of those runs when the e2e suite drives a workout, which is the
+argument for having it. `make coverage-e2e` measures that rather than
+asserting it: rafiki's probe is a `println`, so a captured simulator log is a
+coverage log, and `MACE_E2E_PRG` points the suite's own test files at an
+instrumented build. `make coverage-all` runs both halves and prints the
+union.
+
+Measured on instinct3solar45mm:
+
+| | functions | of 466 | of the 447 compiled |
+| --- | --- | --- | --- |
+| unit tests | 349 | 75% | 78% |
+| e2e suite | 298 | 64% | 67% |
+| **both** | **414** | **89%** | **92%** |
+
+65 of the e2e suite's 298 are reached by nothing else - that is what it is
+worth, stated rather than assumed. The two halves overlap heavily because
+driving a workout runs the same session logic the unit tests call directly;
+the difference is the draw paths and the input handlers.
+
+One instrument step feeds both, because the ids have to mean the same thing
+in both logs. They are stable across runs - instrumenting twice produces an
+identical manifest - so a log kept from an earlier run can still be unioned
+with a later one, which is what makes it possible to re-run a single flaky
+file and append rather than redo the suite.
+
+### What neither suite covers
+
+33 functions, and no screens. That table had three rows when it was first
+written - the weight editor, the history detail view and the custom-workout
+editor - and a test file took each of them. Every screen a user can reach is
+now drawn at least once in CI.
+
+What is left is scattered rather than structural:
+
+| What | Functions | Why |
+| --- | --- | --- |
+| `FitFields` writers | 9 | need a session that reaches the FIT fields themselves |
+| branches in the view and its delegate | 20 | paths the suite passes near but does not take - paging on screens it visits without paging, error branches, the rep-mode and challenge paths |
+| singles | 4 | one each in `MaceClubsApp`, `Layout`, `RestOptionsDelegate`, `WorkoutSummaryDelegate` |
+
+That is a different kind of list from the one it replaces. A screen nobody
+draws is a hole; a branch nobody takes is a decision about what is worth
+driving, and the suite already costs ten minutes a device.
+
+### What driving these screens took
+
+Worth writing down, because each of the three cost runs to discover and the
+next screen-shaped test will need them again.
+
+**A visible row is not a selected row.** `pressUntilVisible` stops when the
+text can be read, and a Menu2 shows several rows at once. It stopped with
+"Mace: 8.8 lb" legible at the bottom of the screen and SELECT opened the
+custom-workout editor, which was the row actually highlighted. Counting
+presses is the way to select a row - which is a button-device idiom, so the
+test skips itself on gesture-driven watches rather than flinging a touch list
+and pressing SELECT on whatever it lands on. On this menu that would cycle a
+real setting.
+
+**The first press after a menu opens is swallowed.** The driver says so on
+`pressUntilChanged`; nine presses landed on the eighth row. Taking the first
+step through `pressUntilChanged` and the rest plain puts the count back on the
+row it names.
+
+**Assert the implement, not the title.** Landing one row off opens the club or
+bulava editor, which draws the same screen - so a test asserting only "WEIGHT"
+would pass while editing a different setting. And assert `MACE` rather than
+`MACE WEIGHT`: at FONT_SMALL, OCR reads the word as "WE HT".
+
+**Read the value line, not the screen.** Both hint lines carry a colon and one
+carries a number, so scraping every digit returned "8805" - the weight and the
+step size together. The value is the only line with digits and no colon. The
+unit is no help: "8.8 lb" comes back as "8.8 ii".
+
+**A number can be drawn and still be unreadable.** The custom-workout editor
+draws its value in FONT_NUMBER_MEDIUM like the weight editor does, and OCR
+returns nothing at all for it - the work field reads back as
+["WORK DUR. TION", "UP/DOWN: 0:30", "SELECT: next"], with a gap where "2:00"
+plainly is in a capture. The set count is worse: one glyph. Where the value
+matters and the text will not come, compare screenshots instead -
+`screensDiffer` from pixel-diff.ts says "this changed and then changed back",
+which is what a value stepping up and down looks like and needs no character
+recognised.
+
+**A menu title is not on screen when the menu is scrolled.** Returning from
+the custom-workout editor lands on the settings list at its ninth row, with
+"Settings" off the top. Assert the absence of the screen you left rather than
+the presence of the one you are on.
+
+A Forerunner 945 does not render that value readably at all - it reads the
+title and both hints and nothing where the number is. The screen is correct
+and a person can read it, so the test exercises the presses everywhere and
+verifies the saved value where the number comes back, reporting with
+`t.diagnostic` on the devices where it cannot. Failing there would be failing
+on legible-to-a-human text, which this suite has decided before is worse than
+the gap it covers.
+
+### Paths in this directory are not what they look like
+
+`run-e2e.ts` spawns each test file with `cwd` set to `tools/e2e`, so the file
+paths it hands `node --test` resolve. Everything else in the repo - the
+Makefile, these docs, the other tools - says `bin/mace-clubs.prg` and means
+the repo root. So a relative path written under `tools/e2e` silently means a
+different, missing directory.
+
+That has cost three bugs, and only one of them looked like a path. The worst
+was `MACE_E2E_COVERAGE_LOG`: it resolved into a directory that does not
+exist, so `appendFileSync` threw ENOENT inside a stdout handler on every
+chunk, and the launch waiting for the app to draw reported **"the simulator
+has no window"**. A path bug that reads as a broken simulator costs a run to
+diagnose, and it was diagnosed twice.
+
+Two things stop the next one. `repoPath()` in `e2e/repo-path.ts` resolves
+against the repo root and passes absolute paths through, so it is safe to
+wrap anything - including a path that arrived from an environment variable,
+which is where that bug came from. And a lint rule in `tools/eslint.config.mjs`
+makes a bare relative literal in an `fs` call an error in this directory,
+because documenting the trap did not stop the second or the third.
+
+The other two bugs were in throwaway scripts written to run a single test
+file. `make e2e-file FILE=...` exists so the next person does not write a
+fourth.
+
+### Getting test data into a test
+
+There is no mocking framework for Monkey C, and no way to stub a `Toybox`
+module: `Application.Storage` is the real thing in a test build. What exists
+instead is three routes, and which one applies depends on where the test runs.
+
+**Pass the data in.** The best option, and the one most of this app is already
+shaped for. `HistoryDetailView` takes the record as a constructor argument
+rather than reading Storage, so `HistoryDetailViewTest` hands it a fabricated
+one (`HistoryDetailFixtures`) and no storage is involved at all. `SmoothnessLog`
+says the same thing in its own header: the read and write live in the callers
+so the retention policy stays testable as a pure function. This is the same
+dependency-injection idea the Connect IQ community reaches for - the usual
+advice on the forums and in the third-party tutorials is to subclass your own
+class and add setters, because there is nothing else to reach for.
+
+**Set it directly.** A `(:test)` function runs inside the app on the
+simulator, so `Storage.setValue(...)` and `Properties.setValue(...)` simply
+work. Useful for the code that genuinely reads storage - `HistoryMenu.read()`,
+for instance. Two things to know before doing it: the suite shares one store
+with no teardown between tests, and the simulator keeps that store between
+runs, so a test that writes has to put the value back, and back to what
+`properties.xml` ships rather than to whatever it read. The next section is
+that hazard in full.
+
+**Record it.** From an e2e test none of the above is available - the test is a
+Node process on the host, outside the watch, and it can no more call
+`Storage.setValue` than a phone can. The simulator's store is a binary file at
+`APPS/DATA/MEDIA/OBJSTORE/<DEVICE>/<DEVICE>.SEN` under the temp directory, in
+a format with no documented writer; `monkeydo -a <source>:<dest>` will push a
+file into the simulator, which is how file-shaped inputs get in, but there is
+nothing to write into that one.
+
+So an e2e test that needs saved state makes it the way a user does.
+`full/history.e2e.test.ts` runs a workout, completes a set, saves, lets the
+app exit, and relaunches - `WorkoutSession.save()` calls `appendHistoryLog()`,
+and Storage outlives the app. That is slower than seeding would be and it is
+also a better test: the record being browsed is one the app wrote, in the
+shape the app writes, rather than a fixture that agrees with the reader
+because the same person wrote both.
+
+The remaining option, not taken here, is a seeding path in the app behind an
+annotation compiled only into a test build. It would be faster and it would
+mean the e2e suite no longer drives the same binary a user installs, which is
+most of what makes it worth running.
+
+### Writing a unit test that touches Properties
+
+The simulator persists an app's `Application.Properties` between runs, and
+the unit suite shares one store with no teardown between tests. So a test
+that writes a property has to put it back - and back to the value
+`properties.xml` ships, not to whatever it read on the way in.
+
+Reading-then-restoring preserves the pollution instead of clearing it.
+`MaceClubsViewTest` calls `chooseWorkingSide`, which remembers the choice as
+the next session's default; the first version restored what it read, and
+`testWorkoutSummaryFallbackTextRendersWithNoData` - which builds a fresh
+session expecting no side data - stayed red across rebuilds until the
+simulator's stored data was cleared by hand. It reads "L" from a test that
+had already finished.
 
 ## Two platforms, one driver
 

@@ -23,6 +23,28 @@ docker run --rm --entrypoint bash \
 No SDK install and no Garmin account are needed: the base image carries the
 device files and, since v2.10.0, the device fonts.
 
+There are make targets for both, which build the image if it is missing:
+
+```sh
+make e2e-docker                              # the whole suite
+make e2e-file FILE=full/history.e2e.test.ts  # one file, for iterating
+make e2e-file FILE=... DEVICE=venu3          # ... on another watch
+make e2e-image                               # rebuild after a Dockerfile change
+```
+
+They wrap the two scripts here. The long form, if you want it:
+
+```sh
+docker run --rm --entrypoint bash \
+  -v "$(pwd):/workspace" -w /workspace \
+  mace-clubs-e2e-linux:local \
+  /workspace/tools/e2e/linux/run-file.sh full/weight-editor.e2e.test.ts
+```
+
+The container is also the answer when the macOS driver cannot run at all: that
+one needs an awake, unlocked display, and `caffeinate` keeps a display awake
+but cannot unlock one. A container does not care what the screen is doing.
+
 Two gotchas worth knowing:
 
 - The base image's own `ENTRYPOINT` is `tester.sh`, so `--entrypoint bash`

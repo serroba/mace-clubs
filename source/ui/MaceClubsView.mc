@@ -38,7 +38,7 @@ class MaceClubsView extends WatchUi.View {
     private var _lastPhase as Number?;
     private var _lastSet as Number = 0;
     private var _warnedSet as Number = 0;
-    private var _icon as WatchUi.BitmapResource;
+    private var _icon as WatchUi.BitmapResource?;
     private var _subwindow as Boolean = false;
     private var _circleRounds as Boolean = true;
     private var _freePhaseStartMs as Number = 0;
@@ -56,11 +56,34 @@ class MaceClubsView extends WatchUi.View {
         _refreshTimer = new Timer.Timer();
         _startTimer = new Timer.Timer();
         _exitTimer = new Timer.Timer();
-        _icon = WatchUi.loadResource(Rez.Drawables.LauncherIcon) as WatchUi.BitmapResource;
+        _icon = loadLauncherIcon();
         if (System has :SCREEN_SHAPE_SEMI_OCTAGON) {
             _subwindow = System.getDeviceSettings().screenShape == System.SCREEN_SHAPE_SEMI_OCTAGON;
         }
         loadSettings();
+    }
+
+    // The idle screen's crossed mace-and-club art, and the one loadResource()
+    // call the app makes.
+    //
+    // The bitmap is not what it looks like on disk. launcher_icon.png is 295
+    // bytes; loading it costs about 2.4KB of app memory - the decoded bitmap
+    // plus the resource tables that the first loadResource() call brings in
+    // with it. That is more than doubling the headroom of the five watches
+    // that have the least, in exchange for a decoration on one screen, so
+    // those five draw the idle screen without it. Everywhere else it stays.
+    //
+    // The measurements are in docs/e2e-testing.md, "What the launcher icon
+    // costs", rather than repeated here - this comment carried its own copy
+    // and the two had drifted 400 bytes apart.
+    (:launcherIcon)
+    private function loadLauncherIcon() as WatchUi.BitmapResource? {
+        return WatchUi.loadResource(Rez.Drawables.LauncherIcon) as WatchUi.BitmapResource;
+    }
+
+    (:noLauncherIcon)
+    private function loadLauncherIcon() as WatchUi.BitmapResource? {
+        return null;
     }
 
     // Applies phone-editable settings; called at startup and from
@@ -605,48 +628,72 @@ class MaceClubsView extends WatchUi.View {
             // 31/45/70 pixel constants this used to carry: those centred a
             // 62px bitmap on a 176px screen and left it off-centre anywhere
             // the launcher icon is a different size.
-            var iconX = cx - _icon.getWidth() / 2;
-            if (_subwindow) {
-                // Shift clear of the subwindow cut-out in the top-right.
-                iconX -= Layout.scaled(w, 14);
+            var icon = _icon;
+            if (icon != null) {
+                var iconX = cx - icon.getWidth() / 2;
+                if (_subwindow) {
+                    // Shift clear of the subwindow cut-out in the top-right.
+                    iconX -= Layout.scaled(w, 14);
+                }
+                var iconY = h * 38 / 100 - icon.getHeight() - Layout.scaled(w, 8);
+                if (iconY < 2) {
+                    iconY = 2;
+                }
+                dc.drawBitmap(iconX, iconY, icon);
             }
-            var iconY = h * 38 / 100 - _icon.getHeight() - Layout.scaled(w, 8);
-            if (iconY < 2) {
-                iconY = 2;
-            }
-            dc.drawBitmap(iconX, iconY, _icon);
-            if (isRepMode()) {
-                dc.drawText(cx, h * 35 / 100, Graphics.FONT_SMALL, "REP MODE", Graphics.TEXT_JUSTIFY_CENTER);
-            } else if (!isFreeTraining) {
+            // Every line below is centred text on what may be a round screen,
+            // so each picks the largest face that still fits the chord at its
+            // own height rather than the one face that suited the Instinct.
+            // The faces are unchanged wherever they already fit, which is
+            // every screen the layout was tuned on; the narrow round ones
+            // (the 208px fr55 lost the tail of "MENU opens settings") step
+            // down instead of drawing past the edge of the display.
+            var smallFaces = [Graphics.FONT_SMALL, Graphics.FONT_TINY, Graphics.FONT_XTINY] as Array<Graphics.FontDefinition>;
+            var tinyFaces = [Graphics.FONT_TINY, Graphics.FONT_XTINY] as Array<Graphics.FontDefinition>;
+            var headingY = h * 35 / 100;
+            if (isRepMode() || !isFreeTraining) {
+                var heading = isRepMode() ? "REP MODE" : preset[:label] as String;
                 dc.drawText(
                     cx,
-                    h * 35 / 100,
-                    Graphics.FONT_SMALL,
-                    preset[:label] as String,
+                    headingY,
+                    Layout.fitCentredLine(dc, heading, smallFaces, w, h, headingY),
+                    heading,
                     Graphics.TEXT_JUSTIFY_CENTER
                 );
             }
+            var summaryY = h * (isFreeTraining ? 40 : 49) / 100;
+            var summary = isRepMode()
+                ? Lang.format("target $1$ swings", [TrainingMode.targetLabel(_repTarget)])
+                : Lang.format("$1$ bpm | $2$", [metronome.getBpm(), patternLabel(preset)]);
             dc.drawText(
                 cx,
-                h * (isFreeTraining ? 40 : 49) / 100,
-                isFreeTraining ? Graphics.FONT_SMALL : Graphics.FONT_TINY,
-                isRepMode()
-                    ? Lang.format("target $1$ swings", [TrainingMode.targetLabel(_repTarget)])
-                    : Lang.format("$1$ bpm | $2$", [metronome.getBpm(), patternLabel(preset)]),
+                summaryY,
+                Layout.fitCentredLine(dc, summary, isFreeTraining ? smallFaces : tinyFaces, w, h, summaryY),
+                summary,
                 Graphics.TEXT_JUSTIFY_CENTER
             );
+            var startY = h * (isFreeTraining ? 55 : 62) / 100;
             dc.drawText(
                 cx,
-                h * (isFreeTraining ? 55 : 62) / 100,
-                isFreeTraining ? Graphics.FONT_SMALL : Graphics.FONT_TINY,
+                startY,
+                Layout.fitCentredLine(
+                    dc,
+                    "SELECT to start",
+                    isFreeTraining ? smallFaces : tinyFaces,
+                    w,
+                    h,
+                    startY
+                ),
                 "SELECT to start",
                 Graphics.TEXT_JUSTIFY_CENTER
             );
+            var hintY = h * (isFreeTraining ? 70 : 75) / 100;
+            var hint = Lang.format("$1$ opens settings", [DeviceInput.menuLabel()]);
             dc.drawText(
                 cx,
-                h * (isFreeTraining ? 70 : 75) / 100,
-                Graphics.FONT_TINY,
-                Lang.format("$1$ opens settings", [DeviceInput.menuLabel()]),
+                hintY,
+                Layout.fitCentredLine(dc, hint, tinyFaces, w, h, hintY),
+                hint,
                 Graphics.TEXT_JUSTIFY_CENTER
             );
             // Last comparable session's smoothness (with trend), so the score
@@ -655,7 +702,14 @@ class MaceClubsView extends WatchUi.View {
             // above on both the interval and free-training idle layouts.
             var lastSmooth = smoothnessText(false);
             if (!lastSmooth.equals("")) {
-                dc.drawText(cx, h * 88 / 100, Graphics.FONT_TINY, lastSmooth, Graphics.TEXT_JUSTIFY_CENTER);
+                var smoothY = h * 88 / 100;
+                dc.drawText(
+                    cx,
+                    smoothY,
+                    Layout.fitCentredLine(dc, lastSmooth, tinyFaces, w, h, smoothY),
+                    lastSmooth,
+                    Graphics.TEXT_JUSTIFY_CENTER
+                );
             }
             return;
         }
@@ -878,6 +932,28 @@ class MaceClubsView extends WatchUi.View {
             [workout.getSets().toString(), setSwings, hr] as Array<String>,
             ["sets", setSwingsLabel, "hr"] as Array<String>
         );
+        // On the seven watches with no MENU key, this is the only way to
+        // change movement or side between sets - MaceClubsDelegate.onTap
+        // routes taps in this band to the rest options menu. Below the metric
+        // row and only while free-resting, so it never crowds a work screen.
+        if (freeResting && DeviceInput.needsMenuTapTarget()) {
+            var hintY = h * 92 / 100;
+            var hint = "TAP options";
+            dc.drawText(
+                cx,
+                hintY,
+                Layout.fitCentredLine(
+                    dc,
+                    hint,
+                    [Graphics.FONT_XTINY] as Array<Graphics.FontDefinition>,
+                    w,
+                    h,
+                    hintY
+                ),
+                hint,
+                Graphics.TEXT_JUSTIFY_CENTER
+            );
+        }
     }
 
     // A row of value-over-label columns, spread across the usable width

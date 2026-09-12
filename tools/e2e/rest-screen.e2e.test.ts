@@ -44,44 +44,58 @@ void describe("Free training rest screen", () => {
         // Now in WORK phase; SELECT moves free training into REST.
         await sim.press("select");
 
-        const lines = await sim.readText();
-        const timePattern = /\d{1,2}:\d{2}/;
-
-        // OCR's exact grouping of "REST" and its time varies run to run
-        // (sometimes one string, sometimes split across array entries), so
-        // this locates values by stable landmarks and reading order instead
-        // of assuming a fixed string shape.
-        const restIndex = lines.findIndex((line) => line.includes("REST"));
-        assert.ok(restIndex !== -1, `expected "REST" on screen: ${JSON.stringify(lines)}`);
-
-        const selectWorkIndex = lines.findIndex((line) => line.includes("SELECT: work"));
-        assert.ok(selectWorkIndex !== -1, `expected the "SELECT: work" label: ${JSON.stringify(lines)}`);
-
-        // The big centered countdown is whatever time-shaped value sits
-        // directly before the "SELECT: work" label.
-        const countdownTime = timePattern.exec(lines[selectWorkIndex - 1] ?? "")?.[0];
-        assert.ok(countdownTime !== undefined, `expected a countdown value before "SELECT: work": ${JSON.stringify(lines)}`);
-
-        // Row 2's wall clock is the first time-shaped value at or after the
-        // "REST" label (and before the countdown).
-        let restTime: string | undefined;
-        for (let i = restIndex; i < selectWorkIndex; i += 1) {
-            const match = timePattern.exec(lines[i] ?? "");
-            if (match !== null) {
-                restTime = match[0];
-                break;
-            }
-        }
-        assert.ok(restTime !== undefined, `expected a time value at/after "REST": ${JSON.stringify(lines)}`);
-
-        // The regression this guards against: row 2 and the big centered
-        // value both showing the identical countdown (the bug PR #125
-        // fixed). They must now differ - row 2 is the wall clock.
+        // Row 2 is "REST <wall clock>", and the regression this guards is
+        // row 2 showing a duplicate of the big countdown instead - the bug
+        // PR #125 fixed.
+        //
+        // Told apart by the hour, which needs one reading of one row and no
+        // assumption about anything else on the screen. clockTimeLabel emits
+        // a 12-hour time whose hour is 1 to 12 - never 0, since it maps 0 to
+        // 12 - while the rest countdown is formatSecs, minutes and seconds,
+        // and has just started: it reads 0:00 and stays there for a minute.
+        // So a row 2 beginning "0:" is the countdown and nothing else.
+        //
+        // Three earlier versions of this reached for something harder.
+        // Comparing row 2 against the countdown meant finding the countdown,
+        // the largest text on the screen and the first thing the OCR drops,
+        // located by its position beside the "SELECT: work" label, which the
+        // Instinct Crossover reads as "= ork". Matching the am/pm suffix
+        // failed on an Instinct 2 reading "REST 11:25\m". Sampling the row
+        // to watch it tick assumed the samples were seconds apart, and
+        // readText runs four OCR passes: on a Forerunner 945 they were two
+        // minutes apart and the clock had genuinely advanced, 12:19 to 12:20
+        // to 12:21, which the test duly reported as a countdown.
+        const restTime = await readRestRowTime(sim);
+        assert.ok(
+            restTime !== undefined,
+            `expected a time on the "REST" row: ${JSON.stringify(await sim.readText())}`,
+        );
         assert.notEqual(
-            restTime,
-            countdownTime,
-            `row 2 and the countdown show the same value (${countdownTime}) - ` +
-                `the wall clock fix has regressed: ${JSON.stringify(lines)}`,
+            restTime.split(":")[0],
+            "0",
+            `row 2 reads "${restTime}", which is the countdown rather than the wall clock - ` +
+                "the fix from PR #125 has regressed",
         );
     });
 });
+
+/**
+ * The time-shaped value on the "REST" row.
+ *
+ * Retried, because OCR is probabilistic and this is small text: a single
+ * read returned "REST distin" on an Instinct 2 whose screen was fine, and a
+ * test that reports a shipped bug has returned on the strength of one bad
+ * read is worse than one that takes another look. Only the digits are
+ * matched, so a mangled suffix ("11:25\m") still reads.
+ */
+async function readRestRowTime(sim: Simulator): Promise<string | undefined> {
+    for (let attempt = 0; attempt < 4; attempt += 1) {
+        const restRow = (await sim.readText()).find((line) => line.includes("REST"));
+        const match = restRow === undefined ? null : /\d{1,2}:\d{2}/.exec(restRow);
+        if (match !== null) {
+            return match[0];
+        }
+        await new Promise((resolve) => setTimeout(resolve, 800));
+    }
+    return undefined;
+}

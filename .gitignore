@@ -7,9 +7,16 @@ gen/
 developer_key*
 .DS_Store
 dist/
-fit-files/
+# Recordings are a person's training data, so they stay local by default.
+# `fit-files/*` rather than `fit-files/`: git will not descend into an
+# excluded directory, so a file inside one cannot be re-included - and one
+# recording is deliberately kept, with the owner's agreement, as the session
+# whose per-set counts were confirmed against the athlete (see
+# docs/swing-counting.md).
+fit-files/*
 *.fit
 !tools/fixtures/*.fit
+!fit-files/24302940509_ACTIVITY.fit
 build/
 node_modules/
 __pycache__/
@@ -29,3 +36,7 @@ tools/e2e/.diffs/
 cov.log
 coverage-*.log
 bin/coverage/
+
+# The Linux simulator drops a core dump beside the driver when it crashes
+# mid-suite - 1.8MB of it, right where `git add -A` will sweep it up.
+tools/e2e/core

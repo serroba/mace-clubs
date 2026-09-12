@@ -151,6 +151,38 @@ module Layout {
         return fonts[fonts.size() - 1];
     }
 
+    // The largest of `fonts` (largest first) that draws `text` centred at
+    // `topY` without either end running under a round screen's bezel.
+    //
+    // Width is measured at whichever end of the glyph box sits further from
+    // the screen's centre line, because that is where the chord is narrowest:
+    // a hint line at 75% of height has noticeably less room at its feet than
+    // at its head, and fitFont's own maxWidth would have to be computed at
+    // the wrong end to miss it. The Instinct is unaffected - usableHalfWidth
+    // gives a semi-octagon its full width - which is what keeps its
+    // hand-tuned rest screen byte-identical while a 208px Forerunner 55, the
+    // narrowest round screen we ship, steps down a face instead of drawing
+    // the tail of "MENU opens settings" past the edge of the display.
+    function fitCentredLine(
+        dc as Dc,
+        text as String,
+        fonts as Array<Graphics.FontDefinition>,
+        screenWidth as Number,
+        screenHeight as Number,
+        topY as Number
+    ) as Graphics.FontDefinition {
+        var centre = screenHeight / 2;
+        for (var i = 0; i < fonts.size(); i++) {
+            var bottomY = topY + Graphics.getFontHeight(fonts[i]);
+            var edgeY = (topY - centre).abs() > (bottomY - centre).abs() ? topY : bottomY;
+            var available = 2 * usableHalfWidth(screenWidth, screenHeight, edgeY);
+            if (dc.getTextDimensions(text, fonts[i])[0] <= available) {
+                return fonts[i];
+            }
+        }
+        return fonts[fonts.size() - 1];
+    }
+
     // Number fonts, largest first - for a headline value that is only digits
     // and separators. Number faces are digit-only, so any value containing
     // letters must use textFonts() instead.

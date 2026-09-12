@@ -218,6 +218,16 @@ export class LinuxPlatform implements Platform {
         await execFileAsync("xdotool", ["mouseup", "1"], { env: this.env });
     }
 
+    async tapScreen(xFraction: number, yFraction: number): Promise<void> {
+        const screen = this.device.screen;
+        const window = this.requireWindow();
+        const x = Math.round(screen.x + screen.width * xFraction) + DECORATION_OFFSET.x;
+        const y = Math.round(screen.y + screen.height * yFraction) + DECORATION_OFFSET.y;
+        await execFileAsync("xdotool", ["mousemove", "--window", window, String(x), String(y), "click", "1"], {
+            env: this.env,
+        });
+    }
+
     async captureScreen(): Promise<Buffer> {
         const window = this.requireWindow();
         const dir = await mkdtemp(join(tmpdir(), "mace-clubs-e2e-"));

@@ -92,6 +92,7 @@ module Motion {
     // accelerometer magnitude elevated. Not yet wired into any detection
     // logic; this only records the data so that question can be answered
     // from real recordings.
+    (:motionExport)
     function gyroFeatures(x as Array<Float>, y as Array<Float>, z as Array<Float>) as Dictionary {
         var n = x.size();
         if (n == 0 || y.size() != n || z.size() != n) {
@@ -123,6 +124,7 @@ module Motion {
     // raw per-sample magnitude (mg) instead, for offline peak-detection
     // prototyping against a real recording (e.g. Python's
     // scipy.signal.find_peaks) rather than guessing at Counter constants.
+    (:swingDebug)
     function rawMagnitudes(x as Array<Number>, y as Array<Number>, z as Array<Number>) as Array<Number> {
         var n = x.size();
         if (n == 0 || y.size() != n || z.size() != n) {
@@ -152,6 +154,7 @@ module Motion {
     // rate (stride 2) lets one axis fit a single 16-element array field
     // instead of two - coarser timing, still plenty for tracing a rotation
     // plane's shape, just not fine peak-to-peak timing.
+    (:swingDebug)
     function decimatedAxisValues(values as Array<Float>, stride as Number) as Array<Number> {
         var n = values.size();
         if (stride <= 0 || n == 0) {

@@ -11,8 +11,32 @@ env:
   MONKEY_C_RS_REV: 93d004f1f26af98c96dc36be10ab841f035f0dbb
   # The floor the Monkey C function-coverage badge quotes, enforced below.
   # rafiki has no --fail-under of its own, so the gate lives here; the badge
-  # would otherwise promise something nothing checks. Currently at 75%.
-  MONKEY_C_COVERAGE_FLOOR: "70"
+  # would otherwise promise something nothing checks.
+  #
+  # 74, against a measured 75: `make coverage` reports 349/466 functions
+  # executed. One point of slack, which is about four functions - enough that
+  # a feature can land with its tests in the same pull request rather than
+  # turning main red between two commits, and not enough to lose the gain
+  # quietly. It sat at 70 with a comment claiming 75, five points of slack
+  # nothing would have noticed being spent.
+  #
+  # 100% is not the target and cannot be reached: 19 of those 466 bodies are
+  # compiled out of this build. Every annotation pair (:history/:noHistory
+  # and five more) has both halves instrumented and only one compiled, so the
+  # unused twin can never report a hit. Against what the build actually
+  # contains the figure is 349/447.
+  #
+  # What is left is the UI: MaceClubsView's draw paths and lifecycle, the
+  # delegates' onSelect/onBack/onTap, each view's onUpdate, FitFields'
+  # writers that need a live recording session. A unit test cannot press a
+  # button or supply a Dc, which is what the e2e suite is for, and that half
+  # is measured rather than assumed: `make coverage-all` reports 349 from the
+  # unit tests, 298 from the e2e suite, 414 together - 89%, or 92% of the 447
+  # this build contains. 65 of the e2e suite's functions are reached by
+  # nothing else. The 33 neither reaches are branches now rather than
+  # screens: every screen a user can reach is drawn at least once in CI.
+  # docs/e2e-testing.md has the breakdown.
+  MONKEY_C_COVERAGE_FLOOR: "74"
 
 # Supersede an in-flight run when the same ref is pushed again. Without this
 # a force-push leaves the old run grinding away on a commit that no longer
@@ -30,7 +54,7 @@ on:
 
 jobs:
   fit-report:
-    name: Local FIT report tests
+    name: TypeScript tooling tests
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v6
@@ -47,7 +71,56 @@ jobs:
         run: npm run typecheck --prefix tools
       - name: Lint all TypeScript
         run: npm run lint --prefix tools
-      - name: Test report generator with coverage
+      # The whole suite, which CI did not run. Five test files ran here and in
+      # two other jobs - the FIT four below, resolve-tool in the xml job,
+      # synthetic-workout in synthetic-fit - and the other twelve ran only on
+      # a developer's machine, through the pre-push hook's `make check`.
+      #
+      # Which meant the tests that exist to stop a claim going stale were the
+      # ones nothing enforced: quality-report.test.ts checks that every README
+      # badge still states something true, support-claim.test.ts that all three
+      # surfaces agree on the device count, reduced-devices.test.ts that the
+      # jungles agree with each other. A green run said nothing about any of
+      # them, and neither did a fork's, or a push made with --no-verify.
+      #
+      # They are hermetic and fast - no SDK, no simulator, a couple of seconds
+      # for the lot - so there was never much reason not to.
+      - name: Test every TypeScript tool
+        run: npm test --prefix tools
+      # Two coverage gates, because they answer different questions.
+      #
+      # This one is the whole tooling tree, and it is new. The gate below has
+      # always covered five modules at 95%, and the badge quoting it said
+      # "TypeScript line coverage" - which read as a claim about the
+      # TypeScript in this repo while saying nothing about the other
+      # twenty-odd modules. Measured over all of them the figure is 79%, so
+      # the badge was overstating by sixteen points on a scope nobody could
+      # see. Nothing stopped a new module arriving with no tests at all.
+      #
+      # The e2e driver is excluded rather than counted. It exists to drive a
+      # GUI - spawn a simulator, click a hotspot, OCR a screenshot - and it is
+      # tested by being used: thirteen devices' worth of e2e jobs in two
+      # workflows. Unit-testing it would mean asserting against mocks of the
+      # thing whose real behaviour is the entire question, and counting it
+      # unmeasured drags the tree to 67% and reports the shape of the code
+      # rather than a gap worth closing.
+      #
+      # 75 against a measured 79: enough slack that one new CLI with an
+      # untested main() does not turn this into an obstacle, tight enough that
+      # a module with no tests at all cannot land quietly.
+      - name: Cover the whole tooling tree
+        run: |
+          set -o pipefail
+          node --experimental-strip-types --test --experimental-test-coverage \
+            --test-coverage-exclude='tools/e2e/**' \
+            --test-coverage-exclude='**/*.test.ts' \
+            --test-coverage-lines=75 \
+            tools/*.test.ts 2>&1 | tee coverage-ts.log
+      # The FIT report core, held far higher: this is the code that reads and
+      # writes what a user's watch actually recorded, where a rounding error
+      # is a wrong number in someone's training log rather than a broken
+      # build.
+      - name: Cover the FIT report core
         run: |
           # pipefail, or `| tee` swallows a coverage-gate failure and the
           # step passes on tee's exit code instead. GitHub's default shell is
@@ -62,7 +135,7 @@ jobs:
             --test-coverage-lines=95 \
             tools/analyze-workout.test.ts tools/report-fit.test.ts \
             tools/validate-workout.test.ts tools/workout-history.test.ts \
-            2>&1 | tee coverage-ts.log
+            2>&1 | tee coverage-fit.log
 
       # Quality signals into the job summary, so every run carries the numbers
       # instead of leaving them to a README that rots.
@@ -116,8 +189,9 @@ jobs:
     runs-on: ubuntu-latest
     container:
       # Pinned, not :latest - a floating tag is how v2.10.0's font and
-      # proprietary-file rework reached these jobs unannounced. Bump the
-      # three occurrences together.
+      # proprietary-file rework reached these jobs unannounced. Every place
+      # that names this image has to agree; tools/container-image.test.ts is
+      # what fails when they do not, so bumping it is one search and one test.
       image: ghcr.io/matco/connectiq-tester:v2.10.0
     steps:
       - uses: actions/checkout@v6
@@ -153,8 +227,9 @@ jobs:
     container:
       # Same image the test job's action uses: monkeyc and device files included.
       # Pinned, not :latest - a floating tag is how v2.10.0's font and
-      # proprietary-file rework reached these jobs unannounced. Bump the
-      # three occurrences together.
+      # proprietary-file rework reached these jobs unannounced. Every place
+      # that names this image has to agree; tools/container-image.test.ts is
+      # what fails when they do not, so bumping it is one search and one test.
       image: ghcr.io/matco/connectiq-tester:v2.10.0
     env:
       SHARD: ${{ matrix.shard }}
@@ -183,6 +258,88 @@ jobs:
           done < <(grep -o 'product id="[^"]*"' manifest.xml | cut -d'"' -f2)
           echo "Shard $((SHARD+1))/$SHARD_COUNT: $((total-fails))/$total devices build clean"
           test "$fails" -eq 0
+
+  memory-headroom:
+    name: The app fits on the low-memory watches
+    runs-on: ubuntu-latest
+    # Twenty devices at roughly 26 seconds each is about nine minutes. The
+    # cap is here because the first version of this job did not have one and
+    # sat for 1h42m after it had finished measuring, against the six-hour
+    # default, holding a pull request open.
+    timeout-minutes: 30
+    container:
+      # Needs the device files, the simulator and monkeydo - this is the only
+      # check that runs the app rather than compiling it. Pinned, not :latest,
+      # and kept in step by tools/container-image.test.ts.
+      image: ghcr.io/matco/connectiq-tester:v2.10.0
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - uses: actions/checkout@v6
+      - name: Install a display and Node
+        run: |
+          apt-get update -qq
+          # openbox as well as xvfb: the simulator needs a window manager,
+          # the same one tools/e2e/linux brings up.
+          apt-get install -y -qq --no-install-recommends xvfb openbox curl ca-certificates
+          curl -fsSL https://deb.nodesource.com/setup_22.x | bash -
+          apt-get install -y -qq --no-install-recommends nodejs
+      # The build sweep proves 120 devices compile. Compiling says nothing
+      # about whether a watch can hold what it compiled: the app grew past the
+      # Instinct 2's 96KB in v0.13.4 and crashed inside getInitialView()
+      # before drawing a frame, on 11.94% of installs, through a green
+      # pipeline, until a 1-star review said so four months later.
+      #
+      # Only the tier where the answer can change - everything at or below
+      # 128KB, about 20 devices. From 512KB up a watch has hundreds of KB
+      # spare at the peak and cannot plausibly fail; the nightly run covers
+      # those, which is what catches this assumption being wrong.
+      - name: Measure what is left at the app's peak
+        env:
+          # A container step gets HOME=/github/home, and the simulator reads
+          # its device files and fonts from $HOME/.Garmin. Without this the
+          # simulator starts and answers nothing, which this reported as
+          # "the simulator was not reachable" for all twenty devices - a
+          # check that was really measuring its own environment.
+          # tools/e2e/linux/run-suite.sh sets the same two for the same reason.
+          HOME: /root
+          DISPLAY: ":1"
+        run: |
+          openssl genrsa -out /tmp/key.pem 4096 2>/dev/null
+          openssl pkcs8 -topk8 -inform PEM -outform DER -in /tmp/key.pem -out developer_key.der -nocrypt
+          node --experimental-strip-types --disable-warning=ExperimentalWarning \
+            tools/memory-headroom.ts --at-risk --devices-dir=/root/.Garmin/ConnectIQ/Devices
+
+  reduced-devices:
+    name: Low-memory devices are on the reduced build
+    runs-on: ubuntu-latest
+    container:
+      # Needed for the device files: each device's own compiler.json is what
+      # states its watch-app memory limit, and the whole point of this job is
+      # to derive the list from those rather than trust a list someone typed.
+      # Pinned, not :latest, and kept in step by tools/container-image.test.ts.
+      image: ghcr.io/matco/connectiq-tester:v2.10.0
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - uses: actions/checkout@v6
+      - name: Install Node
+        run: |
+          apt-get update -qq
+          apt-get install -y -qq --no-install-recommends curl ca-certificates
+          curl -fsSL https://deb.nodesource.com/setup_22.x | bash -
+          apt-get install -y -qq --no-install-recommends nodejs
+      # Five of the 120 devices give a watch-app 96KB and cannot hold the
+      # whole app. #172 fixed the crash for three of them, listed by hand,
+      # and left descentg1 and instinctcrossover failing in the store with an
+      # Out Of Memory Error before their first frame. This fails the build
+      # instead, the next time the manifest and the jungles disagree.
+      - name: Check the jungles against the devices' own memory limits
+        run: |
+          node --experimental-strip-types --disable-warning=ExperimentalWarning \
+            tools/reduced-devices.ts /root/.Garmin/ConnectIQ/Devices
 
   build-all:
     name: Build every manifest device
@@ -228,8 +385,9 @@ jobs:
       code-quality: write
     container:
       # Pinned, not :latest - a floating tag is how v2.10.0's font and
-      # proprietary-file rework reached these jobs unannounced. Bump the
-      # three occurrences together.
+      # proprietary-file rework reached these jobs unannounced. Every place
+      # that names this image has to agree; tools/container-image.test.ts is
+      # what fails when they do not, so bumping it is one search and one test.
       image: ghcr.io/matco/connectiq-tester:v2.10.0
     defaults:
       run:
@@ -263,8 +421,47 @@ jobs:
       - name: Run the suite instrumented
         run: |
           set -o pipefail
-          printf 'project.manifest = manifest.xml\nbase.sourcePath = bin/coverage\nbase.excludeAnnotations = offscreenRender;swingTuning\n' > monkey.jungle
-          HOME=/root tester.sh instinct3solar45mm 2>&1 | tee coverage-run.log
+          # The base exclusions are read out of the real jungle, not restated
+          # here. Restating them is what broke this job the first time a
+          # feature became an annotated pair: source carries both twins
+          # (:history and :noHistory, and four more like it), the jungle
+          # excludes one side per device, and a hardcoded list that predates
+          # them compiles both - which the compiler rejects as "Redefinition
+          # of 'addHistoryItem'". This is the fourth place those exclusions
+          # have to agree, and the only one that can derive them.
+          base=$(sed -n 's/^BASE_EXCLUDES = //p' monkey.jungle)
+          # shellcheck disable=SC2016  # $(BASE_EXCLUDES) is jungle syntax to
+          # match literally, not a shell expansion to perform.
+          rest=$(sed -n 's/^base\.excludeAnnotations = \$(BASE_EXCLUDES);//p' monkey.jungle)
+          printf 'project.manifest = manifest.xml\nbase.sourcePath = bin/coverage\nbase.excludeAnnotations = %s;%s\n' "$base" "$rest" > monkey.jungle
+          # tester.sh gives the simulator a flat `sleep 5` and no retry, so a
+          # simulator that segfaults on launch fails this job on code that is
+          # fine - which is what happened on main, with
+          #   tester.sh: line 58: Segmentation fault (core dumped) simulator
+          #   Unable to connect to simulator.
+          # and passed on a rerun with nothing changed. Our own driver retries
+          # the same connect for the same reason (Simulator.loadApp).
+          #
+          # Only that failure is retried. tester.sh also exits 1 when the
+          # tests genuinely fail, and retrying those would turn a real
+          # regression into an intermittent one.
+          for attempt in 1 2 3; do
+            if HOME=/root tester.sh instinct3solar45mm 2>&1 | tee coverage-run.log; then
+              break
+            fi
+            if ! grep -q "Unable to connect to simulator" coverage-run.log; then
+              echo "::error::the instrumented suite failed on its own terms, not on the simulator"
+              exit 1
+            fi
+            if [ "$attempt" = 3 ]; then
+              echo "::error::the simulator did not come up in three attempts"
+              exit 1
+            fi
+            echo "::warning::simulator did not come up (attempt $attempt/3) - retrying"
+            pkill -9 -f 'bin/simulator' || true
+            pkill -9 Xvfb || true
+            sleep 5
+          done
 
       # Printed, not uploaded. This used to also write Cobertura XML for
       # actions/upload-code-coverage, which needed a forked rafiki to produce

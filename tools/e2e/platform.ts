@@ -55,6 +55,17 @@ export interface Platform {
      * synthesized key event of any kind produces a hold. */
     holdMenu(holdMs: number): Promise<void>;
 
+    /** A tap on the watch screen itself, at a fraction of its width and
+     * height rather than a pixel, so one call means the same thing on a
+     * 163px Instinct 2S and a 454px Venu.
+     *
+     * Seven shipped devices have no MENU key, and on those the idle screen's
+     * lower band is the only way into settings (MaceClubsDelegate.onTap).
+     * Without this the driver could press keys and hold a hotspot but never
+     * touch the screen, so that route - the only one those owners have - was
+     * the one thing the suite could not exercise. */
+    tapScreen(xFraction: number, yFraction: number): Promise<void>;
+
     /** PNG of just the watch screen (this device's `screen` rect), not the
      * surrounding device bezel or window chrome. */
     captureScreen(): Promise<Buffer>;

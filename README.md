@@ -3,19 +3,29 @@
 [![CI](https://github.com/serroba/mace-clubs/actions/workflows/ci.yml/badge.svg)](https://github.com/serroba/mace-clubs/actions/workflows/ci.yml)
 [![E2E UI tests](https://github.com/serroba/mace-clubs/actions/workflows/e2e-linux.yml/badge.svg)](https://github.com/serroba/mace-clubs/actions/workflows/e2e-linux.yml)
 [![Devices](https://img.shields.io/badge/devices-120-C08A3E)](manifest.xml)
-[![TypeScript coverage](https://img.shields.io/badge/TypeScript_line_coverage-%E2%89%A595%25-C08A3E)](.github/workflows/ci.yml)
-[![Monkey C coverage](https://img.shields.io/badge/Monkey_C_function_coverage-%E2%89%A570%25-C08A3E)](.github/workflows/ci.yml)
+[![Devices driven through the UI](https://img.shields.io/badge/driven_through_the_UI-13_devices-C08A3E)](.github/workflows/e2e-linux.yml)
+[![Memory headroom](https://img.shields.io/badge/memory_headroom-21_watches_recorded-C08A3E)](tools/memory-baselines.json)
+[![TypeScript coverage](https://img.shields.io/badge/TypeScript_line_coverage-%E2%89%A575%25-C08A3E)](.github/workflows/ci.yml)
+[![Monkey C coverage](https://img.shields.io/badge/Monkey_C_function_coverage-%E2%89%A574%25-C08A3E)](.github/workflows/ci.yml)
 [![Lint rules](https://img.shields.io/badge/lint_rules-11-C08A3E)](https://github.com/bombsimon/monkey-c-rs)
 [![Release](https://img.shields.io/github/v/release/serroba/mace-clubs?color=C08A3E)](https://github.com/serroba/mace-clubs/releases)
 [![License](https://img.shields.io/github/license/serroba/mace-clubs?color=C08A3E)](LICENSE)
 
 Every number above is either reported by GitHub or asserted by a test: the
-device count against `manifest.xml`, each coverage floor against the value CI
-actually fails below, the rule count against the linter's own list. A badge
-that can drift out of date is not worth having, so
-[`quality-report.test.ts`](tools/quality-report.test.ts) fails when one does.
-`make quality` prints the same figures, and every CI run appends them to its
-job summary.
+device count against `manifest.xml`, the UI-driven count against the two e2e
+matrices, the recorded-headroom count against
+[`memory-baselines.json`](tools/memory-baselines.json), each coverage floor
+against the value CI actually fails below, the rule count against the linter's
+own list. A badge that can drift out of date is not worth having, so
+[`quality-report.test.ts`](tools/quality-report.test.ts) fails when one does -
+and it runs in CI, which it did not until #191.
+
+The coverage badge names its scope on purpose. It is the whole tooling tree
+with the e2e driver set aside, because that driver is tested by being used
+across thirteen devices rather than by unit tests. The FIT report core - the
+code that reads and writes what your watch recorded - is held to ≥95%
+separately. `make quality` prints every figure, and every CI run appends them
+to its job summary.
 
 **Website:** [serroba.github.io/mace-clubs](https://serroba.github.io/mace-clubs/) ·
 **Downloads:** [GitHub Releases](https://github.com/serroba/mace-clubs/releases)
@@ -39,6 +49,8 @@ back to the accelerometer where there is no gyroscope, but the counts have not
 been checked against known-correct numbers. Contributing a recording from your
 own watch is the thing that changes that — see
 [CONTRIBUTING.md](CONTRIBUTING.md#calibration-recordings).
+
+Five watches with 96 KB of app memory — Instinct 2, 2S, 2X, Descent G1 and Instinct Crossover — run a reduced build: no history browser, no on-watch workout editor and no Garmin Connect motion charts. The whole app does not fit in 96 KB, and before it was trimmed it did not start on them at all.
 
 ## What it does
 

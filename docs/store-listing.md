@@ -1,7 +1,7 @@
 # Connect IQ Store listing — DRAFT (review before submitting)
 
 <!-- generated:upload -->
-Upload file: `mace-clubs.iq` from the v0.16.0 GitHub release.
+Upload file: `mace-clubs.iq` from the v0.17.0 GitHub release.
 <!-- /generated:upload -->
 
 Note: the store renders these fields as plain text — no markdown emphasis.
@@ -61,11 +61,17 @@ Also included:
   for private offline swing analysis
 
 <!-- generated:whatsnew -->
-## What's new — v0.16.0
+## What's new — v0.17.0
 
-- Stop the paused headline hiding behind the Instinct's subwindow
-- Make the app-drawn screens scale to the device, and adapt the controls to it
-- Fix the app crashing on workout start on every CIQ 3.1 device
+- Watches with no MENU button can now open settings and, during rest, change movement or side - tap the hint at the bottom of the screen. Fixes a paused workout being saved when the screen said it would be discarded.
+- On the Instinct Crossover the watch hands move aside while the workout summary is up, so the numbers underneath stay readable.
+- The app now starts on the Descent G1 and Instinct Crossover too, which share that memory limit and the same reduced build.
+- The app now starts on Instinct 2, 2S and 2X. It ran out of memory on launch before, and those watches run a reduced build to fit: no history browser, on-watch workout editor or Connect motion charts.
+- Work intervals now show in colour on watches with colour displays.
+- Garmin Connect now charts each detected swing, not just the running total.
+- Fixed the swing cadence chart, which reported impossible values.
+- Smoothness is now called the Rhythm Score.
+- The app is now called Mace & Clubs everywhere it can be.
 <!-- /generated:whatsnew -->
 
 ## Icon
@@ -91,6 +97,8 @@ exception: its detector is tuned against labelled recordings from that one
 watch and its 25 Hz gyroscope. On other watches it still runs, falling back to
 the accelerometer where there is no gyroscope, but the counts have not been
 checked against known-correct numbers.
+
+Five watches with 96 KB of app memory — Instinct 2, 2S, 2X, Descent G1 and Instinct Crossover — run a reduced build: no history browser, no on-watch workout editor and no Garmin Connect motion charts. The whole app does not fit in 96 KB, and before it was trimmed it did not start on them at all.
 
 - Language: English
 

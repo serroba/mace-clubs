@@ -16,6 +16,16 @@ function testInputHintsMatchTheHardware(logger as Test.Logger) as Boolean {
     var menuLabel = DeviceInput.menuLabel();
     var pageLabel = DeviceInput.pageLabel();
 
+    // Asked unconditionally: isTouch is the input capability the tap target
+    // and the "SWIPE" hint both hang off, and it was only ever called inside
+    // the tap-target branch below - which is false on the device coverage is
+    // measured on, so nothing checked it agreed with DeviceSettings.
+    Test.assertEqualMessage(
+        DeviceInput.isTouch(),
+        settings.isTouchScreen,
+        "isTouch must report what DeviceSettings says"
+    );
+
     // A hint may never name a button this watch does not have.
     Test.assertEqualMessage(
         menuLabel.equals("MENU"),

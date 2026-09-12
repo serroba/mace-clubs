@@ -6,19 +6,12 @@
 
 import { after, before, describe, it } from "node:test";
 
-import { assertScreenShows } from "./ocr-match.ts";
+import { assertScreenShows } from "../ocr-match.ts";
 
-import { deviceProfile, Simulator } from "./simulator.ts";
+import { openRestOptions } from "../open-menu.ts";
+import { Simulator } from "../simulator.ts";
 
-// MENU is a held button, and seven shipped devices have no MENU key at all
-// (the venu 4 family, venux1, vivoactive6, the vivoactive3 variants). On
-// those there is no hotspot to press and hold, so this file skips rather
-// than clicking empty bezel and failing on an OCR mismatch. DeviceInput's
-// on-screen tap target is what covers the same route there; it needs a
-// coordinate tap the driver does not model yet.
-const suite = deviceProfile().menuHotspot === null ? describe.skip : describe;
-
-void suite("Rest options menu", () => {
+void describe("Rest options menu", () => {
     let sim: Simulator;
 
     before(async () => {
@@ -41,18 +34,21 @@ void suite("Rest options menu", () => {
         // WORK -> free-training REST.
         await sim.press("select");
 
-        // Free-resting, not paused: MENU opens Rest options, not discard.
-        await sim.hold("menu");
+        // Free-resting, not paused: the menu is Rest options, not discard.
+        await openRestOptions(sim);
 
         const joined = (await sim.readText()).join(" ");
-        assertScreenShows(joined, "Rest options");
+        // The first row only. Not the "Rest options" title, which Menu2 wraps
+        // on a 208px Forerunner 55 and gives back as "Rest"; and not the side
+        // row, which on that screen is below the fold.
         assertScreenShows(joined, "Move");
-        assertScreenShows(joined, "Side");
 
-        // "Discard & go home" is the last item and below the fold on this
-        // screen. Scroll until it is actually visible rather than pressing a
-        // fixed number of times: a button steps one row, but a swipe flings a
-        // touch list by a variable amount and overscrolls a three-item menu.
+        // The rows below the first, scrolled to rather than asserted where
+        // they may not be. A button steps one row, but a swipe flings a touch
+        // list by a variable amount and overscrolls a three-item menu, so
+        // this presses until each is actually visible rather than a fixed
+        // number of times.
+        await sim.pressUntilVisible("down", "Side");
         await sim.pressUntilVisible("down", "Discard");
     });
 });

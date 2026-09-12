@@ -252,6 +252,16 @@ export class MacosPlatform implements Platform {
         await execFileAsync("swift", [MOUSE_HOLD_SCRIPT, String(x), String(y), String(holdMs)]);
     }
 
+    async tapScreen(xFraction: number, yFraction: number): Promise<void> {
+        const bounds = this.windowBounds();
+        const screen = this.device.screen;
+        const x = bounds.x + Math.round(screen.x + screen.width * xFraction);
+        const y = bounds.y + TITLE_BAR_POINTS + Math.round(screen.y + screen.height * yFraction);
+        // The same press-and-hold script the MENU hotspot uses, held just
+        // long enough to register as a tap rather than a long press.
+        await execFileAsync("swift", [MOUSE_HOLD_SCRIPT, String(x), String(y), "80"]);
+    }
+
     async captureScreen(): Promise<Buffer> {
         const bounds = this.windowBounds();
         const screen = this.device.screen;

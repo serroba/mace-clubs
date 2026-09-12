@@ -1,0 +1,9 @@
+{
+  "172": "The app now starts on Instinct 2, 2S and 2X. It ran out of memory on launch before, and those watches run a reduced build to fit: no history browser, on-watch workout editor or Connect motion charts.",
+  "174": "The app now starts on the Descent G1 and Instinct Crossover too, which share that memory limit and the same reduced build.",
+  "181": "On the Instinct Crossover the watch hands move aside while the workout summary is up, so the numbers underneath stay readable.",
+  "185": "Watches with no MENU button can now open settings and, during rest, change movement or side - tap the hint at the bottom of the screen. Fixes a paused workout being saved when the screen said it would be discarded.",
+  "177": "Fixed text running off the edge of the screen on smaller round watches.",
+  "156": "Smoothness is now called the Rhythm Score.",
+  "152": "The app is now called Mace & Clubs everywhere it can be."
+}
