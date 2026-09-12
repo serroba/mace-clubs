@@ -1,43 +1,18 @@
 import Toybox.Lang;
-import Toybox.Math;
 
-// Pure, on-watch repeatability scoring over one-second motion summaries.
-// See docs/smoothness-physics.md before changing the model or terminology.
+// The persistence policy for saved session scores.
+//
+// This module used to hold the scoring model too: a per-window comparison of
+// wrist acceleration against an adaptive reference. That model measured
+// something other than rhythm - it ran against effort, and could not fall
+// with fatigue because its reference followed the athlete down - and it has
+// been replaced by SwingSeries.steadiness, which measures the gaps between
+// detected swings. docs/smoothness-physics.md has the evidence.
+//
+// The name survives in storage keys, FIT fields and settings, where changing
+// it would break saved data for no gain.
 module Smoothness {
-    const MIN_DYNAMIC_RMS = 40;
-    const WARMUP_WINDOWS = 4;
     const HISTORY_LIMIT = 12;
-
-    function normalizedDifference(value as Float, reference as Float, floor as Float) as Float {
-        var scale = reference < 0.0 ? -reference : reference;
-        if (scale < floor) {
-            scale = floor;
-        }
-        var difference = value - reference;
-        if (difference < 0.0) {
-            difference = -difference;
-        }
-        return (difference / scale).toFloat();
-    }
-
-    function windowScore(
-        dynamicRms as Number,
-        dynamicPeak as Number,
-        crossings as Number,
-        referenceRms as Float,
-        referencePeak as Float,
-        referenceCrossings as Float
-    ) as Number {
-        var rmsDifference = normalizedDifference(dynamicRms.toFloat(), referenceRms, 40.0);
-        var peakDifference = normalizedDifference(dynamicPeak.toFloat(), referencePeak, 80.0);
-        var timingDifference = normalizedDifference(crossings.toFloat(), referenceCrossings, 2.0);
-        var difference = 0.45 * rmsDifference + 0.35 * peakDifference + 0.20 * timingDifference;
-        var score = (100.0 - 100.0 * difference).toNumber();
-        if (score < 0) {
-            return 0;
-        }
-        return score > 100 ? 100 : score;
-    }
 
     // Return a new bounded history so callers can test the persistence policy
     // without touching Application.Storage.
@@ -51,59 +26,5 @@ module Smoothness {
         result.add(score);
         result.add(windows);
         return result;
-    }
-
-    class Tracker {
-        private var _validWindows as Number = 0;
-        private var _scoredWindows as Number = 0;
-        private var _scoreTotal as Number = 0;
-        private var _referenceRms as Float = 0.0;
-        private var _referencePeak as Float = 0.0;
-        private var _referenceCrossings as Float = 0.0;
-
-        function add(features as Dictionary) as Boolean {
-            var dynamicRms = features[:dynamicRms] as Number;
-            var dynamicPeak = features[:dynamicPeak] as Number;
-            var crossings = features[:zc] as Number;
-            if (dynamicRms < MIN_DYNAMIC_RMS) {
-                return false;
-            }
-
-            if (_validWindows == 0) {
-                _referenceRms = dynamicRms.toFloat();
-                _referencePeak = dynamicPeak.toFloat();
-                _referenceCrossings = crossings.toFloat();
-            } else {
-                if (_validWindows >= WARMUP_WINDOWS) {
-                    _scoreTotal += windowScore(
-                        dynamicRms,
-                        dynamicPeak,
-                        crossings,
-                        _referenceRms,
-                        _referencePeak,
-                        _referenceCrossings
-                    );
-                    _scoredWindows++;
-                }
-                // 20% new observation, 80% existing session reference.
-                _referenceRms = 0.8 * _referenceRms + 0.2 * dynamicRms;
-                _referencePeak = 0.8 * _referencePeak + 0.2 * dynamicPeak;
-                _referenceCrossings = 0.8 * _referenceCrossings + 0.2 * crossings;
-            }
-            _validWindows++;
-            return true;
-        }
-
-        function getScore() as Number {
-            return _scoredWindows == 0 ? -1 : _scoreTotal / _scoredWindows;
-        }
-
-        function getScoredWindows() as Number {
-            return _scoredWindows;
-        }
-
-        function getScoreTotal() as Number {
-            return _scoreTotal;
-        }
     }
 }

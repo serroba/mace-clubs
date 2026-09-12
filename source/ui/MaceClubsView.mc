@@ -481,7 +481,7 @@ class MaceClubsView extends WatchUi.View {
         var index = count - 1;
         var score = workout.getSetSmoothnessScore(index);
         if (score < 0) {
-            return Lang.format("set $1$: not enough motion", [count]);
+            return Lang.format("set $1$: not enough swings", [count]);
         }
         return Lang.format("set $1$: $2$ ($3$s)", [count, score, workout.getSetSmoothnessWindows(index)]);
     }

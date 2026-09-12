@@ -19,7 +19,6 @@ class WorkoutSession {
     private var _smoothnessEnabled as Boolean = false;
     private var _loadExposureEnabled as Boolean = false;
     private var _swingDebugEnabled as Boolean = false;
-    private var _smoothness as Smoothness.Tracker;
     private var _loadExposure as LoadExposure.Tracker;
     private var _setSmoothness as SmoothnessSetSummaries;
     private var _smoothnessHistory as Array<Number> = [];
@@ -40,7 +39,6 @@ class WorkoutSession {
 
     function initialize() {
         _fit = new FitFields();
-        _smoothness = new Smoothness.Tracker();
         _loadExposure = new LoadExposure.Tracker();
         _setSmoothness = new SmoothnessSetSummaries();
         _swingCounter = newSwingCounter();
@@ -238,7 +236,7 @@ class WorkoutSession {
     (:motionExport)
     private function recordMotionExport(f as Dictionary) as Void {
         _fit.writeMotionFeatures(f[:rms] as Number, f[:peak] as Number, f[:zc] as Number);
-        _fit.writeRecordSmoothness(_smoothness.getScore());
+        _fit.writeRecordSmoothness(_swingSeries.getSessionSteadiness());
     }
 
     (:noMotionExport)
@@ -354,7 +352,15 @@ class WorkoutSession {
         // Swing counting shares the same accelerometer stream. Challenge
         // presets force it on (the count is the whole point of the mode);
         // regular sessions opt in via the swingCounter setting.
-        var swingEnabled = _forceSwingCounting || debugEnabled;
+        //
+        // The Rhythm Score forces it too, because it is measured from the gaps
+        // between detected swings - without the counter there are no gaps and
+        // no score. The two settings were independent when rhythm came from
+        // wrist acceleration alone, so someone who had turned the score on and
+        // the counter off would otherwise get silence where they used to get a
+        // number. The gyroscope costs battery; that session measured 1.0% in
+        // an hour.
+        var swingEnabled = _forceSwingCounting || debugEnabled || _smoothnessEnabled;
         if (!swingEnabled) {
             try {
                 var sc = Application.Properties.getValue("swingCounter");
@@ -437,8 +443,6 @@ class WorkoutSession {
             accel.x as Array<Number>,
             accel.y as Array<Number>,
             accel.z as Array<Number>,
-            _smoothnessEnabled ? _smoothness : null,
-            _setSmoothness.isOpen(),
             _loadExposureEnabled ? _loadExposure : null,
             _workOpen,
             _swingCounting ? _swingCounter : null,
@@ -504,7 +508,7 @@ class WorkoutSession {
     function addSetWithDuration(durationSeconds as Number) as Void {
         if (_smoothnessEnabled) {
             if (_setSmoothness.isOpen()) {
-                _setSmoothness.complete(_smoothness.getScoreTotal(), _smoothness.getScoredWindows());
+                _setSmoothness.complete(_swingSeries.getSteadiness(), _swingSeries.getGaps());
             } else {
                 // A delayed plan refresh can discover multiple completed sets
                 // together. Preserve their numbering without inventing scores.
@@ -590,7 +594,8 @@ class WorkoutSession {
         // shares the boundary: swings during rest never count.
         _workOpen = true;
         if (_smoothnessEnabled) {
-            _setSmoothness.begin(_smoothness.getScoreTotal(), _smoothness.getScoredWindows());
+            _swingSeries.openSpan();
+            _setSmoothness.begin();
         }
     }
 
@@ -613,12 +618,16 @@ class WorkoutSession {
         }
     }
 
+    // Still called smoothness throughout the app and its storage; the
+    // quantity behind it is now the steadiness of the gaps between swings.
+    // See docs/smoothness-physics.md.
     function getSmoothnessScore() as Number {
-        return _smoothness.getScore();
+        return _swingSeries.getSessionSteadiness();
     }
 
+    /** How many gaps the session score was computed from. */
     function getSmoothnessWindows() as Number {
-        return _smoothness.getScoredWindows();
+        return _swingSeries.getSessionGaps();
     }
 
     function getSetSmoothnessCount() as Number {
@@ -682,8 +691,17 @@ class WorkoutSession {
     private function loadComparableHistory() as Void {
         // Movement and working side affect the accelerometer signature, so
         // smoothness trends only compare like-for-like blocks.
+        // The "r2" is the scoring model, not a schema version.
+        //
+        // The Rhythm Score used to be a per-window acceleration comparison and
+        // is now the steadiness of the gaps between swings. Both land in 0-100
+        // and neither can be told from the other by looking, so a delta across
+        // the change would be a subtraction of two different quantities
+        // presented as progress. Keying by model means the trend starts again
+        // rather than lying once; the old values stay in storage, readable,
+        // and are simply never compared against these.
         _smoothnessHistoryKey = Lang.format(
-            "$1$_m$2$_s$3$",
+            "$1$_m$2$_s$3$_r2",
             [
                 Equipment.historyKeyFor(_equipmentType, _equipmentCount, _equipmentWeightGrams),
                 _movementType,
@@ -854,7 +872,6 @@ class WorkoutSession {
         _smoothnessEnabled = false;
         _loadExposureEnabled = false;
         _swingDebugEnabled = false;
-        _smoothness = new Smoothness.Tracker();
         _loadExposure = new LoadExposure.Tracker();
         _setSmoothness = new SmoothnessSetSummaries();
         _swingCounter = newSwingCounter();

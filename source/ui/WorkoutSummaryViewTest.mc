@@ -111,8 +111,8 @@ function testWorkoutSummaryFallbackTextRendersWithNoData(logger as Test.Logger) 
     view.cyclePage(1);
     Test.assertEqualMessage(
         view.currentLines()[1],
-        "not enough motion",
-        "smoothness page falls back with no data"
+        "not enough swings",
+        "the rhythm page falls back when nothing was timed"
     );
 
     // The balance page had a fallback here too - "n/a" when no set was worked

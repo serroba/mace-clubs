@@ -57,8 +57,11 @@ module SyntheticMotion {
     // Run the complete 50-second scenario through Motion.processWindow(), the
     // same entry point used by WorkoutSession.onSensorData().
     function run() as Dictionary {
-        var smooth = new Smoothness.Tracker();
-        var irregular = new Smoothness.Tracker();
+        // Rhythm is scored per span now, from the gaps between detected
+        // swings, so the two sections are read off one tracker at their
+        // boundaries rather than kept in two.
+        var smoothScore = -1;
+        var irregularScore = -1;
         var exposure = new LoadExposure.Tracker();
         var counter = SwingCounter.defaultCounter();
         var swingSeries = new SwingSeries.Tracker();
@@ -72,23 +75,26 @@ module SyntheticMotion {
             var style = styleAt(second);
             var work = isWork(second);
             var axes = samples(style, second);
-            var tracker = second >= 5 && second < 25 ? smooth : (second >= 30 ? irregular : null);
+            if (second == 5 || second == 30) {
+                swingSeries.openSpan();
+            }
             var result = Motion.processWindow(
                 axes[:x] as Array<Number>,
                 axes[:y] as Array<Number>,
                 axes[:z] as Array<Number>,
-                tracker,
-                work,
                 exposure,
                 work,
                 counter,
                 true
             );
             var swingPoint = swingSeries.addTotal(counter.getCount());
+            if (second == 24) {
+                smoothScore = swingSeries.getSteadiness();
+            }
             result.put(:swingTotal, swingPoint[:total] as Number);
             result.put(:swingEvent, swingPoint[:event] as Number);
             result.put(:swingCadence, swingPoint[:cadence] as Number);
-            result.put(:smoothnessScore, tracker == null ? -1 : (tracker as Smoothness.Tracker).getScore());
+            result.put(:smoothnessScore, swingSeries.getSessionSteadiness());
             records.add(result);
             workSeconds += work ? 1 : 0;
             restSeconds += work ? 0 : 1;
@@ -100,10 +106,11 @@ module SyntheticMotion {
                 spikePeak = peak;
             }
         }
+        irregularScore = swingSeries.getSteadiness();
         return {
             :records        => records,
-            :smoothScore    => smooth.getScore(),
-            :irregularScore => irregular.getScore(),
+            :smoothScore    => smoothScore,
+            :irregularScore => irregularScore,
             :exposure       => exposure.getExposure(),
             :activeSeconds  => exposure.getActiveSeconds(),
             :sessionPeak    => sessionPeak,

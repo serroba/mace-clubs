@@ -176,17 +176,12 @@ module Motion {
         x as Array<Number>,
         y as Array<Number>,
         z as Array<Number>,
-        smoothness as Smoothness.Tracker?,
-        smoothnessOpen as Boolean,
         exposure as LoadExposure.Tracker?,
         workOpen as Boolean,
         counter as SwingCounter.Counter?,
         swingCounting as Boolean
     ) as Dictionary {
         var result = features(x, y, z);
-        if (smoothness != null && smoothnessOpen) {
-            (smoothness as Smoothness.Tracker).add(result);
-        }
         if (exposure != null && workOpen) {
             (exposure as LoadExposure.Tracker).add(result);
         }

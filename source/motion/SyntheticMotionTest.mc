@@ -17,21 +17,26 @@ function testSyntheticWorkoutUsesProductionMotionPipeline(logger as Test.Logger)
 (:test)
 function testSyntheticWorkoutDistinguishesSmoothAndIrregularWork(logger as Test.Logger) as Boolean {
     var workout = SyntheticMotion.run();
-    var smooth = workout[:smoothScore] as Number;
-    var irregular = workout[:irregularScore] as Number;
-    Test.assertMessage(smooth >= 90, "stable periodic work remains highly repeatable");
-    Test.assertMessage(irregular >= 0, "irregular work produces a score");
-    Test.assertMessage(smooth > irregular, "smooth work scores above irregular work");
+    // This scenario no longer scores rhythm, and cannot.
+    //
+    // It was built for the model the Rhythm Score used to use, which scored
+    // every one-second acceleration window and so always had something to
+    // report. The score now measures the gaps between *detected swings*, and
+    // this fifty-second waveform produces fewer than the three gaps a score
+    // needs - both spans come back -1. Asserting on that would be asserting
+    // that the fixture is too short.
+    //
+    // The model itself is tested directly against controlled gap sequences in
+    // SmoothnessTest, and against a real recording in docs/swing-counting.md.
+    // What is missing, and worth building, is a synthetic waveform the swing
+    // counter actually bites on: then this scenario could show an even train
+    // scoring above a ragged one through the production pipeline.
     var records = workout[:records] as Array<Dictionary>;
-    var hasLiveSmoothness = false;
     for (var i = 0; i < records.size(); i++) {
         var score = records[i][:smoothnessScore] as Number;
-        if (score >= 0) {
-            hasLiveSmoothness = true;
-            Test.assertMessage(score <= 100, "live smoothness remains bounded");
-        }
+        Test.assertMessage(score <= 100, "live rhythm remains bounded");
+        Test.assertMessage(score >= -1, "an unscored second reports -1, not a wrong number");
     }
-    Test.assertMessage(hasLiveSmoothness, "synthetic workout emits smoothness over time");
     return true;
 }
 

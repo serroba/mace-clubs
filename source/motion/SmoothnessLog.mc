@@ -32,7 +32,12 @@ module SmoothnessLog {
     const IDX_SCORE = 6;
     const IDX_NSETS = 7;
     const IDX_SETS = 8;
-    const DETAIL_MAGIC = 20260816;
+    // Bumped when the Rhythm Score changed model: 20260816 records carry a
+    // per-window acceleration score, 20260912 records the steadiness of swing
+    // gaps. A reader that cannot tell them apart would present two different
+    // quantities as one trend - see docs/smoothness-physics.md.
+    const DETAIL_MAGIC = 20260912;
+    const DETAIL_MAGIC_WINDOWED = 20260816;
     const DETAIL_HEADER = 4;
     const DETAIL_STRIDE = 8;
     const DETAIL_WORK = 0;
@@ -153,9 +158,29 @@ module SmoothnessLog {
         return field(rec, IDX_SETS + index);
     }
 
+    // Both magics count as detailed. The bump records which model scored the
+    // session, not a change of layout, so refusing the older one would strip
+    // the work/rest breakdown from every session saved before the change -
+    // punishing old records for a difference that is only about the score.
     function hasDetails(rec as Array<Storage.ValueType>) as Boolean {
         var start = detailStart(rec);
-        return rec.size() >= start + DETAIL_HEADER && field(rec, start) == DETAIL_MAGIC;
+        if (rec.size() < start + DETAIL_HEADER) {
+            return false;
+        }
+        var magic = field(rec, start);
+        return magic == DETAIL_MAGIC || magic == DETAIL_MAGIC_WINDOWED;
+    }
+
+    /**
+     * Whether this session's scores came from the model the Rhythm Score used
+     * before it measured swing gaps.
+     *
+     * Worth being able to ask. The two models both produce 0-100 and cannot be
+     * told apart by looking, and one of them rose as the athlete tired.
+    */
+    function scoredByWindows(rec as Array<Storage.ValueType>) as Boolean {
+        var start = detailStart(rec);
+        return rec.size() >= start + DETAIL_HEADER && field(rec, start) == DETAIL_MAGIC_WINDOWED;
     }
 
     function totalWorkOf(rec as Array<Storage.ValueType>) as Number {

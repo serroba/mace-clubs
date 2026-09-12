@@ -71,8 +71,8 @@ set is committed.
 
 **Remembers the practice.** Your last 20 sessions stay on the watch, browsable
 from Settings with each session's per-set scores and implement. An optional
-Rhythm Score tracks how repeatable your motion is across a 12-session trend —
-no account, no network request, nothing uploaded.
+Rhythm Score measures how evenly spaced your swings are, across a 12-session
+trend — no account, no network request, nothing uploaded.
 
 **Records what you did.** Work sets and timed rests become separate lap
 boundaries, each carrying its movement, working side, implement weight,
