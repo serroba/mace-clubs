@@ -50,6 +50,7 @@ export const REDUCED_EXCLUSIONS = [
     "motionExport",
     "menuLabelPrefix",
     "launcherIcon",
+    "setChart",
 ] as const;
 
 /** Product ids in the order the manifest lists them. */

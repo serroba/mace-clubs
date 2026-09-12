@@ -15,12 +15,12 @@ BASE_EXCLUDES = offscreenRender;swingTuning
 # the noSwingDebug stubs and keeps the real path; those three devices swap
 # which side is compiled. Keep the three jungles in step - a device that
 # builds here and not there is a device nobody runs.
-base.excludeAnnotations = $(BASE_EXCLUDES);memoryProbe;noSwingDebug;noHistory;noCustomWorkout;noMotionExport;noMenuLabelPrefix;noLauncherIcon
-descentg1.excludeAnnotations = $(BASE_EXCLUDES);memoryProbe;swingDebug;history;customWorkout;motionExport;menuLabelPrefix;launcherIcon
-instinct2.excludeAnnotations = $(BASE_EXCLUDES);memoryProbe;swingDebug;history;customWorkout;motionExport;menuLabelPrefix;launcherIcon
-instinct2s.excludeAnnotations = $(BASE_EXCLUDES);memoryProbe;swingDebug;history;customWorkout;motionExport;menuLabelPrefix;launcherIcon
-instinct2x.excludeAnnotations = $(BASE_EXCLUDES);memoryProbe;swingDebug;history;customWorkout;motionExport;menuLabelPrefix;launcherIcon
-instinctcrossover.excludeAnnotations = $(BASE_EXCLUDES);memoryProbe;swingDebug;history;customWorkout;motionExport;menuLabelPrefix;launcherIcon
+base.excludeAnnotations = $(BASE_EXCLUDES);memoryProbe;noSwingDebug;noHistory;noCustomWorkout;noMotionExport;noMenuLabelPrefix;noLauncherIcon;noSetChart
+descentg1.excludeAnnotations = $(BASE_EXCLUDES);memoryProbe;swingDebug;history;customWorkout;motionExport;menuLabelPrefix;launcherIcon;setChart
+instinct2.excludeAnnotations = $(BASE_EXCLUDES);memoryProbe;swingDebug;history;customWorkout;motionExport;menuLabelPrefix;launcherIcon;setChart
+instinct2s.excludeAnnotations = $(BASE_EXCLUDES);memoryProbe;swingDebug;history;customWorkout;motionExport;menuLabelPrefix;launcherIcon;setChart
+instinct2x.excludeAnnotations = $(BASE_EXCLUDES);memoryProbe;swingDebug;history;customWorkout;motionExport;menuLabelPrefix;launcherIcon;setChart
+instinctcrossover.excludeAnnotations = $(BASE_EXCLUDES);memoryProbe;swingDebug;history;customWorkout;motionExport;menuLabelPrefix;launcherIcon;setChart
 # fenix5 (API 3.1, our oldest supported level) used to be excluded from
 # liveSessionSmoke because Activity.SPORT_TRAINING (@since 3.2.0) threw at
 # runtime there. WorkoutSession.trainingSport() now falls back to the

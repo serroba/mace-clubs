@@ -9,9 +9,9 @@ base.sourcePath = source
 # monkey.jungle: the five 96KB watches ship a reduced build, and measuring
 # the full one there would report headroom no owner has.
 BASE_EXCLUDES = offscreenRender;swingTuning
-base.excludeAnnotations = $(BASE_EXCLUDES);noMemoryProbe;noSwingDebug;noHistory;noCustomWorkout;noMotionExport;noMenuLabelPrefix;noLauncherIcon
-descentg1.excludeAnnotations = $(BASE_EXCLUDES);noMemoryProbe;swingDebug;history;customWorkout;motionExport;menuLabelPrefix;launcherIcon
-instinct2.excludeAnnotations = $(BASE_EXCLUDES);noMemoryProbe;swingDebug;history;customWorkout;motionExport;menuLabelPrefix;launcherIcon
-instinct2s.excludeAnnotations = $(BASE_EXCLUDES);noMemoryProbe;swingDebug;history;customWorkout;motionExport;menuLabelPrefix;launcherIcon
-instinct2x.excludeAnnotations = $(BASE_EXCLUDES);noMemoryProbe;swingDebug;history;customWorkout;motionExport;menuLabelPrefix;launcherIcon
-instinctcrossover.excludeAnnotations = $(BASE_EXCLUDES);noMemoryProbe;swingDebug;history;customWorkout;motionExport;menuLabelPrefix;launcherIcon
+base.excludeAnnotations = $(BASE_EXCLUDES);noMemoryProbe;noSwingDebug;noHistory;noCustomWorkout;noMotionExport;noMenuLabelPrefix;noLauncherIcon;noSetChart
+descentg1.excludeAnnotations = $(BASE_EXCLUDES);noMemoryProbe;swingDebug;history;customWorkout;motionExport;menuLabelPrefix;launcherIcon;setChart
+instinct2.excludeAnnotations = $(BASE_EXCLUDES);noMemoryProbe;swingDebug;history;customWorkout;motionExport;menuLabelPrefix;launcherIcon;setChart
+instinct2s.excludeAnnotations = $(BASE_EXCLUDES);noMemoryProbe;swingDebug;history;customWorkout;motionExport;menuLabelPrefix;launcherIcon;setChart
+instinct2x.excludeAnnotations = $(BASE_EXCLUDES);noMemoryProbe;swingDebug;history;customWorkout;motionExport;menuLabelPrefix;launcherIcon;setChart
+instinctcrossover.excludeAnnotations = $(BASE_EXCLUDES);noMemoryProbe;swingDebug;history;customWorkout;motionExport;menuLabelPrefix;launcherIcon;setChart
