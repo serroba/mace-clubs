@@ -51,18 +51,22 @@
 
     /* 50 bpm is the app's own default tempo, and the hero beats at it. */
     --beat: 1.2s;
-    /* One pass of the hero's session loop: start, work, paused, back. Twenty
-       beats, and deliberately two whole turns of the twelve-second digit
-       roll below, so the clock is always at 0:00 when the work screen
-       appears. */
-    --sim: calc(var(--beat) * 20);
-    /* How long the traced revolution took on the day: 55 frames of 30fps
-       footage, played back at the rate it was shot. It is the recording's
-       own cadence and not the metronome's - he was doing single 360s with
-       a pause between them, so there is no tempo here to match the beat
-       to, and pretending otherwise would be the one dishonest thing on
-       this page. */
-    --swing: 1.833s;
+    /* One pass of the hero's whole session: start, equipment, movement,
+       the countdown, twelve seconds of work, the paused summary and the
+       saved one. Thirty beats, chosen so it is a whole number of every
+       other clock on the page - three turns of the twelve-second digit
+       roll, so the watch clock always arrives at 0:00, and twenty turns
+       of the figure further down, so the two never drift apart. */
+    --sim: calc(var(--beat) * 30);
+    /* How long the traced revolution took on the day. 55 frames of 30fps
+       footage is 1.833s; it is played at 1.8s, which is the same thing to
+       within half a frame and is what lets the figure and the session loop
+       above stay locked to each other for ever. It is still the
+       recording's own cadence and not the metronome's - he was doing
+       single 360s with a pause between them, so there is no tempo here to
+       match the beat to, and speeding it up to 50 bpm would be the one
+       dishonest thing on this page. */
+    --swing: calc(var(--beat) * 1.5);
   }
 
   * { box-sizing: border-box; }
@@ -384,37 +388,53 @@
   .s-sub { fill: none; stroke: var(--brass); stroke-width: 3; }
   .s-hair { stroke: rgba(192, 138, 62, .45); stroke-width: 1; }
 
-  /* A session, in one loop: the start screen, twelve seconds of work, the
-     paused summary, back to the start. */
+  /* A whole session, in one loop: the start screen, the two pickers, the
+     countdown, twelve seconds of work, the paused summary, and the summary it
+     saves. Each phase is a hard cut, because a watch redraws rather than
+     dissolving. */
   .screen .phase { opacity: 0; }
   .screen .phase--work { opacity: 1; }
   .screen--sim .phase--start { animation: sim-start var(--sim) step-end infinite; }
+  .screen--sim .phase--equipment { animation: sim-equipment var(--sim) step-end infinite; }
+  .screen--sim .phase--movement { animation: sim-movement var(--sim) step-end infinite; }
+  .screen--sim .phase--ready { animation: sim-ready var(--sim) step-end infinite; }
   .screen--sim .phase--work { animation: sim-work var(--sim) step-end infinite; }
   .screen--sim .phase--paused { animation: sim-paused var(--sim) step-end infinite; }
+  .screen--sim .phase--summary { animation: sim-summary var(--sim) step-end infinite; }
+  @keyframes sim-start     { 0% { opacity: 1 } 10% { opacity: 0 } }
+  @keyframes sim-equipment { 0% { opacity: 0 } 10% { opacity: 1 } 20% { opacity: 0 } }
+  @keyframes sim-movement  { 0% { opacity: 0 } 20% { opacity: 1 } 30% { opacity: 0 } }
+  @keyframes sim-ready     { 0% { opacity: 0 } 30% { opacity: 1 } 40% { opacity: 0 } }
+  @keyframes sim-work      { 0% { opacity: 0 } 40% { opacity: 1 } 73.33% { opacity: 0 } }
+  @keyframes sim-paused    { 0% { opacity: 0 } 73.33% { opacity: 1 } 86.67% { opacity: 0 } }
+  @keyframes sim-summary   { 0% { opacity: 0 } 86.67% { opacity: 1 } }
+  /* A thumb on the button, at each of the five moments the screen changes
+     because of one. Four are SELECT; the one at 73% is BACK, which is what
+     ends a set. */
   .s-press { fill: var(--lamp); opacity: 0; animation: sim-press var(--sim) step-end infinite; }
-  @keyframes sim-start  { 0% { opacity: 1 } 15% { opacity: 0 } 90% { opacity: 1 } }
-  @keyframes sim-work   { 0% { opacity: 0 } 15% { opacity: 1 } 65% { opacity: 0 } }
-  @keyframes sim-paused { 0% { opacity: 0 } 65% { opacity: 1 } 90% { opacity: 0 } }
-  /* SELECT, under a thumb, at the two moments the screen changes because of
-     it. The button rail is drawn in CSS outside the glass, so this is the
-     inside edge of it lighting up. */
   @keyframes sim-press {
-    0%    { opacity: 0 }
-    13.5% { opacity: 1 }
-    15%   { opacity: 0 }
-    63.5% { opacity: 1 }
-    65%   { opacity: 0 }
+    0%     { opacity: 0 }
+    9%     { opacity: 1 }   10%    { opacity: 0 }
+    19%    { opacity: 1 }   20%    { opacity: 0 }
+    29%    { opacity: 1 }   30%    { opacity: 0 }
+    72.3%  { opacity: 1 }   73.33% { opacity: 0 }
+    85.7%  { opacity: 1 }   86.67% { opacity: 0 }
   }
+  /* The countdown before a set, one digit per beat. The app counts five down
+     to one; the loop shows the last three of them, which is as much as three
+     and a bit seconds of screen holds. */
+  .s-ready { animation: ready calc(var(--beat) * 3) steps(3) infinite; animation-delay: calc(var(--beat) * 9); }
+  @keyframes ready { from { transform: translateY(-60px) } to { transform: translateY(0) } }
 
   /*
     The odometer. One turn is twelve seconds: the seconds digit takes twelve
-    steps, the swing count ten, and they restart together. Both are delayed by
-    three beats so that in the hero - whose loop is exactly two turns long -
-    the work screen always arrives on 0:00.
+    steps, the swing count ten, and they restart together. Both are delayed to
+    the moment the hero's work screen appears, and the hero's loop is exactly
+    three turns long, so it always arrives on 0:00.
   */
   .roll {
     animation-duration: calc(var(--beat) * 10);
-    animation-delay: calc(var(--beat) * 3);
+    animation-delay: calc(var(--beat) * 12);
     animation-iteration-count: infinite;
   }
   .roll--secs { animation-name: roll-secs; animation-timing-function: steps(12); }
@@ -442,6 +462,24 @@
     0%, 40%   { transform: translateY(0); animation-timing-function: cubic-bezier(.3, 0, .2, 1) }
     50%, 90%  { transform: translateY(30px); animation-timing-function: cubic-bezier(.3, 0, .2, 1) }
     100%      { transform: translateY(0) }
+  }
+
+
+  /* The end-of-workout chart, growing left to right when the page arrives.
+     Each bar scales about its own foot, which is the only way a bar chart
+     can grow without sliding. */
+  .s-bars rect { transform-box: view-box; animation: bar calc(var(--beat) * 8) ease-out infinite; }
+  @keyframes bar { 0% { transform: scaleY(0) } 14%, 100% { transform: scaleY(1) } }
+
+  /* The history browser: the list, then the session you picked. */
+  .s-hist-list { animation: hist-list calc(var(--beat) * 8) step-end infinite; }
+  .s-hist-detail { opacity: 0; animation: hist-detail calc(var(--beat) * 8) step-end infinite; }
+  @keyframes hist-list { 0% { opacity: 1 } 66% { opacity: 0 } }
+  @keyframes hist-detail { 0% { opacity: 0 } 66% { opacity: 1 } }
+  .s-hist-focus { animation: hist-focus calc(var(--beat) * 8) infinite; }
+  @keyframes hist-focus {
+    0%, 28%  { transform: translateY(0); animation-timing-function: cubic-bezier(.3, 0, .2, 1) }
+    38%, 100% { transform: translateY(38px) }
   }
 
   /* The summary sits still - it is a thing you read - but the save it is
@@ -657,17 +695,28 @@
        one is the top of the revolution: mace up, weight still stacked,
        which is the frame that reads as a mace being swung. */
     .swinger .strip { animation: none; }
-    /* Each screen holds the frame that says the most: the work screen, at
-       0:00 with nothing counted yet. */
+    /* Each screen holds the frame that says the most: the work screen at
+       0:00 with nothing counted yet, the history on its list, and the
+       chart with its bars up rather than flat on the floor. */
     .screen--sim .phase--start,
+    .screen--sim .phase--equipment,
+    .screen--sim .phase--movement,
+    .screen--sim .phase--ready,
     .screen--sim .phase--work,
     .screen--sim .phase--paused,
+    .screen--sim .phase--summary,
     .s-press,
+    .s-ready,
     .s-focus,
     .s-scrollbar,
     .s-offer,
+    .s-bars rect,
+    .s-hist-list,
+    .s-hist-detail,
+    .s-hist-focus,
     .beat-num,
     .roll { animation: none; }
+    .s-hist-detail { display: none; }
     .button, .resource .arrow, .resource strong { transition: none; }
   }
 </style>
@@ -736,7 +785,7 @@
       <div class="device device--hero">
         <div class="device__case">
         <svg class="screen screen--sim device__screen" viewBox="0 0 176 176" role="img"
-             aria-label="The app running on an Instinct 3 Solar, one session in a loop: the start screen reading 50 bpm, fixed 4, SELECT to start, MENU opens settings; then the work screen, its clock running and the swing count in the subwindow climbing one per beat; then the paused summary reading one set, 0:11, both hands 1/1, with SELECT to save, BACK to resume and MENU to discard.">
+             aria-label="A whole session on an Instinct 3 Solar, running in a loop: the start screen; choosing the mace; choosing the 360; a countdown; twelve seconds of work with the clock running and the swing count climbing one per beat; the paused summary; and the summary it saves, reading one set, 0:11 of work and nine swings.">
           <rect width="176" height="176" fill="#050403"/>
           <circle class="s-sub" cx="139" cy="34" r="27"/>
           <g class="phase phase--start">
@@ -744,6 +793,30 @@
             <text x="88" y="86" text-anchor="middle" font-size="19" textLength="148" lengthAdjust="spacingAndGlyphs">50 bpm | fixed 4</text>
             <text x="88" y="112" text-anchor="middle" font-size="19" textLength="148" lengthAdjust="spacingAndGlyphs">SELECT to start</text>
             <text x="88" y="138" text-anchor="middle" font-size="16" textLength="160" lengthAdjust="spacingAndGlyphs">MENU opens settings</text>
+          </g>
+          <g class="phase phase--equipment">
+            <g transform="translate(122 17) scale(.55)"><use href="#mark"/></g>
+            <text x="18" y="32" text-anchor="start" font-size="16" textLength="64" lengthAdjust="spacingAndGlyphs">Choose</text>
+            <text x="8" y="55" text-anchor="start" font-size="16" textLength="90" lengthAdjust="spacingAndGlyphs">equipment</text>
+            <line class="s-hair" x1="8" y1="64" x2="168" y2="64"/>
+            <g><rect x="10" y="82" width="146" height="34" rx="6" fill="rgba(192,138,62,.17)"/><rect x="10" y="82" width="3" height="34" fill="#C08A3E"/></g>
+            <text x="22" y="105" text-anchor="start" font-size="20" textLength="96" lengthAdjust="spacingAndGlyphs">Mace: 8.8 lb</text>
+            <text x="22" y="143" text-anchor="start" font-size="20" textLength="96" lengthAdjust="spacingAndGlyphs">Club: 8.8 lb</text>
+          </g>
+          <g class="phase phase--movement">
+            <g transform="translate(122 17) scale(.55)"><use href="#mark"/></g>
+            <text x="18" y="32" text-anchor="start" font-size="16" textLength="64" lengthAdjust="spacingAndGlyphs">Choose</text>
+            <text x="8" y="55" text-anchor="start" font-size="16" textLength="90" lengthAdjust="spacingAndGlyphs">movement</text>
+            <line class="s-hair" x1="8" y1="64" x2="168" y2="64"/>
+            <g><rect x="10" y="82" width="146" height="34" rx="6" fill="rgba(192,138,62,.17)"/><rect x="10" y="82" width="3" height="34" fill="#C08A3E"/></g>
+            <text x="22" y="105" text-anchor="start" font-size="20" textLength="42" lengthAdjust="spacingAndGlyphs">360</text>
+            <text x="22" y="143" text-anchor="start" font-size="20" textLength="88" lengthAdjust="spacingAndGlyphs">10-to-2</text>
+          </g>
+          <g class="phase phase--ready">
+            <text x="74" y="48" text-anchor="middle" font-size="17" textLength="88" lengthAdjust="spacingAndGlyphs">GET READY</text>
+            <g class="s-count" transform="translate(88 112) scale(2.6)"><g clip-path="url(#cell)"><use href="#digits" class="s-ready"/></g></g>
+            <text x="88" y="142" text-anchor="middle" font-size="13" textLength="84" lengthAdjust="spacingAndGlyphs">Mace: 8.8 lb</text>
+            <text x="88" y="160" text-anchor="middle" font-size="13" textLength="26" lengthAdjust="spacingAndGlyphs">360</text>
           </g>
           <g class="phase phase--work">
             <g font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="17" font-weight="700" fill="#F4EFE6">
@@ -774,8 +847,16 @@
             <text x="88" y="149" text-anchor="middle" font-size="17" textLength="112" lengthAdjust="spacingAndGlyphs">BACK resume</text>
             <text x="88" y="169" text-anchor="middle" font-size="16" textLength="104" lengthAdjust="spacingAndGlyphs">MENU discard</text>
           </g>
-          <!-- The thumb on SELECT, at the two moments the screen changes
-               because of it. -->
+          <g class="phase phase--summary">
+            <text x="66" y="50" text-anchor="middle" font-size="19" textLength="84" lengthAdjust="spacingAndGlyphs">SUMMARY</text>
+            <text x="88" y="76" text-anchor="middle" font-size="17" textLength="124" lengthAdjust="spacingAndGlyphs">1 sets  0:11 work</text>
+            <text class="s-dim" x="88" y="98" text-anchor="middle" font-size="12" textLength="120" lengthAdjust="spacingAndGlyphs">Mace: 8.8 lb  360</text>
+            <text x="88" y="118" text-anchor="middle" font-size="14" textLength="60" lengthAdjust="spacingAndGlyphs">9 swings</text>
+            <text class="s-dim" x="88" y="146" text-anchor="middle" font-size="11" textLength="72" lengthAdjust="spacingAndGlyphs">UP/DOWN 1/4</text>
+            <text class="s-dim" x="88" y="164" text-anchor="middle" font-size="11" textLength="56" lengthAdjust="spacingAndGlyphs">BACK exit</text>
+          </g>
+          <!-- The thumb on the button, at each moment the screen changes
+               because of one. -->
           <rect class="s-press" x="170" y="50" width="6" height="28" rx="3"/>
         </svg>
         </div>
@@ -958,6 +1039,68 @@
           </div>
         </div>
         <figcaption><b>Read the set back</b>Durations, and the left/right balance.</figcaption>
+      </figure>
+      <figure>
+        <div class="device device--small">
+          <div class="device__case">
+            <svg class="screen device__screen" viewBox="0 0 176 176" role="img"
+                 aria-label="The end-of-workout summary, on its chart page: twelve bars, one per set, rising and then falling away over the last three, captioned 45 to 85 per set. Page two of sixteen, with BACK to exit.">
+              <rect width="176" height="176" fill="#050403"/>
+              <circle class="s-sub" cx="139" cy="34" r="27"/>
+              <text x="56" y="48" text-anchor="middle" font-size="19" textLength="50" lengthAdjust="spacingAndGlyphs">SETS</text>
+              <g class="s-bars" fill="#C08A3E">
+                <rect x="21.0" y="70.4" width="9.2" height="38.6" style="transform-origin: 25.6px 109.0px; animation-delay: 0.0s"/>
+                <rect x="32.2" y="63.5" width="9.2" height="45.5" style="transform-origin: 36.8px 109.0px; animation-delay: 0.05s"/>
+                <rect x="43.4" y="60.0" width="9.2" height="49.0" style="transform-origin: 48.0px 109.0px; animation-delay: 0.1s"/>
+                <rect x="54.6" y="76.7" width="9.2" height="32.3" style="transform-origin: 59.2px 109.0px; animation-delay: 0.15s"/>
+                <rect x="65.8" y="72.1" width="9.2" height="36.9" style="transform-origin: 70.4px 109.0px; animation-delay: 0.2s"/>
+                <rect x="77.0" y="72.1" width="9.2" height="36.9" style="transform-origin: 81.6px 109.0px; animation-delay: 0.25s"/>
+                <rect x="88.2" y="69.2" width="9.2" height="39.8" style="transform-origin: 92.8px 109.0px; animation-delay: 0.3s"/>
+                <rect x="99.4" y="68.1" width="9.2" height="40.9" style="transform-origin: 104.0px 109.0px; animation-delay: 0.35s"/>
+                <rect x="110.6" y="64.6" width="9.2" height="44.4" style="transform-origin: 115.2px 109.0px; animation-delay: 0.4s"/>
+                <rect x="121.8" y="80.8" width="9.2" height="28.2" style="transform-origin: 126.4px 109.0px; animation-delay: 0.45s"/>
+                <rect x="133.0" y="83.1" width="9.2" height="25.9" style="transform-origin: 137.6px 109.0px; animation-delay: 0.5s"/>
+                <rect x="144.2" y="82.5" width="9.2" height="26.5" style="transform-origin: 148.8px 109.0px; animation-delay: 0.55s"/>
+              </g>
+              <text x="88" y="124" text-anchor="middle" font-size="13" textLength="86" lengthAdjust="spacingAndGlyphs">45-85 per set</text>
+              <text class="s-dim" x="88" y="148" text-anchor="middle" font-size="11" textLength="76" lengthAdjust="spacingAndGlyphs">UP/DOWN 2/16</text>
+              <text class="s-dim" x="88" y="166" text-anchor="middle" font-size="11" textLength="56" lengthAdjust="spacingAndGlyphs">BACK exit</text>
+            </svg>
+          </div>
+        </div>
+        <figcaption><b>See the whole session</b>One bar per set, from a real twelve-set recording. The dip at the end is fatigue, and the athlete confirmed it.</figcaption>
+      </figure>
+      <figure>
+        <div class="device device--small">
+          <div class="device__case">
+            <svg class="screen device__screen" viewBox="0 0 176 176" role="img"
+                 aria-label="The history browser: a list of saved sessions with their Rhythm Scores, the highlight moving down it, then the session it opens - mace, 360 on both hands, rhythm 54, three sets.">
+              <rect width="176" height="176" fill="#050403"/>
+              <circle class="s-sub" cx="139" cy="34" r="27"/>
+              <g class="s-hist-list">
+                <text x="18" y="32" text-anchor="start" font-size="16" textLength="66" lengthAdjust="spacingAndGlyphs">History</text>
+                <line class="s-hair" x1="8" y1="64" x2="168" y2="64"/>
+                <g class="s-hist-focus">
+                  <rect x="10" y="82" width="146" height="34" rx="6" fill="rgba(192,138,62,.17)"/>
+                  <rect x="10" y="82" width="3" height="34" fill="#C08A3E"/>
+                </g>
+                <text x="22" y="105" text-anchor="start" font-size="18" textLength="86" lengthAdjust="spacingAndGlyphs">12 Sep 7:14</text>
+                <text x="146" y="105" text-anchor="end" font-size="18">54</text>
+                <text x="22" y="143" text-anchor="start" font-size="18" textLength="90" lengthAdjust="spacingAndGlyphs">8 Sep 19:02</text>
+                <text x="146" y="143" text-anchor="end" font-size="18">51</text>
+              </g>
+              <g class="s-hist-detail">
+                <text x="76" y="34" text-anchor="middle" font-size="13" textLength="74" lengthAdjust="spacingAndGlyphs">12 Sep 7:14</text>
+                <text x="76" y="54" text-anchor="middle" font-size="13" textLength="78" lengthAdjust="spacingAndGlyphs">Mace: 8.8 lb</text>
+                <text class="s-dim" x="88" y="70" text-anchor="middle" font-size="11" textLength="60" lengthAdjust="spacingAndGlyphs">360 | Both</text>
+                <text x="88" y="96" text-anchor="middle" font-size="20" textLength="104" lengthAdjust="spacingAndGlyphs">rhythm 54</text>
+                <text x="88" y="122" text-anchor="middle" font-size="13" textLength="116" lengthAdjust="spacingAndGlyphs">3 sets | 9:30 work</text>
+                <text x="88" y="142" text-anchor="middle" font-size="13" textLength="62" lengthAdjust="spacingAndGlyphs">4:12 rest</text>
+              </g>
+            </svg>
+          </div>
+        </div>
+        <figcaption><b>Look back on the wrist</b>Your last twenty sessions, and the Rhythm Score of each.</figcaption>
       </figure>
     </div>
 
