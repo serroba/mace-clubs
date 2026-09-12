@@ -1,6 +1,7 @@
 import Toybox.Application.Storage;
 import Toybox.Graphics;
 import Toybox.Lang;
+import Toybox.System;
 import Toybox.WatchUi;
 
 // One saved session, beginning with a compact workout overview. DOWN opens the
@@ -11,6 +12,7 @@ class HistoryDetailView extends WatchUi.View {
     private var _rec as Array<Storage.ValueType>;
     private var _count as Number;
     private var _index as Number = -1;
+    private var _subwindow as Boolean = false;
 
     function initialize(rec as Array<Storage.ValueType>) {
         View.initialize();
@@ -18,6 +20,9 @@ class HistoryDetailView extends WatchUi.View {
         _count = SmoothnessLog.hasDetails(rec)
             ? SmoothnessLog.blockCountOf(rec)
             : SmoothnessLog.setCountOf(rec);
+        if (System has :SCREEN_SHAPE_SEMI_OCTAGON) {
+            _subwindow = System.getDeviceSettings().screenShape == System.SCREEN_SHAPE_SEMI_OCTAGON;
+        }
     }
 
     function scroll(direction as Number) as Void {
@@ -32,21 +37,51 @@ class HistoryDetailView extends WatchUi.View {
     function onUpdate(dc as Dc) as Void {
         dc.setColor(Graphics.COLOR_WHITE, Graphics.COLOR_BLACK);
         dc.clear();
-        var cx = dc.getWidth() / 2;
+        var w = dc.getWidth();
+        var cx = w / 2;
         var h = dc.getHeight();
+        // The stamp and the equipment label sit wholly inside the subwindow's
+        // band - the cut-out is 62px tall and these two are drawn at h*12 and
+        // h*22 - so centred on the screen they ran underneath it. Centred in
+        // the clear area beside it instead, the way the paused and summary
+        // screens already place their headings.
+        //
+        // The movement line below is deliberately NOT moved with them.
+        // "Mill | Two-handed" is wider than the clear area at the smallest
+        // face there is, so centring it in a 113px box does not tuck it
+        // beside the cut-out, it pushes its left end off the screen -
+        // measured, on an instinct3solar45mm, after trying it. It stays on
+        // the real centre, where only the tops of its right-hand characters
+        // graze the cut-out's lower edge, which is the lesser of the two.
+        var headerWidth = _subwindow ? Layout.clearWidthBesideSubwindow(w) : w;
+        var headerX = headerWidth / 2;
         var equipment = Equipment.labelFor(
             SmoothnessLog.eqTypeOf(_rec),
             SmoothnessLog.eqCountOf(_rec),
             SmoothnessLog.weightOf(_rec)
         );
         dc.drawText(
-            cx,
+            headerX,
             h * 12 / 100,
             Graphics.FONT_TINY,
             HistoryMenu.stamp(SmoothnessLog.epochOf(_rec)),
             Graphics.TEXT_JUSTIFY_CENTER
         );
-        dc.drawText(cx, h * 22 / 100, Graphics.FONT_TINY, equipment, Graphics.TEXT_JUSTIFY_CENTER);
+        // The equipment label is the one header line whose length varies:
+        // "Mace: 8.8 lb" fits the clear area beside the cut-out and
+        // "Clubs: 2 x 8.8 lb" does not, and centred in a narrower box a line
+        // that does not fit runs off the left edge instead of under the ring.
+        // Stepping down one face is what makes the move safe for both.
+        // FONT_TINY leads the list, so every screen that fits today is
+        // untouched.
+        var equipmentFont = Layout.fitFont(
+            dc,
+            equipment,
+            [Graphics.FONT_TINY, Graphics.FONT_XTINY] as Array<Graphics.FontDefinition>,
+            headerWidth,
+            h
+        );
+        dc.drawText(headerX, h * 22 / 100, equipmentFont, equipment, Graphics.TEXT_JUSTIFY_CENTER);
 
         var movement = Lang.format(
             "$1$ | $2$",
