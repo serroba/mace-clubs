@@ -51,6 +51,11 @@
 
     /* 50 bpm is the app's own default tempo, and the hero beats at it. */
     --beat: 1.2s;
+    /* One pass of the hero's session loop: start, work, paused, back. Twenty
+       beats, and deliberately two whole turns of the twelve-second digit
+       roll below, so the clock is always at 0:00 when the work screen
+       appears. */
+    --sim: calc(var(--beat) * 20);
   }
 
   * { box-sizing: border-box; }
@@ -329,8 +334,6 @@
     aspect-ratio: 1;
     border-radius: 13%;
     background: #050403;
-    object-fit: contain;
-    image-rendering: crisp-edges;
     box-shadow: 0 0 0 2px #100C08, 0 0 14px rgba(0, 0, 0, .8);
   }
   .pit-stage figcaption {
@@ -342,6 +345,107 @@
     letter-spacing: .18em;
     text-transform: uppercase;
   }
+
+  /* --- The app, drawn rather than photographed ---------------------------- */
+  /*
+    These four screens were still captures from the simulator until now, and a
+    still capture cannot show the one thing the app actually is: behaviour over
+    time. A count that climbs on the beat, a clock that runs, a list you scroll,
+    a set you pause and read back. So they became SVG at the 176x176 the
+    display really is, carrying the app's own strings, layout and numbers, and
+    then started moving. The PNGs stay in docs/store-assets, which is the
+    Connect IQ store listing, where a capture has to be a capture.
+
+    Every digit that changes is a strip of numerals sliding behind a
+    one-character window, stepped by steps() - a mechanical odometer, which is
+    why none of this needs a frame sequence or a line of script. The timings
+    are the app's own: the clock steps once a second, the swing count once per
+    --beat, and nine swings by 0:11 is the 50 bpm the screen says it is. The
+    count, the ring behind the watch and the figure further down the page are
+    all on that same beat.
+
+    Screens cut rather than crossfade - every phase animation is step-end -
+    because a watch redraws, it does not dissolve.
+  */
+  /* Out of the flow entirely: it is a parts bin, not a picture. */
+  .sprite { position: absolute; width: 0; height: 0; overflow: hidden; }
+  .screen { display: block; background: #050403; }
+  .screen text { font-family: var(--body); font-weight: 700; fill: #F4EFE6; }
+  .s-dim { fill: #A0958A; }
+  /* The Instinct's round subwindow. Garmin draws its ring orange; this page
+     draws it brass, for the same reason the case's accent bars are brass. */
+  .s-sub { fill: none; stroke: var(--brass); stroke-width: 3; }
+  .s-hair { stroke: rgba(192, 138, 62, .45); stroke-width: 1; }
+
+  /* A session, in one loop: the start screen, twelve seconds of work, the
+     paused summary, back to the start. */
+  .screen .phase { opacity: 0; }
+  .screen .phase--work { opacity: 1; }
+  .screen--sim .phase--start { animation: sim-start var(--sim) step-end infinite; }
+  .screen--sim .phase--work { animation: sim-work var(--sim) step-end infinite; }
+  .screen--sim .phase--paused { animation: sim-paused var(--sim) step-end infinite; }
+  .s-press { fill: var(--lamp); opacity: 0; animation: sim-press var(--sim) step-end infinite; }
+  @keyframes sim-start  { 0% { opacity: 1 } 15% { opacity: 0 } 90% { opacity: 1 } }
+  @keyframes sim-work   { 0% { opacity: 0 } 15% { opacity: 1 } 65% { opacity: 0 } }
+  @keyframes sim-paused { 0% { opacity: 0 } 65% { opacity: 1 } 90% { opacity: 0 } }
+  /* SELECT, under a thumb, at the two moments the screen changes because of
+     it. The button rail is drawn in CSS outside the glass, so this is the
+     inside edge of it lighting up. */
+  @keyframes sim-press {
+    0%    { opacity: 0 }
+    13.5% { opacity: 1 }
+    15%   { opacity: 0 }
+    63.5% { opacity: 1 }
+    65%   { opacity: 0 }
+  }
+
+  /*
+    The odometer. One turn is twelve seconds: the seconds digit takes twelve
+    steps, the swing count ten, and they restart together. Both are delayed by
+    three beats so that in the hero - whose loop is exactly two turns long -
+    the work screen always arrives on 0:00.
+  */
+  .roll {
+    animation-duration: calc(var(--beat) * 10);
+    animation-delay: calc(var(--beat) * 3);
+    animation-iteration-count: infinite;
+  }
+  .roll--secs { animation-name: roll-secs; animation-timing-function: steps(12); }
+  .roll--tens { animation-name: roll-tens; animation-timing-function: step-end; }
+  .roll--count { animation-name: roll-count; animation-timing-function: steps(10); }
+  @keyframes roll-secs { from { transform: translateY(0) } to { transform: translateY(-240px) } }
+  /* Ten of the twelve seconds in, the tens column turns over. */
+  @keyframes roll-tens { 0%, 83.2% { transform: translateY(0) } 83.4% { transform: translateY(-20px) } }
+  @keyframes roll-count { from { transform: translateY(0) } to { transform: translateY(-200px) } }
+
+  /* The tempo, shown where the app shows it: the bpm figure takes the beat. */
+  .beat-num { animation: beat-num var(--beat) ease-out infinite; }
+  @keyframes beat-num { 0% { opacity: 1 } 30% { opacity: .58 } 100% { opacity: 1 } }
+
+  /* Menu2, scrolling. The focus bar and the scrollbar move together, which is
+     the whole of what a watch list does. */
+  .s-focus { animation: pick calc(var(--beat) * 6) infinite; }
+  .s-scrollbar { animation: pick-bar calc(var(--beat) * 6) infinite; }
+  @keyframes pick {
+    0%, 40%   { transform: translateY(0); animation-timing-function: cubic-bezier(.3, 0, .2, 1) }
+    50%, 90%  { transform: translateY(38px); animation-timing-function: cubic-bezier(.3, 0, .2, 1) }
+    100%      { transform: translateY(0) }
+  }
+  @keyframes pick-bar {
+    0%, 40%   { transform: translateY(0); animation-timing-function: cubic-bezier(.3, 0, .2, 1) }
+    50%, 90%  { transform: translateY(30px); animation-timing-function: cubic-bezier(.3, 0, .2, 1) }
+    100%      { transform: translateY(0) }
+  }
+
+  /* The summary sits still - it is a thing you read - but the save it is
+     offering is worth pointing at. */
+  .s-offer { fill: rgba(192, 138, 62, .3); animation: offer calc(var(--beat) * 4) ease-in-out infinite; }
+  .s-focus rect { fill: rgba(192, 138, 62, .17); }
+  .s-focus .tick, .s-scrollbar rect { fill: var(--brass); }
+  /* The swing count is the one figure on the screen that is brass: it is the
+     thing the beat is producing. */
+  .s-count { color: var(--lamp); }
+  @keyframes offer { 0%, 100% { opacity: .25 } 50% { opacity: .9 } }
 
   /* --- Why it is built this way ----------------------------------------- */
   .tradition { display: grid; grid-template-columns: .82fr 1.18fr; gap: 76px; align-items: start; }
@@ -368,27 +472,73 @@
 
   /*
     Someone swinging a mace, in the section that explains the movements.
-    A 360: the head of the mace describes a full circle around the body, one
-    revolution per --beat, which is the tempo the metronome calls.
+    A 360, one revolution per --beat, which is the tempo the metronome calls.
 
-    The whole trick is the counter-movement. A rigid body with a rotating
-    stick attached reads as a machine; what makes it read as a person is that
-    the torso sways against the mace and the knees take the load twice per
-    revolution, at the two points where a real swing is heaviest - overhead
-    and through the bottom. Nothing here is a sprite or a frame sequence: it
-    is four rotations and one translate on grouped SVG paths.
+    The movement is a circle around the body in a plane tilted away from you,
+    so what you see is an ellipse: the mace comes down the front at chest
+    height, out to the side, and over the back of the head. That tilt is the
+    scale(1 .78) on the orbit, and it is also why the mace is drawn twice.
+    Between roughly ten past and ten to the hour it is behind the head, so the
+    copy that is showing then sits before the skull in document order and the
+    skull covers it; the rest of the time the copy in front of the body shows.
+    They swap at the two points where the mace is up and out at forty-five
+    degrees, clear of both the head and the trunk, so the swap cannot be seen.
+    The old version swung the mace straight down between the legs, which is a
+    different movement, and one nobody does with a mace.
+
+    The counter-movement is what makes it read as a person rather than a
+    machine: the torso sways against the weight and the knees take the load
+    twice per revolution, at the two points where a real swing is heaviest.
+
+    What makes it read as heavy is the trail. Four ghost heads run the same
+    revolution on negative delays, so each lags the real one by a fixed slice
+    of the beat - and because the rotation is eased rather than linear they
+    bunch at the top where the mace is slow and smear out through the bottom
+    where it is fast, which is what a swung weight does. Each ghost carries
+    its own copy of the swap on its own delay, so a ghost goes behind the head
+    when it reaches the head, not when the live one does.
   */
-  .swinger { width: 100%; max-width: 210px; height: auto; margin-top: 34px; }
-  .swinger .limb { fill: none; stroke: var(--ash); stroke-width: 7; stroke-linecap: round; }
+  .swinger { width: 100%; max-width: 260px; height: auto; margin-top: 30px; }
+  .swinger .limb { fill: none; stroke: var(--ash); stroke-width: 7; stroke-linecap: round; stroke-linejoin: round; }
   .swinger .trunk { fill: var(--ash); }
-  .swinger .arm { fill: none; stroke: var(--chalk); stroke-width: 5; stroke-linecap: round; }
-  .swinger .shaft { fill: none; stroke: var(--chalk); stroke-width: 4.5; stroke-linecap: round; }
-  .swinger .head { fill: var(--brass); }
+  .swinger .arm { fill: none; stroke: var(--chalk); stroke-width: 5; stroke-linecap: round; stroke-linejoin: round; }
+  /* The shaft is laid down twice, a pit-coloured casing under a chalk stroke:
+     it crosses the trunk on the way past, and chalk on ash disappears. */
+  .swinger .case { fill: none; stroke: var(--pit); stroke-width: 10; stroke-linecap: round; }
+  .swinger .shaft { fill: none; stroke: var(--chalk); stroke-width: 5; stroke-linecap: round; }
+  .swinger .head { fill: var(--brass); stroke: var(--pit); stroke-width: 2.5; }
+  .swinger .ghost { fill: var(--brass); }
+  .swinger .g1 { opacity: .5; }
+  .swinger .g2 { opacity: .34; }
+  .swinger .g3 { opacity: .21; }
+  .swinger .g4 { opacity: .11; }
 
-  /* The mace, pivoting about the grip just in front of the chest. */
-  .swinger .mace { animation: mace-360 var(--beat) cubic-bezier(.42, 0, .58, 1) infinite; }
-  @keyframes mace-360 {
-    to { transform: rotate(360deg); }
+  /* One revolution, and the visibility that goes with it. */
+  .swinger .front,
+  .swinger .back {
+    animation:
+      mace-360 var(--beat) cubic-bezier(.42, 0, .58, 1) infinite,
+      swap-front var(--beat) step-end infinite;
+  }
+  .swinger .back { animation-name: mace-360, swap-back; }
+  @keyframes mace-360 { to { transform: rotate(360deg); } }
+  /* 24.6% of the beat is where the eased rotation has reached 45 degrees. */
+  @keyframes swap-front { 0% { visibility: hidden } 24.6% { visibility: visible } 75.4% { visibility: hidden } }
+  @keyframes swap-back { 0% { visibility: visible } 24.6% { visibility: hidden } 75.4% { visibility: visible } }
+  /* A negative delay starts the revolution part-way through, so each ghost
+     trails the head by one, two, three and four twenty-fourths of a beat.
+     One delay covers both of that group's animations. */
+  .swinger .g1 { animation-delay: calc(var(--beat) * -0.9583); }
+  .swinger .g2 { animation-delay: calc(var(--beat) * -0.9167); }
+  .swinger .g3 { animation-delay: calc(var(--beat) * -0.875); }
+  .swinger .g4 { animation-delay: calc(var(--beat) * -0.8333); }
+  /* Brass catching the lamp as the head comes through the bottom, which is
+     the beat the metronome is calling. */
+  .swinger .head { animation: strike var(--beat) ease-out infinite; }
+  @keyframes strike {
+    0%, 34%   { fill: var(--brass); }
+    50%       { fill: var(--lamp); }
+    72%, 100% { fill: var(--brass); }
   }
   /* Torso leans away from where the weight is - opposite phase to the mace. */
   .swinger .lean { animation: lean var(--beat) ease-in-out infinite; }
@@ -415,14 +565,12 @@
 
   .screens { display: grid; grid-template-columns: repeat(3, 1fr); gap: 36px; margin-top: 72px; }
   .screens figure { margin: 0; }
-  .screens img {
-    width: 100%;
-    max-width: 200px;
-    height: auto;
-    aspect-ratio: 1;
+  /* The Instinct's display is a semi-octagon, not a rounded square: it is
+     chamfered at the four corners and the app draws right up to the chamfer.
+     The hero rounds its aperture instead, because at 300px a hard chamfer
+     reads as a rendering mistake. */
+  .screens .screen {
     clip-path: polygon(20% 0, 80% 0, 100% 20%, 100% 80%, 80% 100%, 20% 100%, 0 80%, 0 20%);
-    background: #050403;
-    image-rendering: crisp-edges;
   }
   .screens figcaption { margin-top: 16px; max-width: 220px; color: var(--ash); font-size: .86rem; }
   .screens figcaption b { display: block; margin-bottom: 5px; color: var(--chalk); font-family: var(--data); font-size: .72rem; letter-spacing: .12em; text-transform: uppercase; }
@@ -540,17 +688,72 @@
     /* The figure exists in order to move; standing still it reads as a
        diagram, which is the right thing to show someone who asked not to be
        moved. Each selector is spelled out rather than using `.swinger *`,
-       because that is one class less specific than `.swinger .mace` and a
+       because that is one class less specific than `.swinger .front` and a
        media query does not add specificity - it lost, silently, and the
        animation kept running. */
-    .swinger .mace,
+    .swinger .front,
+    .swinger .back,
+    .swinger .head,
     .swinger .lean,
     .swinger .load { animation: none; }
+    /* A ghost is lag, and lag with nothing to lag behind is four brass blobs
+       stacked on the live one. The back copy goes too: with the revolution
+       stopped at the top, both copies are drawn at once. */
+    .swinger .g1,
+    .swinger .g2,
+    .swinger .g3,
+    .swinger .g4,
+    .swinger .back { display: none; }
+    /* Held where the movement is legible rather than where the loop starts:
+       at the top of the revolution the shaft lies over the face, and behind
+       the head there is nothing to see but a brass ball. Up and out is the
+       one angle that is clear of both. */
+    .swinger .front { transform: rotate(52deg); }
+    /* Each screen holds the frame that says the most: the work screen, at
+       0:00 with nothing counted yet. */
+    .screen--sim .phase--start,
+    .screen--sim .phase--work,
+    .screen--sim .phase--paused,
+    .s-press,
+    .s-focus,
+    .s-scrollbar,
+    .s-offer,
+    .beat-num,
+    .roll { animation: none; }
     .button, .resource .arrow, .resource strong { transition: none; }
   }
 </style>
 </head>
 <body>
+
+<!--
+  The parts every drawn screen shares: the one-character window the numerals
+  roll behind, the strip of numerals itself, and the app's mark.
+
+  What is NOT shared is either of the two screens. They are written out in
+  full at each place they appear, because a <use> clone does not track
+  animations on what it references: the rolls ran correctly on an original in
+  here - the computed transform was right on every frame - and every clone on
+  the page drew 0:00 for ever.
+-->
+<svg class="sprite" width="0" height="0" aria-hidden="true" focusable="false">
+  <defs>
+    <!-- One character's worth of window, applied to a <g> that has no
+         transform of its own so the rect lands in whatever space its parent
+         set up and scales with it. -->
+    <clipPath id="cell" clipPathUnits="userSpaceOnUse">
+      <rect x="-7" y="-16" width="14" height="21"/>
+    </clipPath>
+    <!-- Twenty numerals on a strip, 0-9 twice, one cell apart - twice so a
+         counter can run past nine without the strip wrapping mid-roll.
+         Monospaced, because a watch readout is, and because it puts every
+         column below on an exact multiple of the advance. -->
+    <g id="digits" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="20" font-weight="700"
+       text-anchor="middle" fill="currentColor"><text y="0">0</text><text y="20">1</text><text y="40">2</text><text y="60">3</text><text y="80">4</text><text y="100">5</text><text y="120">6</text><text y="140">7</text><text y="160">8</text><text y="180">9</text><text y="200">0</text><text y="220">1</text><text y="240">2</text><text y="260">3</text><text y="280">4</text><text y="300">5</text><text y="320">6</text><text y="340">7</text><text y="360">8</text><text y="380">9</text></g>
+    <!-- The app's own mark: a mace crossed with a club. -->
+    <g id="mark" fill="#F4EFE6"><circle cx="15.7" cy="10.05" r="2.4"/><circle cx="46.4" cy="47.55" r="6.85"/><polygon points="13.711,11.393 40.724,51.384 51.28,42.742 17.41,8.366"/><circle cx="41.9" cy="20.05" r="2.1"/><circle cx="12.6" cy="56" r="3.2"/><polygon points="40.304,18.685 10.168,53.92 15.128,57.962 43.559,21.338"/></g>
+  </defs>
+  </svg>
 <header class="shell">
   <nav class="nav" aria-label="Main navigation">
     <a class="brand" href="#top">
@@ -584,9 +787,49 @@
       <div class="beat-ring" aria-hidden="true"></div>
       <div class="device device--hero">
         <div class="device__case">
-          <img class="device__screen" width="176" height="176" loading="eager"
-               src="store-assets/v0.17.0/instinct3solar45mm/01-start-screen.png"
-               alt="The Mace &amp; Clubs start screen on an Instinct 3 Solar: the mace-and-club mark above &ldquo;50 bpm | fixed 4&rdquo;, &ldquo;SELECT to start&rdquo;, and &ldquo;MENU opens settings&rdquo;.">
+        <svg class="screen screen--sim device__screen" viewBox="0 0 176 176" role="img"
+             aria-label="The app running on an Instinct 3 Solar, one session in a loop: the start screen reading 50 bpm, fixed 4, SELECT to start, MENU opens settings; then the work screen, its clock running and the swing count in the subwindow climbing one per beat; then the paused summary reading one set, 0:11, both hands 1/1, with SELECT to save, BACK to resume and MENU to discard.">
+          <rect width="176" height="176" fill="#050403"/>
+          <circle class="s-sub" cx="139" cy="34" r="27"/>
+          <g class="phase phase--start">
+            <g transform="translate(29 6) scale(.85)"><use href="#mark"/></g>
+            <text x="88" y="86" text-anchor="middle" font-size="19" textLength="148" lengthAdjust="spacingAndGlyphs">50 bpm | fixed 4</text>
+            <text x="88" y="112" text-anchor="middle" font-size="19" textLength="148" lengthAdjust="spacingAndGlyphs">SELECT to start</text>
+            <text x="88" y="138" text-anchor="middle" font-size="16" textLength="160" lengthAdjust="spacingAndGlyphs">MENU opens settings</text>
+          </g>
+          <g class="phase phase--work">
+            <g font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="17" font-weight="700" fill="#F4EFE6">
+              <text x="16" y="34">0:</text>
+              <g transform="translate(39 34) scale(0.85)"><g clip-path="url(#cell)"><use href="#digits" class="roll roll--tens"/></g></g>
+              <g transform="translate(49.2 34) scale(0.85)"><g clip-path="url(#cell)"><use href="#digits" class="roll roll--secs"/></g></g>
+              <text x="54" y="58">0:</text>
+              <g transform="translate(77 58) scale(0.85)"><g clip-path="url(#cell)"><use href="#digits" class="roll roll--tens"/></g></g>
+              <g transform="translate(87.2 58) scale(0.85)"><g clip-path="url(#cell)"><use href="#digits" class="roll roll--secs"/></g></g>
+            </g>
+            <text x="6" y="58" font-size="17" textLength="44" lengthAdjust="spacingAndGlyphs">WORK</text>
+            <text class="beat-num" x="88" y="92" text-anchor="middle" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="32">50</text>
+            <text class="s-dim" x="88" y="112" text-anchor="middle" font-size="15" textLength="34" lengthAdjust="spacingAndGlyphs">bpm</text>
+            <text x="48" y="143" text-anchor="middle" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="24">0</text>
+            <text class="s-dim" x="48" y="163" text-anchor="middle" font-size="14" textLength="32" lengthAdjust="spacingAndGlyphs">sets</text>
+            <text x="128" y="143" text-anchor="middle" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="24">--</text>
+            <text class="s-dim" x="128" y="163" text-anchor="middle" font-size="14" textLength="19" lengthAdjust="spacingAndGlyphs">hr</text>
+            <!-- The subwindow carries the swing count, which is the number this
+                 whole app exists to produce. -->
+            <g class="s-count"><g transform="translate(139 45) scale(1.5)"><g clip-path="url(#cell)"><use href="#digits" class="roll roll--count"/></g></g></g>
+          </g>
+          <g class="phase phase--paused">
+            <text x="66" y="56" text-anchor="middle" font-size="19" textLength="78" lengthAdjust="spacingAndGlyphs">PAUSED</text>
+            <text x="88" y="80" text-anchor="middle" font-size="17" textLength="98" lengthAdjust="spacingAndGlyphs">1 set 0:11</text>
+            <text class="s-dim" x="88" y="99" text-anchor="middle" font-size="12" textLength="148" lengthAdjust="spacingAndGlyphs">Both 1/1  W0:11  R0:00</text>
+            <rect class="s-offer" x="24" y="112" width="128" height="24" rx="4"/>
+            <text x="88" y="129" text-anchor="middle" font-size="17" textLength="112" lengthAdjust="spacingAndGlyphs">SELECT save</text>
+            <text x="88" y="149" text-anchor="middle" font-size="17" textLength="112" lengthAdjust="spacingAndGlyphs">BACK resume</text>
+            <text x="88" y="169" text-anchor="middle" font-size="16" textLength="104" lengthAdjust="spacingAndGlyphs">MENU discard</text>
+          </g>
+          <!-- The thumb on SELECT, at the two moments the screen changes
+               because of it. -->
+          <rect class="s-press" x="170" y="50" width="6" height="28" rx="3"/>
+        </svg>
         </div>
       </div>
     </div>
@@ -601,8 +844,8 @@
       <div>
         <p class="eyebrow">Why it is built this way</p>
         <h2>A timer doesn't know what a mill is</h2>
-        <svg class="swinger" viewBox="0 0 240 250" role="img"
-             aria-label="A figure swinging a steel mace in a 360: the mace head travels a full circle around the body once per beat while the torso leans against the weight and the knees absorb it.">
+        <svg class="swinger" viewBox="12 24 186 228" role="img"
+             aria-label="A figure swinging a steel mace in a 360: once per beat the head of the mace comes down the front, out to the side and around behind the head, smearing into a trail where it is fastest, while the torso leans against the weight and the knees absorb it.">
           <!-- Ground, so the knee bob reads against something fixed. -->
           <line x1="62" y1="242" x2="146" y2="242" stroke-width="2" stroke="rgba(154,139,120,.35)"/>
           <g class="load">
@@ -610,27 +853,41 @@
             <path class="limb" d="M104 152 L83 196 L78 238"/>
             <path class="limb" d="M104 152 L125 196 L130 238"/>
             <g class="lean" style="transform-origin: 104px 150px; transform-box: view-box;">
+              <!-- Behind the body: the part of the revolution that passes the
+                   back of the head. -->
+            <g transform="translate(104 88) scale(1 .78)">
+              <g class="arc back g4"><circle class="ghost" cx="0" cy="-71" r="6"/></g>
+              <g class="arc back g3"><circle class="ghost" cx="0" cy="-71" r="7.5"/></g>
+              <g class="arc back g2"><circle class="ghost" cx="0" cy="-71" r="9"/></g>
+              <g class="arc back g1"><circle class="ghost" cx="0" cy="-71" r="10"/></g>
+              <g class="arc back">
+                <path class="case" d="M0 0 L0 -62"/>
+                <path class="shaft" d="M0 0 L0 -62"/>
+                <circle class="head" cx="0" cy="-71" r="10"/>
+              </g>
+            </g>
               <path class="trunk" d="M92 78 L116 78 L112 152 L96 152 Z"/>
               <circle class="trunk" cx="104" cy="60" r="15"/>
-              <!-- Arms reach forward to the grip, which is where a mace is
-                   actually held: out in front of the chest, the implement
-                   circling around the hands. Chalk and narrower than the
-                   trunk, because at this scale an arm of the same weight and
-                   colour disappears into the torso and leaves the mace
+              <!-- Arms out to the grip, which is where a mace is actually
+                   held: hands together in front of the chest, elbows wide,
+                   the implement circling around them. Chalk and narrower than
+                   the trunk, because at this scale an arm of the same weight
+                   and colour disappears into the torso and leaves the mace
                    floating unattached. -->
-              <path class="arm" d="M101 88 L117 104 L124 114"/>
-              <path class="arm" d="M107 90 L120 106 L124 114"/>
-              <!-- The mace, drawn outward from the grip so it rotates about
-                   0,0 of this group. The viewBox is 240 wide rather than 200
-                   so the full arc clears it: the head reaches 103 from the
-                   grip, and at 200 it was being clipped at the right of the
-                   swing. -->
-              <g transform="translate(124 114)">
-                <g class="mace">
-                  <path class="shaft" d="M0 0 L0 -84"/>
-                  <circle class="head" cx="0" cy="-92" r="11"/>
-                </g>
+              <path class="arm" d="M94 85 L81 100 L104 88"/>
+              <path class="arm" d="M114 85 L127 100 L104 88"/>
+              <!-- In front of the body: the rest of it. -->
+            <g transform="translate(104 88) scale(1 .78)">
+              <g class="arc front g4"><circle class="ghost" cx="0" cy="-71" r="6"/></g>
+              <g class="arc front g3"><circle class="ghost" cx="0" cy="-71" r="7.5"/></g>
+              <g class="arc front g2"><circle class="ghost" cx="0" cy="-71" r="9"/></g>
+              <g class="arc front g1"><circle class="ghost" cx="0" cy="-71" r="10"/></g>
+              <g class="arc front">
+                <path class="case" d="M0 0 L0 -62"/>
+                <path class="shaft" d="M0 0 L0 -62"/>
+                <circle class="head" cx="0" cy="-71" r="10"/>
               </g>
+            </g>
             </g>
           </g>
         </svg>
@@ -667,9 +924,23 @@
       <figure>
         <div class="device device--small">
           <div class="device__case">
-            <img class="device__screen" width="176" height="176" loading="lazy"
-                 src="store-assets/v0.17.0/instinct3solar45mm/03-movement-picker.png"
-                 alt="A movement picker listing 360 and 10-to-2, the mace-and-club mark in the corner.">
+            <svg class="screen device__screen" viewBox="0 0 176 176" role="img"
+                 aria-label="The movement picker, scrolling: a list of 360 and 10-to-2 under the title Choose movement, with the highlight moving from one to the other and back.">
+              <rect width="176" height="176" fill="#050403"/>
+              <text x="18" y="32" font-size="16" textLength="64" lengthAdjust="spacingAndGlyphs">Choose</text>
+              <text x="8" y="55" font-size="16" textLength="90" lengthAdjust="spacingAndGlyphs">movement</text>
+              <line class="s-hair" x1="8" y1="64" x2="168" y2="64"/>
+              <circle class="s-sub" cx="139" cy="34" r="27"/>
+              <g transform="translate(122 17) scale(.55)"><use href="#mark"/></g>
+              <!-- Menu2 moves the highlight, not the rows. -->
+              <g class="s-focus">
+                <rect x="10" y="82" width="146" height="34" rx="6"/>
+                <rect class="tick" x="10" y="82" width="3" height="34"/>
+              </g>
+              <text x="22" y="105" font-size="22" textLength="42" lengthAdjust="spacingAndGlyphs">360</text>
+              <text x="22" y="143" font-size="22" textLength="88" lengthAdjust="spacingAndGlyphs">10-to-2</text>
+              <g class="s-scrollbar"><rect x="166" y="76" width="3" height="34" rx="1.5"/></g>
+            </svg>
           </div>
         </div>
         <figcaption><b>Pick the movement</b>The list follows the implement you chose.</figcaption>
@@ -677,9 +948,29 @@
       <figure>
         <div class="device device--small">
           <div class="device__case">
-            <img class="device__screen" width="176" height="176" loading="lazy"
-                 src="store-assets/v0.17.0/instinct3solar45mm/04-work-screen.png"
-                 alt="A work screen showing elapsed time, WORK 0:01, 50 bpm, and counters for sets and heart rate.">
+            <svg class="screen device__screen" viewBox="0 0 176 176" role="img"
+                 aria-label="The work screen, running: elapsed time and the work block's own clock counting up, 50 bpm pulsing on the beat, the set and heart-rate readouts below, and the swing count in the subwindow climbing one per beat.">
+              <rect width="176" height="176" fill="#050403"/>
+              <circle class="s-sub" cx="139" cy="34" r="27"/>
+              <g font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="17" font-weight="700" fill="#F4EFE6">
+                <text x="16" y="34">0:</text>
+                <g transform="translate(39 34) scale(0.85)"><g clip-path="url(#cell)"><use href="#digits" class="roll roll--tens"/></g></g>
+                <g transform="translate(49.2 34) scale(0.85)"><g clip-path="url(#cell)"><use href="#digits" class="roll roll--secs"/></g></g>
+                <text x="54" y="58">0:</text>
+                <g transform="translate(77 58) scale(0.85)"><g clip-path="url(#cell)"><use href="#digits" class="roll roll--tens"/></g></g>
+                <g transform="translate(87.2 58) scale(0.85)"><g clip-path="url(#cell)"><use href="#digits" class="roll roll--secs"/></g></g>
+              </g>
+              <text x="6" y="58" font-size="17" textLength="44" lengthAdjust="spacingAndGlyphs">WORK</text>
+              <text class="beat-num" x="88" y="92" text-anchor="middle" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="32">50</text>
+              <text class="s-dim" x="88" y="112" text-anchor="middle" font-size="15" textLength="34" lengthAdjust="spacingAndGlyphs">bpm</text>
+              <text x="48" y="143" text-anchor="middle" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="24">0</text>
+              <text class="s-dim" x="48" y="163" text-anchor="middle" font-size="14" textLength="32" lengthAdjust="spacingAndGlyphs">sets</text>
+              <text x="128" y="143" text-anchor="middle" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="24">--</text>
+              <text class="s-dim" x="128" y="163" text-anchor="middle" font-size="14" textLength="19" lengthAdjust="spacingAndGlyphs">hr</text>
+              <!-- The subwindow carries the swing count, which is the number this
+                   whole app exists to produce. -->
+              <g class="s-count"><g transform="translate(139 45) scale(1.5)"><g clip-path="url(#cell)"><use href="#digits" class="roll roll--count"/></g></g></g>
+            </svg>
           </div>
         </div>
         <figcaption><b>Work the interval</b>Tempo, rounds and heart rate, nothing else.</figcaption>
@@ -687,9 +978,18 @@
       <figure>
         <div class="device device--small">
           <div class="device__case">
-            <img class="device__screen" width="176" height="176" loading="lazy"
-                 src="store-assets/v0.17.0/instinct3solar45mm/06-paused-summary.png"
-                 alt="A paused summary reading one set, both hands 1/1, work and rest durations, and the save, resume and discard controls.">
+            <svg class="screen device__screen" viewBox="0 0 176 176" role="img"
+                 aria-label="The paused summary: one set at 0:11, both hands 1/1, work 0:11 and rest 0:00, over SELECT save, BACK resume and MENU discard, with the save offer glowing.">
+              <rect width="176" height="176" fill="#050403"/>
+              <circle class="s-sub" cx="139" cy="34" r="27"/>
+              <text x="66" y="56" text-anchor="middle" font-size="19" textLength="78" lengthAdjust="spacingAndGlyphs">PAUSED</text>
+              <text x="88" y="80" text-anchor="middle" font-size="17" textLength="98" lengthAdjust="spacingAndGlyphs">1 set 0:11</text>
+              <text class="s-dim" x="88" y="99" text-anchor="middle" font-size="12" textLength="148" lengthAdjust="spacingAndGlyphs">Both 1/1  W0:11  R0:00</text>
+              <rect class="s-offer" x="24" y="112" width="128" height="24" rx="4"/>
+              <text x="88" y="129" text-anchor="middle" font-size="17" textLength="112" lengthAdjust="spacingAndGlyphs">SELECT save</text>
+              <text x="88" y="149" text-anchor="middle" font-size="17" textLength="112" lengthAdjust="spacingAndGlyphs">BACK resume</text>
+              <text x="88" y="169" text-anchor="middle" font-size="16" textLength="104" lengthAdjust="spacingAndGlyphs">MENU discard</text>
+            </svg>
           </div>
         </div>
         <figcaption><b>Read the set back</b>Durations, and the left/right balance.</figcaption>
