@@ -35,6 +35,23 @@ values, while Garmin Connect accepts any value from 0–999. UP/DOWN adds or
 removes one rep while working, before SELECT commits that corrected count to the
 set summary and the FIT lap.
 
+## Tempo
+
+The metronome covers 5-240 bpm and starts wherever the chosen preset puts it,
+50 by default. **There is no tempo entry in Settings.** It is a control rather
+than a setting: UP/DOWN move it in 5 bpm steps while a workout is running.
+Before one starts those buttons choose the preset, so beginning at a different
+tempo means picking a preset that carries one and adjusting once you are
+swinging.
+
+Two places where UP/DOWN do something else while a workout runs:
+
+- **Rep mode** keeps the metronome silent, so they add or remove a rep instead
+  (above).
+- **Free-training rest** pages the extra info screens, because tempo is
+  meaningless while the metronome is stopped. An interval preset's rest keeps
+  the tempo control.
+
 ## Implements, movements, and sides
 
 Starting a workout asks for the implement, then the movement. The movement list
