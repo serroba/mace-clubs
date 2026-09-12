@@ -56,6 +56,13 @@
        roll below, so the clock is always at 0:00 when the work screen
        appears. */
     --sim: calc(var(--beat) * 20);
+    /* How long the traced revolution took on the day: 55 frames of 30fps
+       footage, played back at the rate it was shot. It is the recording's
+       own cadence and not the metronome's - he was doing single 360s with
+       a pause between them, so there is no tempo here to match the beat
+       to, and pretending otherwise would be the one dishonest thing on
+       this page. */
+    --swing: 1.833s;
   }
 
   * { box-sizing: border-box; }
@@ -471,88 +478,43 @@
   .combo .switch { color: var(--brass); }
 
   /*
-    Someone swinging a mace, in the section that explains the movements.
-    A 360, one revolution per --beat, which is the tempo the metronome calls.
+    Someone swinging a mace, in the section that explains the movements. It is
+    not drawn from imagination any more, and the difference is the point: this
+    is one real 360, traced frame by frame off a recording of the movement -
+    body pose per frame out of the Vision framework, the brass head found by
+    colour, and the angle between the two fitted where the head moved too fast
+    to photograph. video/scripts/ has the tracers, tools/build-swing-figure.ts
+    turns what they produce into the markup below.
 
-    The movement is a circle around the body in a plane tilted away from you,
-    so what you see is an ellipse: the mace comes down the front at chest
-    height, out to the side, and over the back of the head. That tilt is the
-    scale(1 .78) on the orbit, and it is also why the mace is drawn twice.
-    Between roughly ten past and ten to the hour it is behind the head, so the
-    copy that is showing then sits before the skull in document order and the
-    skull covers it; the rest of the time the copy in front of the body shows.
-    They swap at the two points where the mace is up and out at forty-five
-    degrees, clear of both the head and the trunk, so the swap cannot be seen.
-    The old version swung the mace straight down between the legs, which is a
-    different movement, and one nobody does with a mace.
+    The earlier version of this figure swung the mace straight down between
+    its legs on a tidy circle, which is a movement nobody does. What a 360
+    actually does is here instead, because nobody drew it: the mace tips back
+    over the shoulder, falls behind the body, and is pulled back up the front,
+    with the knees folding to take it through the bottom - the subject is most
+    of a head shorter at the bottom of the swing than at the top, and that is
+    measured, not staged. The shaft shortens where it swings away from the
+    camera, which is the same foreshortening the lens saw.
 
-    The counter-movement is what makes it read as a person rather than a
-    machine: the torso sways against the weight and the knees take the load
-    twice per revolution, at the two points where a real swing is heaviest.
-
-    What makes it read as heavy is the trail. Four ghost heads run the same
-    revolution on negative delays, so each lags the real one by a fixed slice
-    of the beat - and because the rotation is eased rather than linear they
-    bunch at the top where the mace is slow and smear out through the bottom
-    where it is fast, which is what a swung weight does. Each ghost carries
-    its own copy of the swap on its own delay, so a ghost goes behind the head
-    when it reaches the head, not when the live one does.
+    All 55 frames are laid side by side in one strip with a one-frame window
+    over them, so the whole animation is a single stepped translate - the same
+    mechanism the watch screens above use to roll a digit. The translate is a
+    percentage rather than a pixel count because a percentage of an SVG
+    transform resolves against the viewBox, which means the markup can be
+    regenerated at any size without this number having to be found again.
   */
-  .swinger { width: 100%; max-width: 260px; height: auto; margin-top: 30px; }
+  .swinger { width: 100%; max-width: 270px; height: auto; margin-top: 30px; }
+  .swinger .ground { stroke: rgba(154, 139, 120, .35); stroke-width: 2; }
   .swinger .limb { fill: none; stroke: var(--ash); stroke-width: 7; stroke-linecap: round; stroke-linejoin: round; }
   .swinger .trunk { fill: var(--ash); }
   .swinger .arm { fill: none; stroke: var(--chalk); stroke-width: 5; stroke-linecap: round; stroke-linejoin: round; }
   /* The shaft is laid down twice, a pit-coloured casing under a chalk stroke:
-     it crosses the trunk on the way past, and chalk on ash disappears. */
-  .swinger .case { fill: none; stroke: var(--pit); stroke-width: 10; stroke-linecap: round; }
+     it crosses the body on the way past, and chalk on ash disappears. */
+  .swinger .case { fill: none; stroke: var(--pit); stroke-width: 11; stroke-linecap: round; }
   .swinger .shaft { fill: none; stroke: var(--chalk); stroke-width: 5; stroke-linecap: round; }
-  .swinger .head { fill: var(--brass); stroke: var(--pit); stroke-width: 2.5; }
-  .swinger .ghost { fill: var(--brass); }
-  .swinger .g1 { opacity: .5; }
-  .swinger .g2 { opacity: .34; }
-  .swinger .g3 { opacity: .21; }
-  .swinger .g4 { opacity: .11; }
+  .swinger .head { fill: var(--brass); stroke: var(--pit); stroke-width: 2; }
 
-  /* One revolution, and the visibility that goes with it. */
-  .swinger .front,
-  .swinger .back {
-    animation:
-      mace-360 var(--beat) cubic-bezier(.42, 0, .58, 1) infinite,
-      swap-front var(--beat) step-end infinite;
-  }
-  .swinger .back { animation-name: mace-360, swap-back; }
-  @keyframes mace-360 { to { transform: rotate(360deg); } }
-  /* 24.6% of the beat is where the eased rotation has reached 45 degrees. */
-  @keyframes swap-front { 0% { visibility: hidden } 24.6% { visibility: visible } 75.4% { visibility: hidden } }
-  @keyframes swap-back { 0% { visibility: visible } 24.6% { visibility: hidden } 75.4% { visibility: visible } }
-  /* A negative delay starts the revolution part-way through, so each ghost
-     trails the head by one, two, three and four twenty-fourths of a beat.
-     One delay covers both of that group's animations. */
-  .swinger .g1 { animation-delay: calc(var(--beat) * -0.9583); }
-  .swinger .g2 { animation-delay: calc(var(--beat) * -0.9167); }
-  .swinger .g3 { animation-delay: calc(var(--beat) * -0.875); }
-  .swinger .g4 { animation-delay: calc(var(--beat) * -0.8333); }
-  /* Brass catching the lamp as the head comes through the bottom, which is
-     the beat the metronome is calling. */
-  .swinger .head { animation: strike var(--beat) ease-out infinite; }
-  @keyframes strike {
-    0%, 34%   { fill: var(--brass); }
-    50%       { fill: var(--lamp); }
-    72%, 100% { fill: var(--brass); }
-  }
-  /* Torso leans away from where the weight is - opposite phase to the mace. */
-  .swinger .lean { animation: lean var(--beat) ease-in-out infinite; }
-  @keyframes lean {
-    0%, 100% { transform: rotate(-5deg); }
-    50%      { transform: rotate(5deg); }
-  }
-  /* Knees absorb twice per revolution: once overhead, once through the
-     bottom. Half the period, which is what makes the rhythm feel loaded. */
-  .swinger .load { animation: load calc(var(--beat) / 2) ease-in-out infinite; }
-  @keyframes load {
-    0%, 100% { transform: translateY(0); }
-    50%      { transform: translateY(3px); }
-  }
+  .swinger .strip { animation: swing var(--swing) steps(55) infinite; }
+  @keyframes swing { to { transform: translateX(-5500%); } }
 
   /* --- Features ---------------------------------------------------------- */
   .section-head { max-width: 52em; margin-bottom: 56px; }
@@ -691,24 +653,10 @@
        because that is one class less specific than `.swinger .front` and a
        media query does not add specificity - it lost, silently, and the
        animation kept running. */
-    .swinger .front,
-    .swinger .back,
-    .swinger .head,
-    .swinger .lean,
-    .swinger .load { animation: none; }
-    /* A ghost is lag, and lag with nothing to lag behind is four brass blobs
-       stacked on the live one. The back copy goes too: with the revolution
-       stopped at the top, both copies are drawn at once. */
-    .swinger .g1,
-    .swinger .g2,
-    .swinger .g3,
-    .swinger .g4,
-    .swinger .back { display: none; }
-    /* Held where the movement is legible rather than where the loop starts:
-       at the top of the revolution the shaft lies over the face, and behind
-       the head there is nothing to see but a brass ball. Up and out is the
-       one angle that is clear of both. */
-    .swinger .front { transform: rotate(52deg); }
+    /* Stopping the strip leaves whichever frame it was on, and the first
+       one is the top of the revolution: mace up, weight still stacked,
+       which is the frame that reads as a mace being swung. */
+    .swinger .strip { animation: none; }
     /* Each screen holds the frame that says the most: the work screen, at
        0:00 with nothing counted yet. */
     .screen--sim .phase--start,
@@ -844,50 +792,67 @@
       <div>
         <p class="eyebrow">Why it is built this way</p>
         <h2>A timer doesn't know what a mill is</h2>
-        <svg class="swinger" viewBox="12 24 186 228" role="img"
-             aria-label="A figure swinging a steel mace in a 360: once per beat the head of the mace comes down the front, out to the side and around behind the head, smearing into a trail where it is fastest, while the torso leans against the weight and the knees absorb it.">
-          <!-- Ground, so the knee bob reads against something fixed. -->
-          <line x1="62" y1="242" x2="146" y2="242" stroke-width="2" stroke="rgba(154,139,120,.35)"/>
-          <g class="load">
-            <!-- Planted wide, knees soft. -->
-            <path class="limb" d="M104 152 L83 196 L78 238"/>
-            <path class="limb" d="M104 152 L125 196 L130 238"/>
-            <g class="lean" style="transform-origin: 104px 150px; transform-box: view-box;">
-              <!-- Behind the body: the part of the revolution that passes the
-                   back of the head. -->
-            <g transform="translate(104 88) scale(1 .78)">
-              <g class="arc back g4"><circle class="ghost" cx="0" cy="-71" r="6"/></g>
-              <g class="arc back g3"><circle class="ghost" cx="0" cy="-71" r="7.5"/></g>
-              <g class="arc back g2"><circle class="ghost" cx="0" cy="-71" r="9"/></g>
-              <g class="arc back g1"><circle class="ghost" cx="0" cy="-71" r="10"/></g>
-              <g class="arc back">
-                <path class="case" d="M0 0 L0 -62"/>
-                <path class="shaft" d="M0 0 L0 -62"/>
-                <circle class="head" cx="0" cy="-71" r="10"/>
-              </g>
-            </g>
-              <path class="trunk" d="M92 78 L116 78 L112 152 L96 152 Z"/>
-              <circle class="trunk" cx="104" cy="60" r="15"/>
-              <!-- Arms out to the grip, which is where a mace is actually
-                   held: hands together in front of the chest, elbows wide,
-                   the implement circling around them. Chalk and narrower than
-                   the trunk, because at this scale an arm of the same weight
-                   and colour disappears into the torso and leaves the mace
-                   floating unattached. -->
-              <path class="arm" d="M94 85 L81 100 L104 88"/>
-              <path class="arm" d="M114 85 L127 100 L104 88"/>
-              <!-- In front of the body: the rest of it. -->
-            <g transform="translate(104 88) scale(1 .78)">
-              <g class="arc front g4"><circle class="ghost" cx="0" cy="-71" r="6"/></g>
-              <g class="arc front g3"><circle class="ghost" cx="0" cy="-71" r="7.5"/></g>
-              <g class="arc front g2"><circle class="ghost" cx="0" cy="-71" r="9"/></g>
-              <g class="arc front g1"><circle class="ghost" cx="0" cy="-71" r="10"/></g>
-              <g class="arc front">
-                <path class="case" d="M0 0 L0 -62"/>
-                <path class="shaft" d="M0 0 L0 -62"/>
-                <circle class="head" cx="0" cy="-71" r="10"/>
-              </g>
-            </g>
+        <svg class="swinger" viewBox="0 0 149 243" role="img"
+             aria-label="A figure swinging a steel mace through one full 360, traced frame by frame from a recording of the movement: the mace tips back over the shoulder, comes down behind, and rises up the front, while the knees fold to take the weight through the bottom.">
+          <line class="ground" x1="29.8" y1="231.9" x2="119.2" y2="231.9"/>
+          <clipPath id="swing-window"><rect width="149" height="243"/></clipPath>
+          <g clip-path="url(#swing-window)">
+            <g class="strip">
+              <g transform="translate(0 0)"><path class="trunk" d="M81.2 101.7L81 148.7L101.4 149.9L106.6 103.1Z"/><circle class="trunk" cx="84.2" cy="83.6" r="14.2"/><path class="limb" d="M85.2 149.2L71.5 187.4"/><path class="limb" d="M71.5 187.4L81.3 231.9"/><path class="limb" d="M97.2 149.3L80.9 186.9"/><path class="limb" d="M80.9 186.9L83.2 224.2"/><path class="arm" d="M82.1 99.7L63.2 114"/><path class="arm" d="M63.2 114L68.7 109.4"/><path class="arm" d="M105.7 105L107 122.3"/><path class="case" d="M68.7 109.4L76.7 33.2"/><path class="shaft" d="M68.7 109.4L76.7 33.2"/><circle class="head" cx="76.7" cy="33.2" r="7.5"/></g>
+              <g transform="translate(149 0)"><path class="trunk" d="M81.4 101.3L80.5 148.5L100.9 149.9L106.8 103.1Z"/><circle class="trunk" cx="84.1" cy="84.3" r="13.7"/><path class="limb" d="M84.7 149.1L71 187.4"/><path class="limb" d="M71 187.4L81.3 231.8"/><path class="limb" d="M96.7 149.3L80.6 187"/><path class="limb" d="M80.6 187L83.4 223.8"/><path class="arm" d="M82.1 99.3L63.4 110.7"/><path class="arm" d="M63.4 110.7L71 106"/><path class="arm" d="M106 105.1L112 116.2"/><path class="case" d="M71 106L63 31.1"/><path class="shaft" d="M71 106L63 31.1"/><circle class="head" cx="63" cy="31.1" r="7.5"/></g>
+              <g transform="translate(298 0)"><path class="trunk" d="M81.7 100.7L79.9 148.3L100.3 150.1L107.1 103.1Z"/><circle class="trunk" cx="84.1" cy="84.7" r="13.5"/><path class="limb" d="M84 149L70.3 187.5"/><path class="limb" d="M70.3 187.5L81.2 231.7"/><path class="limb" d="M96.1 149.4L80.2 187.1"/><path class="limb" d="M80.2 187.1L83.6 223.5"/><path class="arm" d="M82.4 98.9L64 107.3"/><path class="arm" d="M64 107.3L74.5 99.5"/><path class="arm" d="M106.5 105L114.9 111.5"/><path class="arm" d="M114.9 111.5L105.4 93.7"/><path class="case" d="M90 96.6L74.9 22.4"/><path class="shaft" d="M90 96.6L74.9 22.4"/><circle class="head" cx="74.9" cy="22.4" r="7.5"/></g>
+              <g transform="translate(447 0)"><path class="trunk" d="M82.2 100.2L79.3 148.1L99.5 150.5L107.6 103.2Z"/><circle class="trunk" cx="84.1" cy="85" r="13.3"/><path class="limb" d="M83.2 149L69.6 187.7"/><path class="limb" d="M69.6 187.7L81.2 231.6"/><path class="limb" d="M95.6 149.6L79.9 187.3"/><path class="limb" d="M79.9 187.3L83.6 223.4"/><path class="arm" d="M82.8 98.5L64.8 103.6"/><path class="arm" d="M64.8 103.6L77.9 94.5"/><path class="arm" d="M107 104.9L117.1 107.8"/><path class="arm" d="M117.1 107.8L106.1 91.4"/><path class="case" d="M92 92.9L71 19.8"/><path class="shaft" d="M92 92.9L71 19.8"/><circle class="head" cx="71" cy="19.8" r="7.5"/></g>
+              <g transform="translate(596 0)"><path class="trunk" d="M82.8 99.9L78.6 148.1L98.8 150.9L108 103.5Z"/><circle class="trunk" cx="84.2" cy="85.6" r="13.1"/><path class="limb" d="M82.3 149.1L68.9 187.9"/><path class="limb" d="M68.9 187.9L81.1 231.6"/><path class="limb" d="M95.1 150L79.6 187.4"/><path class="limb" d="M79.6 187.4L83.7 223.4"/><path class="arm" d="M83.2 98.2L65.9 100"/><path class="arm" d="M65.9 100L83.2 88.4"/><path class="arm" d="M107.6 105.1L118.5 105.3"/><path class="arm" d="M118.5 105.3L105.7 88.5"/><path class="case" d="M94.4 88.5L70.5 15.7"/><path class="shaft" d="M94.4 88.5L70.5 15.7"/><circle class="head" cx="70.5" cy="15.7" r="7.5"/></g>
+              <g transform="translate(745 0)"><path class="trunk" d="M83.2 99.7L77.8 148.1L98 151.5L108.4 103.9Z"/><circle class="trunk" cx="84.4" cy="86.2" r="12.9"/><path class="limb" d="M81.3 149.2L68.2 188.1"/><path class="limb" d="M68.2 188.1L81 231.6"/><path class="limb" d="M94.6 150.4L79.3 187.6"/><path class="limb" d="M79.3 187.6L83.6 223.5"/><path class="arm" d="M83.5 98.2L67.1 96.5"/><path class="arm" d="M67.1 96.5L84.9 86"/><path class="arm" d="M108.1 105.4L119.9 103.2"/><path class="arm" d="M119.9 103.2L106 87"/><path class="case" d="M95.4 86.5L58.8 20"/><path class="shaft" d="M95.4 86.5L58.8 20"/><circle class="head" cx="58.8" cy="20" r="7.5"/></g>
+              <g transform="translate(894 0)"><path class="trunk" d="M83.6 99.7L77.3 148.4L97.3 152L108.6 104.3Z"/><circle class="trunk" cx="84.5" cy="87.1" r="12.7"/><path class="limb" d="M80.4 149.4L67.4 188.5"/><path class="limb" d="M67.4 188.5L81 231.6"/><path class="limb" d="M94.2 150.9L79.1 187.7"/><path class="limb" d="M79.1 187.7L83.5 223.6"/><path class="arm" d="M83.7 98.4L68.3 93.6"/><path class="arm" d="M68.3 93.6L85.9 84.4"/><path class="arm" d="M108.4 105.7L120.4 102.5"/><path class="arm" d="M120.4 102.5L106.4 86.2"/><path class="case" d="M96.2 85.3L54.2 21.6"/><path class="shaft" d="M96.2 85.3L54.2 21.6"/><circle class="head" cx="54.2" cy="21.6" r="7.5"/></g>
+              <g transform="translate(1043 0)"><path class="trunk" d="M83.6 99.9L76.6 148.6L96.6 152.6L108.6 104.9Z"/><circle class="trunk" cx="84.9" cy="86.6" r="13"/><path class="limb" d="M79.5 149.8L66.5 188.8"/><path class="limb" d="M66.5 188.8L80.9 231.6"/><path class="limb" d="M93.7 151.5L78.9 187.7"/><path class="limb" d="M78.9 187.7L83.5 223.5"/><path class="arm" d="M83.6 98.6L69.5 91.1"/><path class="arm" d="M69.5 91.1L86.8 83.2"/><path class="arm" d="M108.5 106.1L121 101.7"/><path class="arm" d="M121 101.7L106.7 85.6"/><path class="case" d="M96.8 84.4L50.4 22.6"/><path class="shaft" d="M96.8 84.4L50.4 22.6"/><circle class="head" cx="50.4" cy="22.6" r="7.5"/></g>
+              <g transform="translate(1192 0)"><path class="trunk" d="M83.8 100.2L76 149.2L96 153.4L108.8 105.4Z"/><circle class="trunk" cx="85.7" cy="86.4" r="13.1"/><path class="limb" d="M78.6 150.3L65.6 189.3"/><path class="limb" d="M65.6 189.3L80.8 231.6"/><path class="limb" d="M93.4 152.2L78.6 187.8"/><path class="limb" d="M78.6 187.8L83.4 223.6"/><path class="arm" d="M83.8 98.9L70.5 89.1"/><path class="arm" d="M70.5 89.1L87.4 82"/><path class="arm" d="M108.8 106.7L121.4 100.7"/><path class="arm" d="M121.4 100.7L107.1 85.4"/><path class="case" d="M97.3 83.7L47.5 23"/><path class="shaft" d="M97.3 83.7L47.5 23"/><circle class="head" cx="47.5" cy="23" r="7.5"/></g>
+              <g transform="translate(1341 0)"><path class="trunk" d="M84 100.7L75.4 149.8L95.2 154.4L108.8 106.3Z"/><path class="limb" d="M77.8 151L64.5 189.8"/><path class="limb" d="M64.5 189.8L80.7 231.8"/><path class="limb" d="M92.9 153.2L78.3 187.9"/><path class="limb" d="M78.3 187.9L83.4 223.7"/><path class="arm" d="M84 99.4L71.5 87.2"/><path class="arm" d="M71.5 87.2L88.7 80.7"/><path class="arm" d="M108.8 107.5L121.7 99.9"/><path class="arm" d="M121.7 99.9L107.5 84.5"/><path class="case" d="M98.1 82.6L45.8 22.5"/><path class="shaft" d="M98.1 82.6L45.8 22.5"/><circle class="head" cx="45.8" cy="22.5" r="7.5"/></g>
+              <g transform="translate(1490 0)"><path class="trunk" d="M84 101.4L75 150.4L94.8 155.2L108.8 107.2Z"/><circle class="trunk" cx="90.4" cy="96" r="10.8"/><path class="limb" d="M77.4 151.6L63.5 190.1"/><path class="limb" d="M63.5 190.1L80.6 231.8"/><path class="limb" d="M92.3 154.1L78 187.9"/><path class="limb" d="M78 187.9L83.4 223.6"/><path class="arm" d="M84.1 100L72.3 85.7"/><path class="arm" d="M72.3 85.7L89.6 80.3"/><path class="arm" d="M108.6 108.6L121.7 99.5"/><path class="arm" d="M121.7 99.5L107.7 84"/><path class="case" d="M98.6 82.1L45.4 23.1"/><path class="shaft" d="M98.6 82.1L45.4 23.1"/><circle class="head" cx="45.4" cy="23.1" r="7.5"/></g>
+              <g transform="translate(1639 0)"><path class="trunk" d="M83.9 102L74.5 150.9L94.3 155.7L108.7 108.2Z"/><circle class="trunk" cx="90.3" cy="94" r="10.8"/><path class="limb" d="M77.3 152.1L62.3 190.6"/><path class="limb" d="M62.3 190.6L80.4 231.8"/><path class="limb" d="M91.7 154.5L77.5 187.9"/><path class="limb" d="M77.5 187.9L83.3 223.3"/><path class="arm" d="M84.2 100.7L72.7 84.7"/><path class="arm" d="M72.7 84.7L90.1 80.2"/><path class="arm" d="M108.4 109.4L121.5 99.5"/><path class="arm" d="M121.5 99.5L108.1 84.3"/><path class="case" d="M99.1 82.3L46.2 24.7"/><path class="shaft" d="M99.1 82.3L46.2 24.7"/><circle class="head" cx="46.2" cy="24.7" r="7.5"/></g>
+              <g transform="translate(1788 0)"><path class="trunk" d="M83.4 102.5L73.6 151.4L93.4 156.4L108.2 108.7Z"/><circle class="trunk" cx="91.2" cy="90.4" r="10.8"/><path class="limb" d="M77.5 153.1L61.2 191.1"/><path class="limb" d="M61.2 191.1L80.2 231.8"/><path class="limb" d="M90.1 154.8L76.8 188.2"/><path class="limb" d="M76.8 188.2L83.2 223.1"/><path class="arm" d="M86.6 102.4L79.4 86.2"/><path class="arm" d="M79.4 86.2L92.7 81.5"/><path class="arm" d="M104.9 108.7L114 96.5"/><path class="arm" d="M114 96.5L105.8 84.9"/><path class="case" d="M99.3 83.2L46.1 25.7"/><path class="shaft" d="M99.3 83.2L46.1 25.7"/><circle class="head" cx="46.1" cy="25.7" r="7.5"/></g>
+              <g transform="translate(1937 0)"><path class="trunk" d="M83.1 102.9L72.5 151.7L92.1 157.1L107.7 109.5Z"/><circle class="trunk" cx="91.1" cy="91.3" r="10.8"/><path class="limb" d="M78 154.1L60.2 191.5"/><path class="limb" d="M60.2 191.5L80.1 231.7"/><path class="limb" d="M87.7 154.9L76 188.3"/><path class="limb" d="M76 188.3L83.1 223"/><path class="arm" d="M89.2 104.3L85.7 88.1"/><path class="arm" d="M85.7 88.1L94.6 83.1"/><path class="arm" d="M101.9 108.2L106.7 93.5"/><path class="arm" d="M106.7 93.5L103.5 85.9"/><path class="case" d="M99.1 84.5L45.7 26.9"/><path class="shaft" d="M99.1 84.5L45.7 26.9"/><circle class="head" cx="45.7" cy="26.9" r="7.5"/></g>
+              <g transform="translate(2086 0)"><path class="trunk" d="M82.6 103.3L71.2 152.3L90.8 157.9L107.2 110.3Z"/><circle class="trunk" cx="91.9" cy="91.3" r="10.8"/><path class="limb" d="M78.4 155.2L59.3 192"/><path class="limb" d="M59.3 192L80 231.7"/><path class="limb" d="M84.5 155.3L75 188.7"/><path class="limb" d="M75 188.7L82.9 223.1"/><path class="arm" d="M92.2 106.3L91.8 90"/><path class="arm" d="M91.8 90L96.2 85.3"/><path class="arm" d="M97.9 107.5L99.3 90.4"/><path class="arm" d="M99.3 90.4L101.2 87.2"/><path class="case" d="M98.7 86.2L65.1 14.8"/><path class="shaft" d="M98.7 86.2L65.1 14.8"/><circle class="head" cx="65.1" cy="14.8" r="7.5"/></g>
+              <g transform="translate(2235 0)"><path class="trunk" d="M82.2 103.6L70.1 152.2L89.7 158.2L106.6 111Z"/><circle class="trunk" cx="95.6" cy="93.5" r="10.8"/><path class="limb" d="M79.5 155.6L60.4 191.5"/><path class="limb" d="M60.4 191.5L79.9 231.5"/><path class="limb" d="M80.5 154.9L71.6 189.6"/><path class="limb" d="M71.6 189.6L82.5 223.5"/><path class="arm" d="M95 108.3L95.1 93"/><path class="arm" d="M95.1 93L97.6 88.9"/><path class="arm" d="M94.5 106.6L92.6 87.4"/><path class="arm" d="M92.6 87.4L98.7 88.7"/><path class="case" d="M98.2 88.8L87.7 10"/><path class="shaft" d="M98.2 88.8L87.7 10"/><circle class="head" cx="87.7" cy="10" r="7.5"/></g>
+              <g transform="translate(2384 0)"><path class="trunk" d="M82.3 103.9L68.6 152.2L88 158.8L106.5 112.1Z"/><circle class="trunk" cx="96.3" cy="93.6" r="10.8"/><path class="limb" d="M79.2 156.3L59.5 192"/><path class="limb" d="M59.5 192L79.8 231.5"/><path class="limb" d="M77.4 154.8L70.3 190"/><path class="limb" d="M70.3 190L82.2 223.3"/><path class="arm" d="M97.4 110L96.6 92.6"/><path class="arm" d="M96.6 92.6L98.9 92.1"/><path class="arm" d="M92.2 106.3L87.7 85.4"/><path class="arm" d="M87.7 85.4L96.8 89.9"/><path class="case" d="M97.8 91L57.2 21.8"/><path class="shaft" d="M97.8 91L57.2 21.8"/><circle class="head" cx="57.2" cy="21.8" r="7.5"/></g>
+              <g transform="translate(2533 0)"><path class="trunk" d="M81.7 104.1L67.4 152.7L86.6 159.5L105.7 112.5Z"/><circle class="trunk" cx="96.6" cy="93.4" r="10.8"/><path class="limb" d="M79.1 157.2L58.7 192.4"/><path class="limb" d="M58.7 192.4L79.7 231.5"/><path class="limb" d="M74.5 155L69 190.4"/><path class="limb" d="M69 190.4L81.9 223.4"/><path class="arm" d="M98.2 110.8L98.9 92.5"/><path class="arm" d="M98.9 92.5L100.7 96.2"/><path class="arm" d="M89.2 105.6L81.2 84"/><path class="arm" d="M81.2 84L94.3 91"/><path class="case" d="M97.5 93.6L35.6 41"/><path class="shaft" d="M97.5 93.6L35.6 41"/><circle class="head" cx="35.6" cy="41" r="7.5"/></g>
+              <g transform="translate(2682 0)"><path class="trunk" d="M80.8 104.5L66.4 153.4L85.6 160.2L104.8 112.9Z"/><circle class="trunk" cx="91.8" cy="93.1" r="10.8"/><path class="limb" d="M78.3 158L58 192.7"/><path class="limb" d="M58 192.7L79.7 231.6"/><path class="limb" d="M73.3 155.6L67.9 190.7"/><path class="limb" d="M67.9 190.7L81.8 223.6"/><path class="arm" d="M98.2 111.2L99.6 91.6"/><path class="arm" d="M99.6 91.6L101.3 97.6"/><path class="arm" d="M86 105.2L75.6 81.5"/><path class="arm" d="M75.6 81.5L92.8 91.3"/><path class="case" d="M97 94.5L20.9 63.1"/><path class="shaft" d="M97 94.5L20.9 63.1"/><circle class="head" cx="20.9" cy="63.1" r="7.5"/></g>
+              <g transform="translate(2831 0)"><path class="trunk" d="M80.4 105.1L66 154L85.2 160.8L104.4 113.5Z"/><circle class="trunk" cx="87.7" cy="93.5" r="11"/><path class="limb" d="M77.3 158.4L57.5 192.8"/><path class="limb" d="M57.5 192.8L79.7 231.7"/><path class="limb" d="M73.3 156.2L66.9 190.8"/><path class="limb" d="M66.9 190.8L81.6 223.6"/><path class="arm" d="M95.9 110.4L94.4 88.1"/><path class="arm" d="M94.4 88.1L99.5 99.7"/><path class="arm" d="M87.5 107.3L76.3 82"/><path class="arm" d="M76.3 82L93.3 92.7"/><path class="case" d="M96.4 96.2L12.1 88.4"/><path class="shaft" d="M96.4 96.2L12.1 88.4"/><circle class="head" cx="12.1" cy="88.4" r="7.5"/></g>
+              <g transform="translate(2980 0)"><path class="trunk" d="M80.1 105.6L65.6 154.2L84.8 161L104.1 114.2Z"/><circle class="trunk" cx="84" cy="93.8" r="12.1"/><path class="limb" d="M76.3 158.3L57.1 192.7"/><path class="limb" d="M57.1 192.7L79.6 231.9"/><path class="limb" d="M73.5 156.8L66.4 190.9"/><path class="limb" d="M66.4 190.9L81.5 223.6"/><path class="arm" d="M93.5 109.6L90 84.7"/><path class="arm" d="M90 84.7L98.2 101.4"/><path class="arm" d="M89.2 109.2L77.4 83"/><path class="arm" d="M77.4 83L94.3 94.5"/><path class="case" d="M96.3 98L10 115"/><path class="shaft" d="M96.3 98L10 115"/><circle class="head" cx="10" cy="115" r="7.5"/></g>
+              <g transform="translate(3129 0)"><path class="trunk" d="M78.2 106.4L65 154.5L84.4 160.9L102.4 114.4Z"/><circle class="trunk" cx="79.4" cy="94.3" r="13"/><path class="limb" d="M75.3 158.2L56.9 192.5"/><path class="limb" d="M56.9 192.5L79.6 232"/><path class="limb" d="M73.7 157.1L65.9 191"/><path class="limb" d="M65.9 191L81.5 223.3"/><path class="arm" d="M91 108.8L86.1 81.4"/><path class="arm" d="M86.1 81.4L97 103.1"/><path class="arm" d="M88.6 111.5L79.4 86.5"/><path class="arm" d="M79.4 86.5L95.3 96.7"/><path class="case" d="M96.2 99.9L16.4 141"/><path class="shaft" d="M96.2 99.9L16.4 141"/><circle class="head" cx="16.4" cy="141" r="7.5"/></g>
+              <g transform="translate(3278 0)"><path class="trunk" d="M76.3 107.1L64.2 155.2L83.8 161.2L100.7 114.5Z"/><circle class="trunk" cx="73.5" cy="93.4" r="15.4"/><path class="limb" d="M73.9 158.5L55 193.1"/><path class="limb" d="M55 193.1L79.5 232.3"/><path class="limb" d="M74.1 158L67.5 190.6"/><path class="limb" d="M67.5 190.6L81.8 222.7"/><path class="arm" d="M88.9 107.9L86.4 78.4"/><path class="arm" d="M86.4 78.4L96.1 99.9"/><path class="arm" d="M87.4 113.5L95.6 135"/><path class="arm" d="M95.6 135L98.8 100.9"/><path class="case" d="M97.4 100.4L31 163"/><path class="shaft" d="M97.4 100.4L31 163"/><circle class="head" cx="31" cy="163" r="7.5"/></g>
+              <g transform="translate(3427 0)"><path class="trunk" d="M74.4 106.6L64 155.5L83.8 160.7L99 113.2Z"/><circle class="trunk" cx="70.6" cy="93.1" r="15.6"/><path class="limb" d="M73.9 158.4L55.3 192.6"/><path class="limb" d="M55.3 192.6L79.5 232.4"/><path class="limb" d="M73.9 157.9L66.9 190.6"/><path class="limb" d="M66.9 190.6L81.7 222.2"/><path class="arm" d="M88.1 107.2L88.4 78.3"/><path class="arm" d="M88.4 78.3L96.4 96.4"/><path class="arm" d="M84.7 112.6L95.6 135"/><path class="arm" d="M95.6 135L100 101.9"/><path class="case" d="M98.2 99.2L51.6 179"/><path class="shaft" d="M98.2 99.2L51.6 179"/><circle class="head" cx="51.6" cy="179" r="7.5"/></g>
+              <g transform="translate(3576 0)"><path class="trunk" d="M73.4 106.4L63.8 155.4L83.6 160.4L98.2 112.6Z"/><circle class="trunk" cx="70.8" cy="92.7" r="15.1"/><path class="limb" d="M73.8 158.1L55.8 192.2"/><path class="limb" d="M55.8 192.2L79.4 232.4"/><path class="limb" d="M73.4 157.6L66.5 190.6"/><path class="limb" d="M66.5 190.6L81.7 221.7"/><path class="arm" d="M88.8 107.1L90.5 78"/><path class="arm" d="M90.5 78L86.7 82.6"/><path class="case" d="M94.5 92.3L73.7 182.8"/><path class="shaft" d="M94.5 92.3L73.7 182.8"/><circle class="head" cx="73.7" cy="182.8" r="7.5"/></g>
+              <g transform="translate(3725 0)"><path class="trunk" d="M72.7 106L63.4 155L83.2 159.8L97.5 112Z"/><circle class="trunk" cx="70.8" cy="92.2" r="14.8"/><path class="limb" d="M74.2 157.7L56.5 191.6"/><path class="limb" d="M56.5 191.6L79.5 232.4"/><path class="limb" d="M72.3 157.2L66.2 190.6"/><path class="limb" d="M66.2 190.6L81.7 221.3"/><path class="arm" d="M89.7 107.1L92.7 77.3"/><path class="arm" d="M92.7 77.3L81.4 77"/><path class="case" d="M91.8 89.4L99.4 180.5"/><path class="shaft" d="M91.8 89.4L99.4 180.5"/><circle class="head" cx="99.4" cy="180.5" r="7.5"/></g>
+              <g transform="translate(3874 0)"><path class="trunk" d="M72.1 105.1L63.4 154.5L83.2 159.1L96.9 110.7Z"/><circle class="trunk" cx="70.7" cy="91.5" r="14.3"/><path class="limb" d="M74.6 157L57.4 191.2"/><path class="limb" d="M57.4 191.2L79.5 232.5"/><path class="limb" d="M71.9 156.5L66.1 190.6"/><path class="limb" d="M66.1 190.6L81.8 220.8"/><path class="arm" d="M90.6 106.8L94.2 76.8"/><path class="arm" d="M94.2 76.8L86.3 75.6"/><path class="arm" d="M78.1 109L64.4 77.5"/><path class="arm" d="M64.4 77.5L90 75.8"/><path class="case" d="M88.2 75.7L120.3 159"/><path class="shaft" d="M88.2 75.7L120.3 159"/><circle class="head" cx="120.3" cy="159" r="7.5"/></g>
+              <g transform="translate(4023 0)"><path class="trunk" d="M71.4 104L63.8 154.1L83.8 158.1L96.4 109Z"/><circle class="trunk" cx="71.2" cy="90.5" r="13.7"/><path class="limb" d="M75.5 156.4L58.5 190.7"/><path class="limb" d="M58.5 190.7L79.6 232.5"/><path class="limb" d="M72 155.8L66.4 190.5"/><path class="limb" d="M66.4 190.5L81.9 220.3"/><path class="arm" d="M91.5 106.1L95.5 76"/><path class="arm" d="M95.5 76L88.2 74.1"/><path class="arm" d="M76.3 106.8L63.5 77.9"/><path class="arm" d="M63.5 77.9L85.3 68.3"/><path class="case" d="M86.8 71.2L135.2 142.4"/><path class="shaft" d="M86.8 71.2L135.2 142.4"/><circle class="head" cx="135.2" cy="142.4" r="7.5"/></g>
+              <g transform="translate(4172 0)"><path class="trunk" d="M71.9 102.7L64.5 153.3L84.5 157.3L96.9 107.7Z"/><circle class="trunk" cx="72.1" cy="89" r="13.7"/><path class="limb" d="M76.8 155.6L59.9 190.2"/><path class="limb" d="M59.9 190.2L79.7 232.5"/><path class="limb" d="M72.2 155L66.9 190.3"/><path class="limb" d="M66.9 190.3L82.1 219.9"/><path class="arm" d="M92.3 105.5L96 75.5"/><path class="arm" d="M96 75.5L89.4 73.6"/><path class="arm" d="M76.5 104.6L62.6 78.7"/><path class="arm" d="M62.6 78.7L83.3 67.5"/><path class="case" d="M86.3 70.5L139 133.5"/><path class="shaft" d="M86.3 70.5L139 133.5"/><circle class="head" cx="139" cy="133.5" r="7.5"/></g>
+              <g transform="translate(4321 0)"><path class="trunk" d="M72.4 101.8L65.5 152.5L85.5 156.3L97.4 106.4Z"/><circle class="trunk" cx="73" cy="87.6" r="13.6"/><path class="limb" d="M78.3 154.8L61.3 189.6"/><path class="limb" d="M61.3 189.6L79.8 232.4"/><path class="limb" d="M72.7 154.1L67.5 190.1"/><path class="limb" d="M67.5 190.1L82.2 219.6"/><path class="arm" d="M93.2 105L96 75.1"/><path class="arm" d="M96 75.1L89.8 72.8"/><path class="arm" d="M76.6 103L61.9 79.8"/><path class="arm" d="M61.9 79.8L81.4 67"/><path class="case" d="M85.6 69.9L128.6 135.3"/><path class="shaft" d="M85.6 69.9L128.6 135.3"/><circle class="head" cx="128.6" cy="135.3" r="7.5"/></g>
+              <g transform="translate(4470 0)"><path class="trunk" d="M72.9 101L66.6 151.8L86.6 155.4L98.1 105.4Z"/><circle class="trunk" cx="74.1" cy="86.3" r="13.7"/><path class="limb" d="M79.8 153.9L62.9 189"/><path class="limb" d="M62.9 189L80 232.3"/><path class="limb" d="M73.2 153.3L68.5 189.9"/><path class="limb" d="M68.5 189.9L82.4 219.8"/><path class="arm" d="M94.1 104.4L95.3 74.4"/><path class="arm" d="M95.3 74.4L89.3 71.9"/><path class="arm" d="M76.8 101.9L61.3 81"/><path class="arm" d="M61.3 81L79.4 67"/><path class="case" d="M84.3 69.4L130.2 127.7"/><path class="shaft" d="M84.3 69.4L130.2 127.7"/><circle class="head" cx="130.2" cy="127.7" r="7.5"/></g>
+              <g transform="translate(4619 0)"><path class="trunk" d="M73.6 99.8L67.5 151L87.7 154.4L98.8 104Z"/><circle class="trunk" cx="74.8" cy="85.3" r="13.5"/><path class="limb" d="M81.4 152.9L64.4 188.5"/><path class="limb" d="M64.4 188.5L80.2 232.2"/><path class="limb" d="M73.9 152.4L69.5 189.8"/><path class="limb" d="M69.5 189.8L82.7 219.9"/><path class="arm" d="M95.1 103.5L93.7 73.6"/><path class="arm" d="M93.7 73.6L90.5 70.8"/><path class="arm" d="M77.2 100.2L60.7 82.4"/><path class="arm" d="M60.7 82.4L77.7 67.2"/><path class="case" d="M84.1 69L135.1 117.2"/><path class="shaft" d="M84.1 69L135.1 117.2"/><circle class="head" cx="135.1" cy="117.2" r="7.5"/></g>
+              <g transform="translate(4768 0)"><path class="trunk" d="M74.1 99L68.8 150.4L89 153.4L99.3 102.8Z"/><circle class="trunk" cx="75.8" cy="84.4" r="13.2"/><path class="limb" d="M82.9 152.2L66 188.1"/><path class="limb" d="M66 188.1L80.4 232.1"/><path class="limb" d="M74.9 151.6L71 189.6"/><path class="limb" d="M71 189.6L83 220.1"/><path class="arm" d="M95.9 102.6L91.9 73.9"/><path class="arm" d="M91.9 73.9L90.7 70.4"/><path class="arm" d="M77.6 99.3L60.2 83.9"/><path class="arm" d="M60.2 83.9L76.1 67.7"/><path class="case" d="M83.4 69.1L136 109"/><path class="shaft" d="M83.4 69.1L136 109"/><circle class="head" cx="136" cy="109" r="7.5"/></g>
+              <g transform="translate(4917 0)"><path class="trunk" d="M74.6 98.7L70.1 149.9L90.3 152.7L99.8 102.1Z"/><circle class="trunk" cx="78.2" cy="83.2" r="13"/><path class="limb" d="M84.5 151.5L67.5 187.7"/><path class="limb" d="M67.5 187.7L80.6 231.9"/><path class="limb" d="M75.9 151.1L72.2 189.2"/><path class="limb" d="M72.2 189.2L83.4 220.3"/><path class="arm" d="M96.6 101.8L89.2 74.1"/><path class="arm" d="M89.2 74.1L87.9 69.3"/><path class="arm" d="M77.9 99L59.2 86.4"/><path class="arm" d="M59.2 86.4L73 68.3"/><path class="case" d="M80.4 68.8L134.7 99.8"/><path class="shaft" d="M80.4 68.8L134.7 99.8"/><circle class="head" cx="134.7" cy="99.8" r="7.5"/></g>
+              <g transform="translate(5066 0)"><path class="trunk" d="M75 98.6L71.3 149.6L91.5 152.2L100.4 101.8Z"/><circle class="trunk" cx="80.5" cy="81.9" r="13.1"/><path class="limb" d="M85.8 151L68.9 187.3"/><path class="limb" d="M68.9 187.3L80.8 231.8"/><path class="limb" d="M77 150.8L73.4 189"/><path class="limb" d="M73.4 189L83.7 220.7"/><path class="arm" d="M97.1 101.2L85.7 75.2"/><path class="arm" d="M85.7 75.2L84.2 69.1"/><path class="arm" d="M78.2 99.2L58.6 89.5"/><path class="arm" d="M58.6 89.5L70 69.7"/><path class="case" d="M77.1 69.4L132.9 93.2"/><path class="shaft" d="M77.1 69.4L132.9 93.2"/><circle class="head" cx="132.9" cy="93.2" r="7.5"/></g>
+              <g transform="translate(5215 0)"><path class="trunk" d="M75.4 98.8L72.4 149.5L92.6 151.7L100.8 101.6Z"/><circle class="trunk" cx="82.9" cy="80.8" r="13.4"/><path class="limb" d="M86.8 150.7L70.3 187"/><path class="limb" d="M70.3 187L81 231.7"/><path class="limb" d="M78.2 150.5L74.7 188.7"/><path class="limb" d="M74.7 188.7L83.7 221.2"/><path class="arm" d="M97.4 100.5L83.2 76.2"/><path class="arm" d="M83.2 76.2L80.5 69.1"/><path class="arm" d="M78.7 100L58.3 92.8"/><path class="arm" d="M58.3 92.8L67.1 71.7"/><path class="case" d="M73.8 70.4L131.6 84.8"/><path class="shaft" d="M73.8 70.4L131.6 84.8"/><circle class="head" cx="131.6" cy="84.8" r="7.5"/></g>
+              <g transform="translate(5364 0)"><path class="trunk" d="M75.7 99L73.3 149.4L93.5 151.4L101.1 101.6Z"/><circle class="trunk" cx="85.7" cy="79.9" r="13.8"/><path class="limb" d="M87.5 150.4L71.6 186.7"/><path class="limb" d="M71.6 186.7L81.1 231.7"/><path class="limb" d="M79.3 150.3L75.8 188.4"/><path class="limb" d="M75.8 188.4L83.6 221.7"/><path class="arm" d="M97.5 99.8L81.2 77.5"/><path class="arm" d="M81.2 77.5L76.9 69.5"/><path class="arm" d="M79.4 100.9L58.3 96.4"/><path class="arm" d="M58.3 96.4L64.7 74.4"/><path class="case" d="M70.8 71.9L130 76.2"/><path class="shaft" d="M70.8 71.9L130 76.2"/><circle class="head" cx="130" cy="76.2" r="7.5"/></g>
+              <g transform="translate(5513 0)"><path class="trunk" d="M76.2 99.4L74.2 149.3L94.6 151.1L101.6 101.6Z"/><circle class="trunk" cx="88" cy="79.7" r="14"/><path class="limb" d="M88.1 150.3L72.9 186.6"/><path class="limb" d="M72.9 186.6L81.3 231.7"/><path class="limb" d="M80.6 150L76.6 188"/><path class="limb" d="M76.6 188L83.6 222.1"/><path class="arm" d="M97.5 99.1L78.4 79.7"/><path class="arm" d="M78.4 79.7L74.3 71"/><path class="arm" d="M80.3 101.8L58.8 100.2"/><path class="arm" d="M58.8 100.2L62.6 77.5"/><path class="case" d="M68.4 74.3L127.9 68.7"/><path class="shaft" d="M68.4 74.3L127.9 68.7"/><circle class="head" cx="127.9" cy="68.7" r="7.5"/></g>
+              <g transform="translate(5662 0)"><path class="trunk" d="M76.4 100.2L75.1 149.3L95.5 150.9L101.8 102.2Z"/><circle class="trunk" cx="88.4" cy="79.7" r="14.4"/><path class="limb" d="M88.6 150.3L74 186.4"/><path class="limb" d="M74 186.4L81.4 231.7"/><path class="limb" d="M81.9 149.9L77.3 187.6"/><path class="limb" d="M77.3 187.6L83.5 222.6"/><path class="arm" d="M97.4 98.9L76.4 82"/><path class="arm" d="M76.4 82L72.5 74"/><path class="arm" d="M80.7 103.5L59.6 103.8"/><path class="arm" d="M59.6 103.8L60.8 81.1"/><path class="case" d="M66.7 77.5L125.2 62.3"/><path class="shaft" d="M66.7 77.5L125.2 62.3"/><circle class="head" cx="125.2" cy="62.3" r="7.5"/></g>
+              <g transform="translate(5811 0)"><path class="trunk" d="M76.6 101.2L76.3 149.4L96.7 150.6L102 102.6Z"/><circle class="trunk" cx="89" cy="79.7" r="14.9"/><path class="limb" d="M89.2 150.3L74.9 186.2"/><path class="limb" d="M74.9 186.2L81.5 231.7"/><path class="limb" d="M83.6 149.8L77.9 187.3"/><path class="limb" d="M77.9 187.3L83.2 223.1"/><path class="arm" d="M97.3 98.7L75.2 83.9"/><path class="arm" d="M75.2 83.9L70.3 76.5"/><path class="arm" d="M81.3 104.9L60.9 107.2"/><path class="arm" d="M60.9 107.2L59.5 84.9"/><path class="case" d="M64.9 80.7L121.2 56"/><path class="shaft" d="M64.9 80.7L121.2 56"/><circle class="head" cx="121.2" cy="56" r="7.5"/></g>
+              <g transform="translate(5960 0)"><path class="trunk" d="M77 101.8L77.4 149.4L97.8 150.4L102.4 103Z"/><circle class="trunk" cx="89.5" cy="79.8" r="15.2"/><path class="limb" d="M89.7 150.3L75.7 186.1"/><path class="limb" d="M75.7 186.1L81.5 231.7"/><path class="limb" d="M85.3 149.6L78.6 187.1"/><path class="limb" d="M78.6 187.1L82.9 223.8"/><path class="arm" d="M97.2 98.7L73.7 87"/><path class="arm" d="M73.7 87L68 79.9"/><path class="arm" d="M82.1 106L62.4 110.5"/><path class="arm" d="M62.4 110.5L58.5 88.8"/><path class="case" d="M63.2 84.3L117.5 53.3"/><path class="shaft" d="M63.2 84.3L117.5 53.3"/><circle class="head" cx="117.5" cy="53.3" r="7.5"/></g>
+              <g transform="translate(6109 0)"><path class="trunk" d="M78.5 101.9L78.3 149.3L98.7 150.5L103.9 103.3Z"/><circle class="trunk" cx="89.9" cy="80" r="15.2"/><path class="limb" d="M90.2 150.3L76.3 186"/><path class="limb" d="M76.3 186L81.5 231.8"/><path class="limb" d="M86.7 149.5L79 186.7"/><path class="limb" d="M79 186.7L82.8 224.3"/><path class="arm" d="M97.1 98.6L72.2 90"/><path class="arm" d="M72.2 90L66 84"/><path class="arm" d="M84.7 106.6L64.1 113.7"/><path class="arm" d="M64.1 113.7L57.8 92.8"/><path class="case" d="M61.9 88.4L110.2 46.4"/><path class="shaft" d="M61.9 88.4L110.2 46.4"/><circle class="head" cx="110.2" cy="46.4" r="7.5"/></g>
+              <g transform="translate(6258 0)"><path class="trunk" d="M80.4 101.7L79.3 149.1L99.7 150.7L105.8 103.7Z"/><circle class="trunk" cx="90.5" cy="80.2" r="15.2"/><path class="limb" d="M90.7 150.3L76.8 186"/><path class="limb" d="M76.8 186L81.6 231.8"/><path class="limb" d="M88.2 149.4L79.5 186.4"/><path class="limb" d="M79.5 186.4L82.7 224.7"/><path class="arm" d="M96.9 98.8L71.5 93.5"/><path class="arm" d="M71.5 93.5L64.5 87.7"/><path class="arm" d="M88.9 106.7L65.9 116.7"/><path class="arm" d="M65.9 116.7L57.4 96.8"/><path class="case" d="M61 92.3L108.1 46.8"/><path class="shaft" d="M61 92.3L108.1 46.8"/><circle class="head" cx="108.1" cy="46.8" r="7.5"/></g>
+              <g transform="translate(6407 0)"><path class="trunk" d="M82.3 101.6L80.3 148.8L100.7 150.8L107.7 104Z"/><circle class="trunk" cx="91" cy="80.5" r="15.2"/><path class="limb" d="M91 150.3L77.2 185.9"/><path class="limb" d="M77.2 185.9L81.6 231.8"/><path class="limb" d="M89.8 149.4L80.1 186.1"/><path class="limb" d="M80.1 186.1L82.8 225.1"/><path class="arm" d="M96.8 99.1L71.1 97"/><path class="arm" d="M71.1 97L63.7 90.6"/><path class="arm" d="M93 106.4L67.8 119.3"/><path class="arm" d="M67.8 119.3L57.3 100.7"/><path class="case" d="M60.5 95.6L105.4 45.7"/><path class="shaft" d="M60.5 95.6L105.4 45.7"/><circle class="head" cx="105.4" cy="45.7" r="7.5"/></g>
+              <g transform="translate(6556 0)"><path class="trunk" d="M84.1 101.5L81.4 148.8L101.6 151L109.5 104.3Z"/><circle class="trunk" cx="91.4" cy="80.7" r="15.3"/><path class="limb" d="M91.4 150.3L77.4 185.9"/><path class="limb" d="M77.4 185.9L81.7 231.7"/><path class="limb" d="M91.5 149.5L80.7 185.9"/><path class="limb" d="M80.7 185.9L82.8 225.4"/><path class="arm" d="M96.7 99.6L71 100.5"/><path class="arm" d="M71 100.5L62.9 94.6"/><path class="arm" d="M96.9 106.2L69.6 121.5"/><path class="arm" d="M69.6 121.5L57.5 104.3"/><path class="case" d="M60.2 99.5L99.9 43.4"/><path class="shaft" d="M60.2 99.5L99.9 43.4"/><circle class="head" cx="99.9" cy="43.4" r="7.5"/></g>
+              <g transform="translate(6705 0)"><path class="trunk" d="M86 101.2L82.2 148.5L102.4 151.3L111.2 104.6Z"/><circle class="trunk" cx="91.9" cy="80.9" r="15.4"/><path class="limb" d="M91.6 150.2L77.5 186"/><path class="limb" d="M77.5 186L81.7 231.7"/><path class="limb" d="M93.1 149.5L81.1 185.7"/><path class="limb" d="M81.1 185.7L82.9 225.6"/><path class="arm" d="M96.7 100.2L71.3 103.4"/><path class="arm" d="M71.3 103.4L62.1 97.2"/><path class="arm" d="M100.9 105.4L71.6 123.6"/><path class="arm" d="M71.6 123.6L57.8 107.8"/><path class="case" d="M59.9 102.5L99 44.1"/><path class="shaft" d="M59.9 102.5L99 44.1"/><circle class="head" cx="99" cy="44.1" r="7.5"/></g>
+              <g transform="translate(6854 0)"><path class="trunk" d="M87.7 100.8L82.6 148.2L102.8 151.4L112.9 104.8Z"/><circle class="trunk" cx="92.2" cy="81.2" r="15.4"/><path class="limb" d="M91.7 150.2L77.6 186.1"/><path class="limb" d="M77.6 186.1L81.8 231.7"/><path class="limb" d="M93.7 149.4L81.3 185.5"/><path class="limb" d="M81.3 185.5L82.9 225.7"/><path class="arm" d="M96.7 100.8L71.9 106.4"/><path class="arm" d="M71.9 106.4L61.6 100.2"/><path class="arm" d="M104.4 104.6L73.1 125.2"/><path class="arm" d="M73.1 125.2L58.3 111.1"/><path class="case" d="M59.9 105.7L93.2 42.3"/><path class="shaft" d="M59.9 105.7L93.2 42.3"/><circle class="head" cx="93.2" cy="42.3" r="7.5"/></g>
+              <g transform="translate(7003 0)"><path class="trunk" d="M89.2 100.5L83.1 148.1L103.1 151.7L114.2 105.1Z"/><circle class="trunk" cx="92.6" cy="81.4" r="15.6"/><path class="limb" d="M91.7 150.2L77.7 186.2"/><path class="limb" d="M77.7 186.2L81.8 231.7"/><path class="limb" d="M94.5 149.5L81.4 185.4"/><path class="limb" d="M81.4 185.4L82.9 225.7"/><path class="arm" d="M96.7 101.3L72.8 109.5"/><path class="arm" d="M72.8 109.5L61.5 103.7"/><path class="arm" d="M106.7 104.2L75 126.9"/><path class="arm" d="M75 126.9L59.1 114.7"/><path class="case" d="M60.3 109.2L93.1 44.3"/><path class="shaft" d="M60.3 109.2L93.1 44.3"/><circle class="head" cx="93.1" cy="44.3" r="7.5"/></g>
+              <g transform="translate(7152 0)"><path class="trunk" d="M89.1 100.8L83.4 148.1L103.4 151.7L114.3 105.2Z"/><circle class="trunk" cx="93.1" cy="81.6" r="15.4"/><path class="limb" d="M91.6 150.3L77.6 186.3"/><path class="limb" d="M77.6 186.3L81.8 231.8"/><path class="limb" d="M95.2 149.5L81.5 185.4"/><path class="limb" d="M81.5 185.4L82.8 225.5"/><path class="arm" d="M96.7 101.9L73.9 112.5"/><path class="arm" d="M73.9 112.5L61.7 107.3"/><path class="arm" d="M106.8 104.2L76.6 128.2"/><path class="arm" d="M76.6 128.2L60 117.9"/><path class="case" d="M60.8 112.6L93.1 46.1"/><path class="shaft" d="M60.8 112.6L93.1 46.1"/><circle class="head" cx="93.1" cy="46.1" r="7.5"/></g>
+              <g transform="translate(7301 0)"><path class="trunk" d="M89.1 101.1L83.6 148.2L103.6 151.6L114.3 105.5Z"/><circle class="trunk" cx="93.2" cy="81.8" r="15.5"/><path class="limb" d="M91.7 150.2L77.6 186.3"/><path class="limb" d="M77.6 186.3L81.8 231.8"/><path class="limb" d="M95.4 149.6L81.4 185.4"/><path class="limb" d="M81.4 185.4L82.6 225.2"/><path class="arm" d="M96.7 102.4L75.1 115.4"/><path class="arm" d="M75.1 115.4L61.9 111"/><path class="arm" d="M106.7 104.2L78.2 129.5"/><path class="arm" d="M78.2 129.5L61.1 120.9"/><path class="case" d="M61.5 115.9L87.8 45.6"/><path class="shaft" d="M61.5 115.9L87.8 45.6"/><circle class="head" cx="87.8" cy="45.6" r="7.5"/></g>
+              <g transform="translate(7450 0)"><path class="trunk" d="M88.9 101.5L83.8 148.2L104 151.6L114.1 105.7Z"/><circle class="trunk" cx="93.3" cy="82" r="15.5"/><path class="limb" d="M91.6 150.3L77.4 186.4"/><path class="limb" d="M77.4 186.4L81.8 231.8"/><path class="limb" d="M96.1 149.6L81.2 185.5"/><path class="limb" d="M81.2 185.5L82.4 224.9"/><path class="arm" d="M96.5 102.9L76.2 117.9"/><path class="arm" d="M76.2 117.9L62.3 114.2"/><path class="arm" d="M106.5 104.3L79.6 130.9"/><path class="arm" d="M79.6 130.9L62.2 124.1"/><path class="case" d="M62.2 119.1L82.1 45.8"/><path class="shaft" d="M62.2 119.1L82.1 45.8"/><circle class="head" cx="82.1" cy="45.8" r="7.5"/></g>
+              <g transform="translate(7599 0)"><path class="trunk" d="M88.6 101.8L83.9 148.3L104.1 151.5L113.8 105.8Z"/><circle class="trunk" cx="93.2" cy="82.3" r="15.4"/><path class="limb" d="M91.6 150.2L77.2 186.5"/><path class="limb" d="M77.2 186.5L81.8 231.8"/><path class="limb" d="M96.4 149.6L81.2 185.5"/><path class="limb" d="M81.2 185.5L82.3 224.7"/><path class="arm" d="M96.2 103.3L77.5 120.1"/><path class="arm" d="M77.5 120.1L62.8 117.5"/><path class="arm" d="M106.3 104.4L80.8 132.2"/><path class="arm" d="M80.8 132.2L63.2 126.9"/><path class="case" d="M63 122.2L81.1 47.4"/><path class="shaft" d="M63 122.2L81.1 47.4"/><circle class="head" cx="81.1" cy="47.4" r="7.5"/></g>
+              <g transform="translate(7748 0)"><path class="trunk" d="M88.3 102.1L84 148.6L104.2 151.6L113.5 105.9Z"/><circle class="trunk" cx="93.1" cy="82.4" r="15.4"/><path class="limb" d="M91.6 150.3L77 186.6"/><path class="limb" d="M77 186.6L81.8 231.7"/><path class="limb" d="M96.7 149.9L81 185.7"/><path class="limb" d="M81 185.7L82.2 224.4"/><path class="arm" d="M95.8 103.5L78.5 121.9"/><path class="arm" d="M78.5 121.9L63.2 120.2"/><path class="arm" d="M106.1 104.5L81.7 133.2"/><path class="arm" d="M81.7 133.2L64.2 129.6"/><path class="case" d="M63.7 124.9L80.5 49.1"/><path class="shaft" d="M63.7 124.9L80.5 49.1"/><circle class="head" cx="80.5" cy="49.1" r="7.5"/></g>
+              <g transform="translate(7897 0)"><path class="trunk" d="M88 102.5L84.2 148.8L104.4 151.6L113.2 105.9Z"/><circle class="trunk" cx="92.8" cy="82.7" r="15.3"/><path class="limb" d="M91.5 150.4L76.8 186.6"/><path class="limb" d="M76.8 186.6L81.8 231.7"/><path class="limb" d="M97.2 150L81 185.7"/><path class="limb" d="M81 185.7L82 224.1"/><path class="arm" d="M95.4 103.7L79.6 123.3"/><path class="arm" d="M79.6 123.3L63.9 122.5"/><path class="arm" d="M105.8 104.7L82.2 134.1"/><path class="arm" d="M82.2 134.1L64.9 131.8"/><path class="case" d="M64.4 127.2L76.9 50.3"/><path class="shaft" d="M64.4 127.2L76.9 50.3"/><circle class="head" cx="76.9" cy="50.3" r="7.5"/></g>
+              <g transform="translate(8046 0)"><path class="trunk" d="M87.7 102.7L84.3 148.9L104.5 151.5L112.9 105.9Z"/><circle class="trunk" cx="92.6" cy="82.9" r="15.2"/><path class="limb" d="M91.5 150.4L76.6 186.6"/><path class="limb" d="M76.6 186.6L81.8 231.7"/><path class="limb" d="M97.3 150.1L80.9 185.7"/><path class="limb" d="M80.9 185.7L81.9 223.8"/><path class="arm" d="M95.1 103.8L80 124"/><path class="arm" d="M80 124L64.1 123.6"/><path class="arm" d="M105.6 104.7L82.3 134.7"/><path class="arm" d="M82.3 134.7L65.5 133.3"/><path class="case" d="M64.8 128.4L75.7 50.9"/><path class="shaft" d="M64.8 128.4L75.7 50.9"/><circle class="head" cx="75.7" cy="50.9" r="7.5"/></g>
             </g>
           </g>
         </svg>
