@@ -7,9 +7,16 @@ gen/
 developer_key*
 .DS_Store
 dist/
-fit-files/
+# Recordings are a person's training data, so they stay local by default.
+# `fit-files/*` rather than `fit-files/`: git will not descend into an
+# excluded directory, so a file inside one cannot be re-included - and one
+# recording is deliberately kept, with the owner's agreement, as the session
+# whose per-set counts were confirmed against the athlete (see
+# docs/swing-counting.md).
+fit-files/*
 *.fit
 !tools/fixtures/*.fit
+!fit-files/24302940509_ACTIVITY.fit
 build/
 node_modules/
 __pycache__/
