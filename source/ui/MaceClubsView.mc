@@ -517,7 +517,12 @@ class MaceClubsView extends WatchUi.View {
         var h = dc.getHeight();
 
         if (_starting) {
-            dc.drawText(cx, h * 20 / 100, Graphics.FONT_SMALL, "GET READY", Graphics.TEXT_JUSTIFY_CENTER);
+            // Centred in the clear area beside the cut-out, the same way the
+            // PAUSED heading and its headline already are. Centred on the
+            // screen it ran into the subwindow: at h*20 the ring is still
+            // there, and "GET READY" is wide enough to reach it.
+            var readyX = _subwindow ? Layout.clearWidthBesideSubwindow(w) / 2 : cx;
+            dc.drawText(readyX, h * 20 / 100, Graphics.FONT_SMALL, "GET READY", Graphics.TEXT_JUSTIFY_CENTER);
             dc.drawText(
                 cx,
                 h * 38 / 100,
