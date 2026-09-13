@@ -89,13 +89,26 @@ class HistoryDetailView extends WatchUi.View {
         );
         dc.drawText(headerX, h * 22 / 100, equipmentFont, equipment, Graphics.TEXT_JUSTIFY_CENTER);
 
+        // The side tag goes only where there is room for it. "Mill | Both"
+        // fits the clear area beside the cut-out and "Flow / other | Both"
+        // does not - three of the eight movement names are long enough to
+        // push it past, and Flow / other is the one both validated recordings
+        // in this repo actually used, so the likeliest case was the failing
+        // one. Measured rather than guessed at: the first pass of this sized
+        // the strings by character count and got two of the three wrong.
+        //
+        // Dropping the tag rather than clipping it loses nothing from the
+        // screen. Every set page draws the side in full a press away, which
+        // is also where it varies - the overview's is the session's, and a
+        // session that switched hands has it per set anyway.
+        var movementName = Movement.typeLabel(SmoothnessLog.moveOf(_rec));
         var movement = Lang.format(
             "$1$ | $2$",
-            [
-                Movement.typeLabel(SmoothnessLog.moveOf(_rec)),
-                Movement.sideShortLabel(SmoothnessLog.sideOf(_rec))
-            ]
+            [movementName, Movement.sideShortLabel(SmoothnessLog.sideOf(_rec))]
         );
+        if (dc.getTextDimensions(movement, Graphics.FONT_XTINY)[0] > headerWidth) {
+            movement = movementName;
+        }
         dc.drawText(headerX, h * 31 / 100, Graphics.FONT_XTINY, movement, Graphics.TEXT_JUSTIFY_CENTER);
 
         if (_index < 0) {
