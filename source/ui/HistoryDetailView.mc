@@ -46,13 +46,19 @@ class HistoryDetailView extends WatchUi.View {
         // the clear area beside it instead, the way the paused and summary
         // screens already place their headings.
         //
-        // The movement line below is deliberately NOT moved with them.
-        // "Mill | Two-handed" is wider than the clear area at the smallest
-        // face there is, so centring it in a 113px box does not tuck it
-        // beside the cut-out, it pushes its left end off the screen -
-        // measured, on an instinct3solar45mm, after trying it. It stays on
-        // the real centre, where only the tops of its right-hand characters
-        // graze the cut-out's lower edge, which is the lesser of the two.
+        // The movement line joins them, but only once it is short enough to.
+        // Spelled out - "Mill | Two-handed" - it is wider than the clear area
+        // at the smallest face there is, and centring that in a 113px box does
+        // not tuck it beside the cut-out, it pushes its left end off the
+        // screen. Measured, after trying it. The compact side tag the per-set
+        // lines already use takes it to "Mill | Both", which fits with room to
+        // spare.
+        //
+        // Moving it down instead, below the cut-out, was the other way out and
+        // is worse: drawSet shares this header and starts at h*41, so the line
+        // would land on top of it, and pushing the set pages down in turn runs
+        // their last line into the paging hint. One string got shorter; five
+        // positions did not have to move.
         var headerWidth = _subwindow ? Layout.clearWidthBesideSubwindow(w) : w;
         var headerX = headerWidth / 2;
         var equipment = Equipment.labelFor(
@@ -85,9 +91,12 @@ class HistoryDetailView extends WatchUi.View {
 
         var movement = Lang.format(
             "$1$ | $2$",
-            [Movement.typeLabel(SmoothnessLog.moveOf(_rec)), Movement.sideLabel(SmoothnessLog.sideOf(_rec))]
+            [
+                Movement.typeLabel(SmoothnessLog.moveOf(_rec)),
+                Movement.sideShortLabel(SmoothnessLog.sideOf(_rec))
+            ]
         );
-        dc.drawText(cx, h * 31 / 100, Graphics.FONT_XTINY, movement, Graphics.TEXT_JUSTIFY_CENTER);
+        dc.drawText(headerX, h * 31 / 100, Graphics.FONT_XTINY, movement, Graphics.TEXT_JUSTIFY_CENTER);
 
         if (_index < 0) {
             drawOverview(dc, cx, h);
