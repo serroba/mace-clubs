@@ -21,9 +21,13 @@ class MaceClubsDelegate extends WatchUi.BehaviorDelegate {
     // Taps at or below this share of a running screen go to the menu; above
     // it they do what SELECT does. Both screens that use it draw their menu
     // hint in that band and nothing else there - the paused screen stacks
-    // "SELECT save", "BACK resume" and the discard line at 69/79/89%, and
-    // the free-rest screen puts its options hint at 92%, clear of the metric
-    // row above.
+    // "SELECT save" at 69%, either "BACK resume" or the paging hint at 79%,
+    // and the discard line at 89%, and the free-rest screen puts its options
+    // hint at 92%, clear of the metric row above.
+    //
+    // The discard line sits at 89% whether the workout is paused or
+    // finished, and MaceClubsView says why: moving it above this threshold
+    // would leave the words saying discard while the tap saved instead.
     const HINT_BAND_TOP_PERCENT = 84;
 
     private var _view as MaceClubsView;
@@ -68,7 +72,9 @@ class MaceClubsDelegate extends WatchUi.BehaviorDelegate {
             return true;
         }
         if (_view.done) {
-            // a finished interval workout can only be saved
+            // There is nothing to resume: the plan has run out. Leaving
+            // without saving is still offered, on the screen's own discard
+            // line and through onMenu below.
             return true;
         }
         if (_view.paused) {
@@ -168,11 +174,17 @@ class MaceClubsDelegate extends WatchUi.BehaviorDelegate {
         //
         // This is not the stray tap the idle-only rule below guards against.
         // Reaching a paused screen takes a deliberate BACK, and discard is
-        // behind its own "Discard & go home?" confirmation. A finished
-        // interval workout is excluded because it can only be saved, which
-        // is what its own screen says.
+        // behind its own "Discard & go home?" confirmation.
+        //
+        // A finished workout is included, and used not to be. The reasoning
+        // then was that it "can only be saved, which is what its own screen
+        // says" - but that left the seven watches with no MENU key unable to
+        // leave a finished session without saving it at all, because onMenu
+        // is exactly the route they do not have. The screen now names
+        // discard in both states, so the gesture has to mean it in both.
+        // `done` implies `paused`, so the condition below already covers it.
         var height = System.getDeviceSettings().screenHeight;
-        if (DeviceInput.needsMenuTapTarget() && !_view.done && (_view.paused || _view.isFreeResting())) {
+        if (tapRoutingActive() && _view.workout.isStarted()) {
             // Routed by position, like the idle screen below, because a tap
             // and the physical SELECT key are the same event to the
             // simulator and both screens offer both: "SELECT save" beside
@@ -217,10 +229,13 @@ class MaceClubsDelegate extends WatchUi.BehaviorDelegate {
     // onKey below reads the same predicate, so the physical SELECT key keeps
     // working on the screens where onSelect has stepped aside.
     private function tapRoutingActive() as Boolean {
-        if (!DeviceInput.needsMenuTapTarget() || _view.isStarting() || _view.done) {
-            return false;
-        }
-        return !_view.workout.isStarted() || _view.paused || _view.isFreeResting();
+        return Navigation.routesTapsByPosition(
+            DeviceInput.needsMenuTapTarget(),
+            _view.isStarting(),
+            _view.workout.isStarted(),
+            _view.paused,
+            _view.isFreeResting()
+        );
     }
 
     // The idle screen on a device that has no other way into the menu.
