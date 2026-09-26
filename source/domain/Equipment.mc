@@ -9,12 +9,19 @@ module Equipment {
     const TYPE_MACE = 0;
     const TYPE_CLUBS = 1;
     const TYPE_BULAVA = 2;
+    // Appended, like the bulava before it, so the implement_type already
+    // written into every existing FIT file keeps its meaning.
+    const TYPE_MUDGAR = 3;
 
     function type() as Number {
         return numberProperty("equipmentType", TYPE_MACE);
     }
 
-    // Only clubs come in pairs; the mace and the bulava are single implements.
+    // Only clubs come in pairs here. A mudgar is swung as a pair in the
+    // Indian tradition as often as singly, but the app records one at a time
+    // until there is a reason to model the pair - the quantity is part of the
+    // smoothness history key, so adding it later starts new histories rather
+    // than corrupting old ones.
     function count() as Number {
         if (type() != TYPE_CLUBS) {
             return 1;
@@ -29,12 +36,28 @@ module Equipment {
         if (kind == TYPE_BULAVA) {
             return "bulavaWeightGrams";
         }
+        if (kind == TYPE_MUDGAR) {
+            return "mudgarWeightGrams";
+        }
         return "maceWeightGrams";
     }
 
+    // Starting weights, in grams, for an athlete who has not set their own.
+    // A bulava and a mudgar are both typically heavier than a starter mace or
+    // club; these match the defaults in resources/settings/properties.xml,
+    // which is what a watch actually reads.
+    function startingGramsFor(kind as Number) as Number {
+        if (kind == TYPE_BULAVA) {
+            return 6000;
+        }
+        if (kind == TYPE_MUDGAR) {
+            return 5000;
+        }
+        return 4000;
+    }
+
     function defaultWeightGrams(kind as Number) as Number {
-        // A bulava is typically heavier than a starter mace or club.
-        var grams = numberProperty(weightKeyFor(kind), kind == TYPE_BULAVA ? 6000 : 4000);
+        var grams = numberProperty(weightKeyFor(kind), startingGramsFor(kind));
         return grams < 0 ? 0 : grams;
     }
 
@@ -44,6 +67,9 @@ module Equipment {
         }
         if (kind == TYPE_BULAVA) {
             return "Bulava";
+        }
+        if (kind == TYPE_MUDGAR) {
+            return "Mudgar";
         }
         return "Mace";
     }

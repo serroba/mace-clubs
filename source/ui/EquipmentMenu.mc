@@ -34,6 +34,15 @@ module EquipmentMenu {
                 null
             )
         );
+        var mudgarWeight = Equipment.defaultWeightGrams(Equipment.TYPE_MUDGAR);
+        menu.addItem(
+            new WatchUi.MenuItem(
+                Equipment.labelFor(Equipment.TYPE_MUDGAR, 1, mudgarWeight),
+                null,
+                "mudgar",
+                null
+            )
+        );
         return menu;
     }
 }
@@ -55,6 +64,9 @@ class EquipmentMenuDelegate extends WatchUi.Menu2InputDelegate {
             quantity = 1;
         } else if (id.equals("bulava")) {
             kind = Equipment.TYPE_BULAVA;
+            quantity = 1;
+        } else if (id.equals("mudgar")) {
+            kind = Equipment.TYPE_MUDGAR;
             quantity = 1;
         } else if (id.equals("oneClub")) {
             quantity = 1;
