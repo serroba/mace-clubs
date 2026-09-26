@@ -608,17 +608,45 @@ class MaceClubsView extends WatchUi.View {
                     dc.drawText(cx, h * 56 / 100, Graphics.FONT_TINY, detail, Graphics.TEXT_JUSTIFY_CENTER);
                 }
             }
+            // Every way off this screen is named, and leaving without saving
+            // is named first among equals because it is the one nobody can
+            // guess.
+            //
+            // It used to lose a fight for the third line: `count > 1` gave
+            // that slot to the paging hint instead, so the discard line
+            // vanished exactly when the athlete had done the most work. A
+            // finished workout had it worst - no resume line either, so
+            // "SELECT save" and "UP/DOWN sets" were the whole screen while
+            // MENU quietly still discarded.
+            //
+            // Paging gives up its hint rather than discard, because the set
+            // line above already reads "1/3" and a position implies there is
+            // somewhere to page to. A fourth line is not an option: the block
+            // is 69/79/89% and anything below it runs off the bottom of a
+            // 156px Instinct 2S and under the bezel of any round screen.
+            //
+            // Discard stays at 89% in both states on purpose. That is inside
+            // MaceClubsDelegate.HINT_BAND_TOP_PERCENT, which is what makes a
+            // tap on the words do what the words say on the seven watches
+            // with no MENU key. Moving this line up would silently turn those
+            // taps back into a save.
             dc.drawText(cx, h * 69 / 100, Graphics.FONT_XTINY, "SELECT save", Graphics.TEXT_JUSTIFY_CENTER);
             if (!done) {
                 dc.drawText(cx, h * 79 / 100, Graphics.FONT_XTINY, "BACK resume", Graphics.TEXT_JUSTIFY_CENTER);
+            } else if (count > 1) {
+                dc.drawText(
+                    cx,
+                    h * 79 / 100,
+                    Graphics.FONT_XTINY,
+                    Lang.format("$1$ sets", [DeviceInput.pageLabel()]),
+                    Graphics.TEXT_JUSTIFY_CENTER
+                );
             }
             dc.drawText(
                 cx,
-                h * (done ? 79 : 89) / 100,
+                h * 89 / 100,
                 Graphics.FONT_XTINY,
-                count > 1
-                    ? Lang.format("$1$ sets", [DeviceInput.pageLabel()])
-                    : Lang.format("$1$ discard", [DeviceInput.menuLabel()]),
+                Lang.format("$1$ discard", [DeviceInput.menuLabel()]),
                 Graphics.TEXT_JUSTIFY_CENTER
             );
             return;
