@@ -52,6 +52,9 @@ module SettingsMenu {
             new WatchUi.MenuItem(equipmentWeightLabel(Equipment.TYPE_BULAVA), null, "bulavaWeight", null)
         );
         menu.addItem(
+            new WatchUi.MenuItem(equipmentWeightLabel(Equipment.TYPE_MUDGAR), null, "mudgarWeight", null)
+        );
+        menu.addItem(
             new WatchUi.ToggleMenuItem("Beat beep", null, "toneEnabled", boolProp("toneEnabled", false), null)
         );
         menu.addItem(

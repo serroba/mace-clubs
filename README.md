@@ -30,13 +30,14 @@ to its job summary.
 **Website:** [serroba.github.io/mace-clubs](https://serroba.github.io/mace-clubs/) ·
 **Downloads:** [GitHub Releases](https://github.com/serroba/mace-clubs/releases)
 
-A Garmin watch app for steel mace, Indian club, and bulava training, shaped by
-the way these implements are actually trained.
+A Garmin watch app for steel mace, Indian club, bulava, and mudgar training,
+shaped by the way these implements are actually trained.
 
 Set your tempo and the watch holds it with a wrist buzz, so you keep your
 cadence without looking at your arm. Pick your implement and it offers that
 implement's movements — 360s and 10-to-2s for the mace, mills and casts for
-clubs, the traditional combination set for the bulava. Each hand's sets are
+clubs, 360s and mills for the mudgar, the traditional combination set for the
+bulava. Each hand's sets are
 counted separately, because the tradition says they should be. Finish, and the
 session is in Garmin Connect with every set labelled by what you actually did.
 

@@ -178,11 +178,21 @@ class FitFields {
             FitContributor.DATA_TYPE_FLOAT,
             {:mesgType => FitContributor.MESG_TYPE_SESSION, :units => "%"}
         );
+        // The value is Equipment.TYPE_*: 0 mace, 1 clubs, 2 bulava, 3 mudgar.
+        //
+        // That legend lives here and in docs/equipment-profiles.md rather
+        // than in the units string, because the units string is short and
+        // the SDK does not say how short. "0=mace 1=clubs" (14 characters)
+        // has always worked; extending it to "0=mace 1=clubs 2=bulava
+        // 3=mudgar" (32) made createField throw a System Error at runtime -
+        // which is a crash on the first started workout, not a build error,
+        // so nothing catches it but the simulator. It is also why the legend
+        // was left saying "0=mace 1=clubs" when the bulava was added.
         _equipmentTypeField = session.createField(
             "implement_type",
             FIELD_ID_EQUIPMENT_TYPE,
             FitContributor.DATA_TYPE_UINT8,
-            {:mesgType => FitContributor.MESG_TYPE_SESSION, :units => "0=mace 1=clubs"}
+            {:mesgType => FitContributor.MESG_TYPE_SESSION, :units => "implement code"}
         );
         _equipmentCountField = session.createField(
             "implement_count",

@@ -10,21 +10,22 @@ Note: the store renders these fields as plain text — no markdown emphasis.
 Mace and Clubs
 
 ## Summary (one line)
-Metronome, interval timer, and swing tracking for mace, club, and bulava training.
+Metronome, interval timer, and swing tracking for mace, club, bulava, and mudgar.
 
 ## Description
 Keep your swing cadence without watching the screen. Mace & Clubs is a
-metronome and interval timer built for steel mace, Indian club, and bulava
-training, shaped by the way these implements are traditionally trained.
+metronome and interval timer built for steel mace, Indian club, bulava, and
+mudgar training, shaped by the way these implements are traditionally
+trained.
 
 Set your tempo and the watch holds it with a wrist buzz (and an optional
 beep). The first beat of each loop is accented, so you feel when to switch
 sides instead of reading the screen.
 
 Pick your implement, then your movement: 360 and 10-to-2 for the mace, mill
-and shield cast for clubs, and mill, reverse mill, bullwhip, or the
-traditional combination set for the bulava. Your choice is saved with every
-work set in the activity.
+and shield cast for clubs, 360 and mill for the mudgar, and mill, reverse
+mill, bullwhip, or the traditional combination set for the bulava. Your
+choice is saved with every work set in the activity.
 
 The bulava Combo calls the whole sequence for you: mill, reverse mill, and
 bullwhip on one hand, then the other. Each movement change gets an accented

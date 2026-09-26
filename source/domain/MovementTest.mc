@@ -20,6 +20,18 @@ function testMovementOptionsPerEquipment(logger as Test.Logger) as Boolean {
     Test.assertEqualMessage(bulava[2], Movement.TYPE_REVERSE_MILL, "bulava includes the reverse mill");
     Test.assertEqualMessage(bulava[3], Movement.TYPE_BULLWHIP, "bulava includes the bullwhip");
     Test.assertEqualMessage(bulava[4], Movement.TYPE_FLOW_OTHER, "bulava keeps the flow catch-all");
+
+    // The mudgar sits between the gada and the clubs - see optionsFor.
+    var mudgar = Movement.optionsFor(Equipment.TYPE_MUDGAR);
+    Test.assertEqualMessage(mudgar.size(), 3, "mudgar offers three movements");
+    Test.assertEqualMessage(mudgar[0], Movement.TYPE_360, "mudgar leads with the 360");
+    Test.assertEqualMessage(mudgar[1], Movement.TYPE_MILL, "mudgar carries the mill over from club work");
+    Test.assertEqualMessage(mudgar[2], Movement.TYPE_FLOW_OTHER, "mudgar keeps the flow catch-all");
+    Test.assertEqualMessage(
+        Movement.resolveFor(Movement.TYPE_SHIELD_CAST, Equipment.TYPE_MUDGAR),
+        Movement.TYPE_360,
+        "a club movement falls back to the mudgar default"
+    );
     return true;
 }
 

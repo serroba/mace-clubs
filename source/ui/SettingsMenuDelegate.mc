@@ -75,12 +75,18 @@ class SettingsMenuDelegate extends WatchUi.Menu2InputDelegate {
             item.setLabel(SettingsMenu.cueLabel());
         } else if (id.equals("customWorkout")) {
             openCustomWorkoutEditor(item);
-        } else if (id.equals("maceWeight") || id.equals("clubWeight") || id.equals("bulavaWeight")) {
+        } else if (id.equals("maceWeight")
+            || id.equals("clubWeight")
+            || id.equals("bulavaWeight")
+            || id.equals("mudgarWeight"))
+        {
             var kind = Equipment.TYPE_MACE;
             if (id.equals("clubWeight")) {
                 kind = Equipment.TYPE_CLUBS;
             } else if (id.equals("bulavaWeight")) {
                 kind = Equipment.TYPE_BULAVA;
+            } else if (id.equals("mudgarWeight")) {
+                kind = Equipment.TYPE_MUDGAR;
             }
             var editor = new WeightEditorView(kind);
             WatchUi.pushView(editor, new WeightEditorDelegate(editor, _view, item, kind), WatchUi.SLIDE_UP);

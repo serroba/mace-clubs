@@ -1,4 +1,5 @@
 {
+  "210": "The mudgar is now one of the implements you can choose, with its own movements, its own default weight, and its own Rhythm Score history.",
   "172": "The app now starts on Instinct 2, 2S and 2X. It ran out of memory on launch before, and those watches run a reduced build to fit: no history browser, on-watch workout editor or Connect motion charts.",
   "174": "The app now starts on the Descent G1 and Instinct Crossover too, which share that memory limit and the same reduced build.",
   "181": "On the Instinct Crossover the watch hands move aside while the workout summary is up, so the numbers underneath stay readable.",

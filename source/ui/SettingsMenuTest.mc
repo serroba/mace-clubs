@@ -91,6 +91,14 @@ function testSettingsMenuLiveLabelsMatchTheirValueForms(logger as Test.Logger) a
         ),
         "weight rows name the implement"
     );
+    Test.assertEqualMessage(
+        SettingsMenu.equipmentWeightLabel(Equipment.TYPE_MUDGAR),
+        Lang.format(
+            "Mudgar: $1$",
+            [Equipment.weightLabel(Equipment.defaultWeightGrams(Equipment.TYPE_MUDGAR))]
+        ),
+        "the mudgar row names its implement too"
+    );
     var custom = Presets.custom();
     Test.assertEqualMessage(
         SettingsMenu.customWorkoutLabel(),

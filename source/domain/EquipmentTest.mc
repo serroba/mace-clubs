@@ -24,6 +24,32 @@ function testEquipmentLabels(logger as Test.Logger) as Boolean {
         pounds ? "Bulava: 13.2 lb" : "Bulava: 6 kg",
         "bulava label follows watch units"
     );
+    Test.assertEqualMessage(
+        Equipment.labelFor(Equipment.TYPE_MUDGAR, 1, 5000),
+        pounds ? "Mudgar: 11 lb" : "Mudgar: 5 kg",
+        "mudgar label follows watch units"
+    );
+    return true;
+}
+
+(:test)
+function testMudgarIsASingleImplementWithItsOwnWeight(logger as Test.Logger) as Boolean {
+    Test.assertEqualMessage(
+        Equipment.weightKeyFor(Equipment.TYPE_MUDGAR),
+        "mudgarWeightGrams",
+        "mudgar weight persists under its own key"
+    );
+    // The figure this asserts has to match resources/settings/properties.xml,
+    // which is what a watch actually reads - startingGramsFor is only the
+    // fallback for a build whose properties have not been written yet.
+    Test.assertEqualMessage(
+        Equipment.startingGramsFor(Equipment.TYPE_MUDGAR),
+        5000,
+        "a mudgar starts heavier than the mace and lighter than the bulava"
+    );
+    var session = new WorkoutSession();
+    session.selectEquipment(Equipment.TYPE_MUDGAR, 2);
+    Test.assertEqualMessage(session.getEquipmentCount(), 1, "mudgar quantity is always one");
     return true;
 }
 
@@ -51,9 +77,12 @@ function testEquipmentHistoryKeysSeparateProfiles(logger as Test.Logger) as Bool
     var clubs = Equipment.historyKeyFor(Equipment.TYPE_CLUBS, 2, 10000);
     var lighterClubs = Equipment.historyKeyFor(Equipment.TYPE_CLUBS, 2, 8000);
     var bulava = Equipment.historyKeyFor(Equipment.TYPE_BULAVA, 1, 10000);
+    var mudgar = Equipment.historyKeyFor(Equipment.TYPE_MUDGAR, 1, 10000);
     Test.assertMessage(!mace.equals(clubs), "mace scores are not compared with clubs");
     Test.assertMessage(!clubs.equals(lighterClubs), "different weights have separate histories");
     Test.assertMessage(!bulava.equals(mace), "bulava scores are not compared with the mace");
+    Test.assertMessage(!mudgar.equals(bulava), "mudgar scores are not compared with the bulava");
+    Test.assertMessage(!mudgar.equals(mace), "mudgar scores are not compared with the mace");
     return true;
 }
 

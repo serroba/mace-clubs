@@ -30,9 +30,18 @@ module Movement {
     // the 360 and the 10-to-2, mills and shield casts come from club
     // swinging, and the bulava adds the reverse mill and the bullwhip.
     // Flow/other stays available everywhere as the catch-all.
+    //
+    // The mudgar sits between the gada and the clubs, and its list says so:
+    // the swing behind the head is the 360, and the mill carries over from
+    // club work. This is a judgement about the tradition rather than
+    // something the code can derive - correct it here if it is wrong, and
+    // MovementTest pins whatever it says.
     function optionsFor(equipmentType as Number) as Array<Number> {
         if (equipmentType == Equipment.TYPE_CLUBS) {
             return [TYPE_MILL, TYPE_SHIELD_CAST, TYPE_FLOW_OTHER] as Array<Number>;
+        }
+        if (equipmentType == Equipment.TYPE_MUDGAR) {
+            return [TYPE_360, TYPE_MILL, TYPE_FLOW_OTHER] as Array<Number>;
         }
         if (equipmentType == Equipment.TYPE_BULAVA) {
             // The combination set leads: it is the traditional bulava session.

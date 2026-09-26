@@ -40,6 +40,10 @@ function testMovementMenuFollowsTheImplement(logger as Test.Logger) as Boolean {
         MovementMenu.build(Equipment.TYPE_BULAVA) instanceof WatchUi.Menu2,
         "bulava movements build"
     );
+    Test.assertMessage(
+        MovementMenu.build(Equipment.TYPE_MUDGAR) instanceof WatchUi.Menu2,
+        "mudgar movements build"
+    );
     return true;
 }
 
