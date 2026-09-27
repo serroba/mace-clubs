@@ -2,7 +2,7 @@
 
 [![CI](https://github.com/serroba/mace-clubs/actions/workflows/ci.yml/badge.svg)](https://github.com/serroba/mace-clubs/actions/workflows/ci.yml)
 [![E2E UI tests](https://github.com/serroba/mace-clubs/actions/workflows/e2e-linux.yml/badge.svg)](https://github.com/serroba/mace-clubs/actions/workflows/e2e-linux.yml)
-[![Devices](https://img.shields.io/badge/devices-120-C08A3E)](manifest.xml)
+[![Devices](https://img.shields.io/badge/devices-127-C08A3E)](manifest.xml)
 [![Devices driven through the UI](https://img.shields.io/badge/driven_through_the_UI-13_devices-C08A3E)](.github/workflows/e2e-linux.yml)
 [![Memory headroom](https://img.shields.io/badge/memory_headroom-21_watches_recorded-C08A3E)](tools/memory-baselines.json)
 [![TypeScript coverage](https://img.shields.io/badge/TypeScript_line_coverage-%E2%89%A575%25-C08A3E)](.github/workflows/ci.yml)
@@ -41,7 +41,7 @@ bulava. Each hand's sets are
 counted separately, because the tradition says they should be. Finish, and the
 session is in Garmin Connect with every set labelled by what you actually did.
 
-**Runs on 120 Connect IQ watches. Swing counting is validated on the Instinct 3
+**Runs on 127 Connect IQ watches. Swing counting is validated on the Instinct 3
 Solar 45 mm.** Everything else — the metronome, intervals, movement and side
 tracking, and activity recording — behaves the same on every one of them. Swing
 counting is the exception: its detector is tuned against labelled recordings

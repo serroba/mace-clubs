@@ -89,7 +89,7 @@ Health & Fitness
 - Sensor access (for heart rate, gyroscope swing counting, and optional motion capture)
 
 ## Support
-Runs on 120 Connect IQ watches. Swing counting is validated on the Instinct 3
+Runs on 127 Connect IQ watches. Swing counting is validated on the Instinct 3
 Solar 45 mm.
 
 Everything else — the metronome, intervals, movement and side tracking, and
