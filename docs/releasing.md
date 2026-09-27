@@ -2,10 +2,26 @@
 
 ```sh
 make release-assets VERSION=0.15.2      # generate notes, listing, screenshots
+git checkout -b release/v0.15.2
 git add docs/ source/app/AppVersion.mc
 git commit -m "Prepare version 0.15.2"
-git tag v0.15.2 && git push origin main v0.15.2
+gh pr create --fill && gh pr merge --squash --delete-branch
+
+git checkout main && git pull            # the squashed commit, on main
+git tag v0.15.2 && git push origin v0.15.2
 ```
+
+**Bump, merge, then tag - in that order, and push only the tag.** `main` is a
+protected branch: *"Changes must be made through a pull request"*. The old
+version of this page said `git push origin main v0.15.2`, which cannot work -
+git pushes the refs it can and reports the rest, so the tag lands and the
+branch is refused. v0.18.0 shipped that way: the release built correctly from
+a tag whose commit was not on `main`, and `main` still said 0.17.0 until a
+pull request caught it up.
+
+The content was identical, so nothing had to be re-released - but a tag that
+is not an ancestor of `main` is a release nobody can `git checkout` from the
+branch it supposedly came from. The `pre-push` hook now refuses one.
 
 The tag push is what triggers `release.yml`. The `pre-push` hook checks the
 release is actually ready before letting it through.

@@ -7,22 +7,40 @@ cd "$repo_root"
 # Release gate: pushing a v* tag is what triggers the release workflow, so
 # everything that must be true of a release is checked here first.
 #
-# 1. The paperwork exists and is committed. Generating it is easy;
+# 1. The tagged commit is already on main - see below for why.
+# 2. The paperwork exists and is committed. Generating it is easy;
 #    remembering to is what failed before - 19 of the first 26 tags shipped
 #    with no product-update doc, and the store assets were eleven releases
-#    stale. Checked first because it fails in a second, while the e2e suite
-#    takes minutes.
-# 2. The e2e UI suite passes. Needs an awake, unlocked screen: caffeinate
+#    stale. Checked before the suite because it fails in a second, while
+#    the e2e suite takes minutes.
+# 3. The e2e UI suite passes. Needs an awake, unlocked screen: caffeinate
 #    keeps the display from sleeping mid-run but can't unlock an already
 #    locked one - if the suite times out waiting for the simulator window,
 #    unlock and retry the push.
 #
-# Tag deletions (zero local sha) don't re-release anything and skip both.
+# Tag deletions (zero local sha) don't re-release anything and skip all three.
 zero_sha="0000000000000000000000000000000000000000"
 while read -r _local_ref local_sha remote_ref _remote_sha; do
     if [[ "$remote_ref" == refs/tags/v* && "$local_sha" != "$zero_sha" ]]; then
         tag="${remote_ref#refs/tags/}"
-        echo "Pushing release tag ${tag} - checking release paperwork..."
+
+        # 1. The tagged commit is already on main.
+        #
+        # main is protected, so a release commit reaches it through a pull
+        # request and a squash - which makes a new commit. Tagging before
+        # that merge produces a tag that is not an ancestor of main, and a
+        # release nobody can check out from the branch it supposedly came
+        # from. v0.18.0 shipped exactly that way. Bump, merge, then tag.
+        echo "Pushing release tag ${tag} - checking it is on main..."
+        git fetch --quiet origin main
+        if ! git merge-base --is-ancestor "$local_sha" origin/main; then
+            echo "error: ${tag} points at a commit that is not on origin/main." >&2
+            echo "       Merge the release pull request first, then tag the commit on main:" >&2
+            echo "         git checkout main && git pull && git tag ${tag} && git push origin ${tag}" >&2
+            exit 1
+        fi
+
+        echo "Checking release paperwork..."
         bash tools/check_release_docs.sh "${tag#v}"
         echo "Running the e2e UI suite..."
         caffeinate -dimsu npm run test:e2e --prefix tools
