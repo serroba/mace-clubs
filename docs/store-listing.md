@@ -1,7 +1,7 @@
 # Connect IQ Store listing — DRAFT (review before submitting)
 
 <!-- generated:upload -->
-Upload file: `mace-clubs.iq` from the v0.17.0 GitHub release.
+Upload file: `mace-clubs.iq` from the v0.18.0 GitHub release.
 <!-- /generated:upload -->
 
 Note: the store renders these fields as plain text — no markdown emphasis.
@@ -62,17 +62,18 @@ Also included:
   for private offline swing analysis
 
 <!-- generated:whatsnew -->
-## What's new — v0.17.0
+## What's new — v0.18.0
 
-- Watches with no MENU button can now open settings and, during rest, change movement or side - tap the hint at the bottom of the screen. Fixes a paused workout being saved when the screen said it would be discarded.
-- On the Instinct Crossover the watch hands move aside while the workout summary is up, so the numbers underneath stay readable.
-- The app now starts on the Descent G1 and Instinct Crossover too, which share that memory limit and the same reduced build.
-- The app now starts on Instinct 2, 2S and 2X. It ran out of memory on launch before, and those watches run a reduced build to fit: no history browser, on-watch workout editor or Connect motion charts.
-- Work intervals now show in colour on watches with colour displays.
-- Garmin Connect now charts each detected swing, not just the running total.
-- Fixed the swing cadence chart, which reported impossible values.
-- Smoothness is now called the Rhythm Score.
-- The app is now called Mace & Clubs everywhere it can be.
+- The app now runs on the fenix 9, fenix 9 Pro and fenix 9 Pro Solar, taking it to 127 Garmin watches.
+- Leaving a workout without saving is now offered on every paused screen, alongside save and resume. It used to disappear once a session had more than one set, and on watches with no MENU button a finished workout could not be left unsaved at all.
+- The mudgar is now one of the implements you can choose, with its own movements, its own default weight, and its own Rhythm Score history.
+- Long movement names no longer push the side tag off the edge of a saved session's details.
+- On Instinct watches, the date and movement in a saved session no longer disappear behind the round cut-out.
+- Two more headings moved clear of the Instinct's cut-out: GET READY, and the equipment line in a saved session.
+- The Rhythm Score now measures how evenly you swing rather than how hard, so it no longer rises just because you sped up.
+- The end-of-workout summary shows a bar per set, so you can see where the session held together and where it frayed.
+- Screens that told you to press UP/DOWN now name the buttons your watch actually has.
+- The Instinct 2, 2S, 2X, Descent G1 and Instinct Crossover got about 2.4KB of memory back, which is what stops the app running out mid-workout.
 <!-- /generated:whatsnew -->
 
 ## Icon
