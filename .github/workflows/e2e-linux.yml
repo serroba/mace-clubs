@@ -79,6 +79,14 @@ jobs:
         # the odd one out, kept because fenix7 was here first and covers a
         # size nothing in the report uses.
         #
+        # fenix9pro51mm is the second exception and the first deliberate one.
+        # 466 is a width nothing else here covers and no report can yet show
+        # users on, because the family shipped in August - so this row is
+        # added ahead of the evidence the rest of the list is built from,
+        # which is worth saying out loud rather than letting the rule above
+        # quietly stop being true. Drop it if 466 never appears in the
+        # report; the build sweep still proves it compiles either way.
+        #
         # Six of these were staged behind findings that turned out to be
         # assertions rather than devices. fr55 and vivoactive4s "truncate a
         # system menu title"; fenix8solar51mm "reads badly under OCR"; fr945
@@ -111,6 +119,7 @@ jobs:
           - vivoactive5 # 390 round AMOLED, touch, no UP/DOWN
           - venu3 # 454 round AMOLED, touch, no UP/DOWN
           - venu445mm # 454 round AMOLED, touch, no MENU key - 4 of 7 files
+          - fenix9pro51mm # 466 round AMOLED, touch with keys - widest we draw
     container:
       image: ghcr.io/matco/connectiq-tester:v2.10.0
     defaults:
