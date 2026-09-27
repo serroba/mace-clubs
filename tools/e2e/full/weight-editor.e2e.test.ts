@@ -69,8 +69,32 @@ const DOWN_PRESSES_TO_MACE_WEIGHT = 9;
  * screen is correct and a person can read it, so the caller reports what it
  * could not check rather than failing.
  */
+/**
+ * The weight the editor is showing, or null where it cannot be read.
+ *
+ * "The first line with a digit and no colon" was the rule, and it held until
+ * a 466px fenix 9 returned this:
+ *
+ *   ["4 \u00bb", "MACE WEIGHT", "8.8 |b", "UP/DOWN: 0.5", ...]
+ *
+ * That leading "4 \u00bb" is the watch bezel - the fenix skin has 50/40/20
+ * printed around it and a sliver reaches the capture. The old rule took it,
+ * stripped it to "4", and read "4" again after a press that had genuinely
+ * moved the value from 8.8 lb to 9.3. A working editor reported as broken,
+ * on the one device whose screen is widest.
+ *
+ * So the line has to look like a weight rather than merely contain a digit.
+ * A weight carries either a decimal separator or a unit, and the OCR mangles
+ * both - "8.8 |b" for lb, "9,3" for 9.3 - so neither is matched literally.
+ */
 function shownWeight(lines: string[]): string | null {
-    const value = lines.find((line) => !line.includes(":") && /[0-9]/.test(line));
+    const candidates = lines.filter((line) => !line.includes(":") && /[0-9]/.test(line));
+    // A decimal between two digits, however the separator was read.
+    const decimal = candidates.find((line) => /\d\s*[.,]\s*\d/.test(line));
+    // Otherwise a unit: whole weights drop the decimal ("4 kg"), and l and b
+    // are read as |, I and 1 often enough to be worth allowing.
+    const united = candidates.find((line) => /\d[^0-9]*([|Il1]b|kg|kq)/i.test(line));
+    const value = decimal ?? united;
     return value === undefined ? null : value.replace(/[^0-9]/g, "");
 }
 
