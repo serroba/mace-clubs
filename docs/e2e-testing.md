@@ -142,8 +142,8 @@ Two consequences worth knowing:
 The suite runs on **Linux**, headlessly, on GitHub-hosted runners, as two
 workflows over two device groups.
 
-`.github/workflows/e2e-linux.yml` runs the **full** suite - what 115 of the
-120 devices ship:
+`.github/workflows/e2e-linux.yml` runs the **full** suite - what 122 of the
+127 devices ship:
 
 | Width | Device | Display | Input |
 | --- | --- | --- | --- |
@@ -280,7 +280,7 @@ route it stands in for is covered by `workout-summary`.
 
 ### Compiling is not running
 
-`ci.yml`'s build sweep proves all 120 devices compile. It says nothing about
+`ci.yml`'s build sweep proves all 127 devices compile. It says nothing about
 whether a watch can hold what it compiled, and that gap is how the app spent
 four months unable to start on 11.94% of installs.
 

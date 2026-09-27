@@ -112,7 +112,7 @@ rather than with something merely consistent.
 
 ### Known gap
 
-`launcher_icon.png` is a single 62×62 bitmap, but the 120 devices in the
+`launcher_icon.png` is a single 62×62 bitmap, but the 127 devices in the
 manifest want fifteen different sizes, from 26×26 to 70×70, and one of them is
 not square (40×33). It is therefore rescaled by the runtime on 93 of them — 51
 devices alone are 40×40, a downscale that aliases a thin white diagonal badly.
@@ -160,7 +160,7 @@ you a one-star review is the one they believe.
 Both halves are true; they are about different things. Use this, and keep the
 short form intact as one sentence:
 
-> **Runs on 120 Connect IQ watches. Swing counting is validated on the
+> **Runs on 127 Connect IQ watches. Swing counting is validated on the
 > Instinct 3 Solar 45 mm.**
 
 Where there is room, the long form follows it:
