@@ -69,6 +69,28 @@ practitioner reading 48 on their last set could reasonably take it as their
 best, and it was their most exhausted. Unresolved, and recorded here because
 the ground truth that raises the question came with it.
 
+## The first mudgar session: rotation that oscillates rather than spins
+
+Activity 24560093916: 5 sets of two-handed 8 kg mudgar flow, 42:30, Instinct 3
+Solar 45 mm, app build 21. Kept as the unlabelled fixture `mudgar-2026-10-01`.
+No independent per-set count was taken, so this is not a calibration input -
+but the rotation in it says something the mace recordings could not.
+
+Integrating wrist rotation about its own principal axis (power iteration on
+the gyro scatter matrix, per set) gives a **net signed total of ~0** every
+set. The wrist reverses; it does not turn. Only ~48% of the rotational energy
+sits on that principal axis, so the motion is not planar either - which rules
+out the single-axis assumption that works for a mace 360.
+
+What does hold is the ratio. Unsigned angular travel runs 74-95 revolutions
+per set against 112-140 detected, i.e. **0.61-0.70 across all five sets**, or
+roughly 235 degrees of wrist travel per detected swing. A detector firing on
+noise would not hold a ratio that tight against a quantity it never sees, so
+the count is tracking something real and proportional even without a label.
+The shipped `HIGH_MG` needs no mudgar-specific change on this evidence: at
+1800 mg, 43.2% of work seconds cross against 4.0% of rest seconds, and zero
+swings were credited while the app was in a rest phase.
+
 ## Replay-testing this algorithm against real recordings
 
 Rather than a second, TypeScript reimplementation of the counter that can
