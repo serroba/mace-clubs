@@ -80,6 +80,19 @@
             "swingDebugEnabled": true,
             "onDeviceDetectedPerSet": [73, 79, 84, 92, 84, 102, 81],
             "notes": "Raw accelerometer and gyroscope profile. Independent per-set swing counts were not recorded, so this fixture is excluded from detector tuning and accuracy claims."
+        },
+        {
+            "id": "mudgar-2026-10-01",
+            "file": "24560093916_ACTIVITY.fit",
+            "recordedAt": "2026-10-01T07:15:43+10:00",
+            "appVersion": "0.18.0",
+            "equipment": "mudgar",
+            "equipmentCount": 1,
+            "equipmentWeightGrams": 8000,
+            "movement": "flow-other",
+            "swingDebugEnabled": true,
+            "onDeviceDetectedPerSet": [112, 130, 129, 136, 140],
+            "notes": "First mudgar recording. Rotation is the whole signal here in a way it was not for the mace: integrating wrist rotation about its own principal axis gives a net signed total of ~0 per set, so the wrist oscillates rather than spinning, and only ~48% of the rotational energy sits on one axis. Unsigned travel is 74-95 revolutions per set against 112-140 detected - a ratio of 0.61-0.70 that holds across all five sets, or ~235 degrees of wrist travel per detected swing. Five sets of ~6:10 work with ~2:50 rests; paused once for 27s during set 4. Independent per-set swing counts were not recorded, so this fixture is excluded from detector tuning and accuracy claims."
         }
     ]
 }
