@@ -36,6 +36,12 @@ export const SMALL_MEMORY_BYTES = 96 * 1024;
 /** The annotations a reduced build compiles out. Order is not significant;
  * the check compares them as a set.
  *
+ * fullSettings is the settings menu beyond its first seven rows. Twenty rows
+ * of Menu2 left those watches with 3,968 free bytes, and changing any setting
+ * then killed the app with an Out Of Memory Error - not in the write, which
+ * was the obvious suspect and the wrong one, but in whatever allocated next.
+ * See SettingsMenu.addExtraItems for the measurements.
+ *
  * launcherIcon belongs here for the same reason as the rest, and it is the
  * one that shows why the list has to be complete rather than roughly right.
  * launcher_icon.png is 295 bytes on disk and costs about 2.4KB of app memory
@@ -51,6 +57,7 @@ export const REDUCED_EXCLUSIONS = [
     "menuLabelPrefix",
     "launcherIcon",
     "setChart",
+    "fullSettings",
 ] as const;
 
 /** Product ids in the order the manifest lists them. */
