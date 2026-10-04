@@ -56,6 +56,22 @@ export interface DeviceProfile {
      */
     readonly escHotspot: Point | null;
     /**
+     * Whether real watch hands sweep over the display.
+     *
+     * The Instinct Crossover and its AMOLED twin are hybrids: a physical hour
+     * and minute hand sit on top of the screen, so a line of text can be
+     * covered by hardware. A reduced/settings-write run had "REPS MODE" drawn
+     * correctly and unreadable, both hands lying flat across it, and OCR
+     * returned the lines above and below it and nothing else. A test that
+     * reads the middle of the screen has to know that is possible here, or it
+     * reports a working app as broken.
+     *
+     * The app can ask the hands to move aside - WorkoutSummaryView does, via
+     * setClockHandPosition - but the idle screen does not, which is why they
+     * were over the text at all.
+     */
+    readonly analogHands: boolean;
+    /**
      * Whether the device has physical UP/DOWN keys. 30 of the 120 manifest
      * devices do not, and on those an arrow key press is simply dropped -
      * which is why menu navigation has to become a swipe (see isTouch).
@@ -66,6 +82,7 @@ export interface DeviceProfile {
 }
 
 interface SimulatorJson {
+    analogHands?: unknown;
     display: { location: Rect; isTouch?: boolean };
     keys?: { id: string; location: Rect }[];
     image?: string;
@@ -155,6 +172,7 @@ export function loadDeviceProfile(id: string): DeviceProfile {
         isTouch: parsed.display.isTouch === true,
         menuHotspot: centreOf(menuKey),
         escHotspot: centreOf(escKey),
+        analogHands: parsed.analogHands !== undefined,
     };
 }
 

@@ -38,55 +38,14 @@ module SettingsMenu {
         addHistoryItem(menu);
         menu.addItem(new WatchUi.MenuItem(trainingModeLabel(), null, "trainingMode", null));
         menu.addItem(new WatchUi.MenuItem(repTargetLabel(), null, "repTarget", null));
-        menu.addItem(new WatchUi.MenuItem(cornerLabel(), null, "circleShows", null));
+        addCornerItem(menu);
         menu.addItem(new WatchUi.MenuItem(wristLabel(), null, "watchWrist", null));
         menu.addItem(new WatchUi.MenuItem(movementLabel(), null, "movementType", null));
         menu.addItem(new WatchUi.MenuItem(workingSideLabel(), null, "workingSide", null));
-        menu.addItem(new WatchUi.MenuItem(cueLabel(), null, "cueMode", null));
+        addCueItem(menu);
         addCustomWorkoutItem(menu);
         menu.addItem(new WatchUi.MenuItem(equipmentWeightLabel(Equipment.TYPE_MACE), null, "maceWeight", null));
-        menu.addItem(
-            new WatchUi.MenuItem(equipmentWeightLabel(Equipment.TYPE_CLUBS), null, "clubWeight", null)
-        );
-        menu.addItem(
-            new WatchUi.MenuItem(equipmentWeightLabel(Equipment.TYPE_BULAVA), null, "bulavaWeight", null)
-        );
-        menu.addItem(
-            new WatchUi.MenuItem(equipmentWeightLabel(Equipment.TYPE_MUDGAR), null, "mudgarWeight", null)
-        );
-        menu.addItem(
-            new WatchUi.ToggleMenuItem("Beat beep", null, "toneEnabled", boolProp("toneEnabled", false), null)
-        );
-        menu.addItem(
-            new WatchUi.ToggleMenuItem(
-                "Beat vibration",
-                null,
-                "vibeEnabled",
-                boolProp("vibeEnabled", true),
-                null
-            )
-        );
-        menu.addItem(
-            new WatchUi.ToggleMenuItem("Soft beep", null, "softBeep", boolProp("softBeep", true), null)
-        );
-        menu.addItem(
-            new WatchUi.ToggleMenuItem(
-                "Downbeat accent",
-                null,
-                "accentEnabled",
-                boolProp("accentEnabled", true),
-                null
-            )
-        );
-        menu.addItem(
-            new WatchUi.ToggleMenuItem(
-                "Rhythm Score",
-                null,
-                "smoothnessEnabled",
-                boolProp("smoothnessEnabled", false),
-                null
-            )
-        );
+        addOtherWeightAndSoundItems(menu);
         menu.addItem(
             new WatchUi.ToggleMenuItem(
                 "Swing counter",
@@ -96,25 +55,7 @@ module SettingsMenu {
                 null
             )
         );
-        menu.addItem(
-            new WatchUi.ToggleMenuItem(
-                "Load exposure",
-                null,
-                "loadExposureEnabled",
-                boolProp("loadExposureEnabled", false),
-                null
-            )
-        );
-        menu.addItem(
-            new WatchUi.ToggleMenuItem(
-                "Motion charts",
-                null,
-                "motionCapture",
-                boolProp("motionCapture", false),
-                null
-            )
-        );
-        menu.addItem(new WatchUi.MenuItem(aboutLabel(), null, "about", null));
+        addTailItems(menu);
         return menu;
     }
 
@@ -202,6 +143,150 @@ module SettingsMenu {
         } catch (e) {}
         return dflt;
     }
+
+    /**
+     * Everything beyond the seven rows a 96KB watch can hold.
+     *
+     * Not a cosmetic trim. Twenty rows of Menu2 cost about 5.2KB of the 9KB
+     * those devices have free once the first screen exists, and with the menu
+     * up they are left with 3,968 bytes - not enough for the app to keep
+     * running. Changing any setting crashed it:
+     *
+     *     Error: Out Of Memory Error
+     *     Stack: onSelect() at source/ui/SettingsMenuDelegate.mc:48
+     *
+     * and moving the write out only moved the crash, into whatever allocated
+     * next - Layout.fitCentredLine once, patternLabel three times after. The
+     * write was never what did not fit. The menu was. Measured on instinct2
+     * and descentg1: at twenty rows the app dies, at seven it does not.
+     *
+     * The movement picker writes a property from under its own Menu2 on the
+     * same watches and has always worked, which is what ruled the write out
+     * as the cause.
+     *
+     * Nothing is lost permanently - all 65 of these are editable in Garmin
+     * Connect on the phone (resources/settings/settings.xml). What those five
+     * watches give up is changing them on the wrist, which is the same trade
+     * they already make for history, the custom-workout editor and the
+     * per-set chart.
+    */
+    // The rows beyond the seven a 96KB watch can hold, kept in four pieces so
+    // a full build's order is unchanged - full/weight-editor reaches "Mace
+    // weight" by nine counted presses, and the 122 devices with room to spare
+    // should see the menu they always saw.
+    //
+    // Not a cosmetic trim. Twenty rows of Menu2 cost about 5.2KB of the 9KB
+    // these devices have free once the first screen exists, leaving 3,968
+    // bytes - not enough for the app to keep running. Changing any setting
+    // crashed it:
+    //
+    //     Error: Out Of Memory Error
+    //     Stack: onSelect() at source/ui/SettingsMenuDelegate.mc:48
+    //
+    // and moving the write out only moved the crash into whatever allocated
+    // next - Layout.fitCentredLine once, patternLabel three times after. The
+    // write was never what did not fit. The menu was. Seven rows leave 8,696
+    // bytes, better than twice the old figure (tools/memory-baselines.json).
+    //
+    // The movement picker writes a property from under its own Menu2 on the
+    // same watches and always has, which is what ruled the write out.
+    //
+    // What stays is what you change at the gym: mode, rep target, wrist,
+    // movement, side, mace weight and the swing counter. What goes is still
+    // editable in Garmin Connect - all 65 of them are, see
+    // resources/settings/settings.xml - so this costs those five watches the
+    // wrist, not the setting, which is the trade they already make for
+    // history, the custom-workout editor and the per-set chart.
+    (:fullSettings)
+    function addCornerItem(menu as WatchUi.Menu2) as Void {
+        menu.addItem(new WatchUi.MenuItem(cornerLabel(), null, "circleShows", null));
+    }
+
+    (:noFullSettings)
+    function addCornerItem(menu as WatchUi.Menu2) as Void {}
+
+    (:fullSettings)
+    function addCueItem(menu as WatchUi.Menu2) as Void {
+        menu.addItem(new WatchUi.MenuItem(cueLabel(), null, "cueMode", null));
+    }
+
+    (:noFullSettings)
+    function addCueItem(menu as WatchUi.Menu2) as Void {}
+
+    (:fullSettings)
+    function addOtherWeightAndSoundItems(menu as WatchUi.Menu2) as Void {
+        menu.addItem(
+            new WatchUi.MenuItem(equipmentWeightLabel(Equipment.TYPE_CLUBS), null, "clubWeight", null)
+        );
+        menu.addItem(
+            new WatchUi.MenuItem(equipmentWeightLabel(Equipment.TYPE_BULAVA), null, "bulavaWeight", null)
+        );
+        menu.addItem(
+            new WatchUi.MenuItem(equipmentWeightLabel(Equipment.TYPE_MUDGAR), null, "mudgarWeight", null)
+        );
+        menu.addItem(
+            new WatchUi.ToggleMenuItem("Beat beep", null, "toneEnabled", boolProp("toneEnabled", false), null)
+        );
+        menu.addItem(
+            new WatchUi.ToggleMenuItem(
+                "Beat vibration",
+                null,
+                "vibeEnabled",
+                boolProp("vibeEnabled", true),
+                null
+            )
+        );
+        menu.addItem(
+            new WatchUi.ToggleMenuItem("Soft beep", null, "softBeep", boolProp("softBeep", true), null)
+        );
+        menu.addItem(
+            new WatchUi.ToggleMenuItem(
+                "Downbeat accent",
+                null,
+                "accentEnabled",
+                boolProp("accentEnabled", true),
+                null
+            )
+        );
+        menu.addItem(
+            new WatchUi.ToggleMenuItem(
+                "Rhythm Score",
+                null,
+                "smoothnessEnabled",
+                boolProp("smoothnessEnabled", false),
+                null
+            )
+        );
+    }
+
+    (:noFullSettings)
+    function addOtherWeightAndSoundItems(menu as WatchUi.Menu2) as Void {}
+
+    (:fullSettings)
+    function addTailItems(menu as WatchUi.Menu2) as Void {
+        menu.addItem(
+            new WatchUi.ToggleMenuItem(
+                "Load exposure",
+                null,
+                "loadExposureEnabled",
+                boolProp("loadExposureEnabled", false),
+                null
+            )
+        );
+        menu.addItem(
+            new WatchUi.ToggleMenuItem(
+                "Motion charts",
+                null,
+                "motionCapture",
+                boolProp("motionCapture", false),
+                null
+            )
+        );
+        menu.addItem(new WatchUi.MenuItem(aboutLabel(), null, "about", null));
+    }
+
+    (:noFullSettings)
+    function addTailItems(menu as WatchUi.Menu2) as Void {}
 
     function numProp(key as String, dflt as Number) as Number {
         try {
